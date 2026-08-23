@@ -7,7 +7,7 @@ mkdir -p "$cache"
 chmod 700 "$cache"
 
 tab=$(printf '\t')
-snapshot=$(cliphist list)
+snapshot=$(cliphist list) || exit 0
 
 ids=$(printf '%s\n' "$snapshot" | cut -f1)
 for f in "$cache"/*.png; do
