@@ -261,8 +261,9 @@ ShellRoot {
 
             /**
              * True while this monitor's active workspace reports a fullscreen
-             * client. The pill then retracts off the top edge and the whole
-             * layer becomes click-through so fullscreen content owns the screen.
+             * client. The pill retracts off the top edge and the layer is
+             * click-through so fullscreen content owns the screen, until a
+             * surface or a peek summons it back over the content.
              */
             readonly property bool monFullscreen: {
                 var mons = Hyprland.monitors.values;
@@ -275,6 +276,8 @@ ShellRoot {
                 }
                 return false;
             }
+            readonly property bool summoned: modal || root.peekMon === modelData.name
+            readonly property bool pillHidden: monFullscreen && !summoned
 
             onMonFullscreenChanged: if (monFullscreen) {
                 if (root.openMon === modelData.name) root.close();
@@ -291,7 +294,7 @@ ShellRoot {
 
             anchors { top: true; left: true; right: true; bottom: true }
 
-            mask: monFullscreen ? hiddenRegion : (modal ? fullRegion : pillRegion)
+            mask: modal ? fullRegion : (pillHidden ? hiddenRegion : pillRegion)
             Region { id: hiddenRegion }
             Region {
                 id: pillRegion
@@ -427,7 +430,7 @@ ShellRoot {
                     surface: overlay.surface
                     forcePinned: root.peekMon === overlay.modelData.name
 
-                    opacity: overlay.monFullscreen ? 0 : 1
+                    opacity: overlay.pillHidden ? 0 : 1
                     Behavior on opacity {
                         NumberAnimation {
                             duration: Motion.morph
@@ -436,7 +439,7 @@ ShellRoot {
                         }
                     }
                     transform: Translate {
-                        y: overlay.monFullscreen ? -(pill.height + overlay.topGap) : 0
+                        y: overlay.pillHidden ? -(pill.height + overlay.topGap) : 0
                         Behavior on y {
                             NumberAnimation {
                                 duration: Motion.morph
