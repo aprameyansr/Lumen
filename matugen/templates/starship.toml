@@ -1,0 +1,83 @@
+# No newline at start
+add_newline = false
+
+format = """
+$cmd_duration 󰜥 $directory $python $git_branch
+$character"""
+
+# --------------------------
+# CHARACTER (PROMPT SYMBOL)
+# --------------------------
+[character]
+success_symbol = "[   ](bold fg:{{primary}})"
+error_symbol   = "[   ](bold fg:{{outline}})"
+
+# --------------------------
+# GIT BRANCH
+# --------------------------
+[git_branch]
+symbol = "󰘬"
+style = "bg:{{outline}} fg:{{bright}}"
+truncation_length = 12
+format = "󰜥 [](bold fg:{{outline}})[$symbol $branch]($style)[ ](bold fg:{{outline}})"
+
+# --------------------------
+# DIRECTORY
+# --------------------------
+[directory]
+home_symbol = "  "
+read_only = "  "
+style = "bg:{{surface_container_high}} fg:{{bright}}"
+format = '[](bold fg:{{surface_container_high}})[󰉋 $path]($style)[](bold fg:{{surface_container_high}})'
+
+[directory.substitutions]
+"Desktop" = "  "
+"Documents" = "  "
+"Downloads" = "  "
+"Music" = " 󰎈 "
+"Pictures" = "  "
+"Videos" = "  "
+"GitHub" = " 󰊤 "
+
+# --------------------------
+# CMD DURATION
+# --------------------------
+[cmd_duration]
+min_time = 0
+style = "bg:{{primary}} fg:{{bright}}"
+format = '[](bold fg:{{primary}})[󰪢 $duration]($style)[](bold fg:{{primary}})'
+
+# --------------------------
+# HOSTNAME
+# --------------------------
+[hostname]
+style = "bg:{{outline_variant}} fg:{{bright}}"
+format = "[](bold fg:{{outline_variant}})[•$hostname]($style)[](bold fg:{{outline_variant}})"
+ssh_only = false
+disabled = false
+
+# --------------------------
+# USERNAME
+# --------------------------
+[username]
+style_user = "bold bg:{{surface_container}} fg:{{bright}}"
+format = "[](bold fg:{{surface_container}})[$user]($style)[](bold fg:{{surface_container}})"
+show_always = true
+
+# --------------------------
+# PACKAGE
+# --------------------------
+[package]
+disabled = true
+
+# --------------------------
+# PYTHON VENV
+# --------------------------
+[python]
+disabled = false
+detect_extensions = []
+detect_files = []
+detect_folders = []
+symbol = ""
+style = "bg:{{primary_container}} fg:{{cream}}"
+format = '[](bold fg:{{primary_container}})[$symbol ($virtualenv)]($style)[](bold fg:{{primary_container}})'

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+LED="/sys/class/leds/platform::micmute/brightness"
+
+if wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | grep -q MUTED; then
+    echo 1 | sudo tee "$LED" >/dev/null
+else
+    echo 0 | sudo tee "$LED" >/dev/null
+fi

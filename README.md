@@ -1,101 +1,147 @@
-<div align="center">
 
 # Ricelin
 
-**My Hyprland setup on CachyOS. The whole shell is hand-written Quickshell, no copied dotfiles.**
+**My personal Hyprland setup on Arch Linux, built around a custom Quickshell interface.**
 
-![Ricelin desktop](assets/hero.png)
+This repository contains my personal Linux configuration files. I use
+Hyprland as my window manager, Quickshell for my desktop shell, and fish as
+my interactive shell.
 
-</div>
-
-I started this a few months into Linux, mostly to learn how things work. It somehow turned into my daily driver.
-
-## The shell
-
-Everything you see is hand-written Quickshell. One pill bar that morphs into whatever surface I need.
-
-![The pill surfaces](assets/shell.png)
-
-The pill becomes media and now playing, a calendar, the wallpaper picker, clipboard history, an audio and brightness mixer, and network and bluetooth controls. There is also an app launcher, a lock screen, and [rishot](https://github.com/Gakuseei/rishot), my own screenshot and annotation tool, which lives in its own repo so you can read all of it there.
+The configuration has evolved over time as I have changed and refined my
+setup.
 
 ## Stack
 
-- WM: Hyprland, configured in Lua
-- Shell UI: custom Quickshell
-- Terminal: Ghostty
-- Shell: fish
-- Font: JetBrains Mono Nerd
-- Colors: matugen, palette pulled from the wallpaper
+- **WM:** Hyprland, configured in Lua
+- **Shell UI:** Quickshell
+- **Terminal:** Kitty
+- **Shell:** fish
+- **Editor:** Neovim
+- **Font:** JetBrains Mono Nerd Font
+- **Theming:** matugen
+- **System:** Arch Linux
+- **Audio:** PipeWire / WirePlumber
+- **Screenshot:** hyprshot
+- **Color picker:** hyprpicker
 
-matugen pulls a palette from each wallpaper and recolors the pill, terminal, window borders and fastfetch. The shell itself runs a warm vermilion theme I tuned by hand.
+## Quickshell
 
-<div align="center">
+The desktop shell is built with Quickshell.
 
-![the palette is pulled from the wallpaper](assets/wallust.gif)
+The main interface is a single pill-style shell containing various surfaces
+for different parts of the desktop.
 
-![Wallpaper retheme](assets/retheme.gif)
+It includes:
 
-</div>
+- Application launcher
+- Clipboard history
+- Wallpaper selection
+- Power menu
+- Network controls
+- Audio mixer
+- Settings
+- Screen recording
+- Media controls
+- Workspaces
+- Battery and system information
+- Bluetooth controls
+- Game mode
 
-## Install
+The shell is designed around opening these surfaces on demand rather than
+keeping separate applications or menus open on the desktop.
 
-> [!WARNING]
-> The installer is young. It hasn't had a clean-machine run beyond mine yet, so expect rough edges. Read `install.sh` first and keep backups. If something breaks, file a bug and say it's the installer.
+## Theming
 
-One line, straight through the pipe:
+I use `matugen` to generate colors from wallpapers.
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/Gakuseei/Ricelin/main/install.sh | bash
-```
+The generated palette is used throughout the desktop, including the shell,
+terminal and other parts of the configuration.
 
-`install.sh` is a thin bootstrap: it detects your distro (Arch, Debian, Fedora or
-openSUSE), makes sure git and python3 are there, clones the rice into
-`~/.local/share/ricelin`, then hands off to the guided Python installer. That part
-walks you through a short wizard, picks the right package names for your distro,
-pulls the deps and copies the configs into `~/.config`, backing up anything it
-replaces. The monitor layout and GPU env are swapped for portable defaults so it
-boots on any hardware; my own layout is kept next to it as `monitors.lua.example`.
-Then start `Hyprland` from a TTY.
-
-Skip the wizard with flags, passed straight through the pipe:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/Gakuseei/Ricelin/main/install.sh | bash -s -- --quickstart
-```
-
-```
---quickstart  core defaults, no questions
---full        also install the daily apps (dolphin, keepassxc, zathura, imv, rnote)
---sddm        also install the torii SDDM login theme
---no-deps     skip the package step, just deploy the configs
---dry-run     walk the whole flow and change nothing
-```
-
-Ricelin is a Hyprland shell. On Niri, Sway or anything else only rishot (the
-screenshot tool) makes sense; grab it from [rishot](https://github.com/Gakuseei/rishot)'s own installer.
+The Quickshell interface also has its own manually tuned visual styling,
+built around warm vermilion and muted cream tones.
 
 ## Keybinds
 
+### Window Management
+
 | Key | Action |
 |---|---|
-| `Super` + `Return` | terminal |
-| `Super` + `Space` | app launcher |
-| `Super` + `V` | clipboard history |
-| `Super` + `C` | wallpaper picker |
-| `Super` + `B` | shuffle wallpaper and retheme |
-| `Super` + `E` | file manager |
-| `Super` + `T` | toggle floating |
-| `Super` + `L` | lock |
-| `Print` | rishot |
+| `Super + Q` | Close window |
+| `Super + F` | Toggle floating |
+| `Super + D` | Maximize |
+| `Super + Shift + D` | True fullscreen |
+| `Super + J` | Toggle split |
+| `Alt + Tab` | Cycle windows |
+| `Super + Left` | Previous workspace |
+| `Super + Right` | Next workspace |
+| `Super + Mouse Left` | Move window |
+| `Super + Mouse Right` | Resize window |
+
+### Quickshell
+
+| Key | Action |
+|---|---|
+| `Super + Space` | Application launcher |
+| `Super + V` | Clipboard |
+| `Super + C` | Wallpaper picker |
+| `Super + G` | Game mode |
+| `Super + X` | Power menu |
+| `Super + A` | Network |
+| `Super + U` | Audio mixer |
+| `Super + I` | Settings |
+| `Super + R` | Screen recorder |
+
+### Applications
+
+| Key | Action |
+|---|---|
+| `Super + Return` | Kitty terminal |
+| `F23` | Kitty terminal |
+| `Super + W` | Firefox |
+| `Super + E` | Nautilus |
+| `Super + N` | Obsidian |
+| `Super + M` | Spotify |
+| `Ctrl + Shift + Escape` | Resources |
+
+### Workspaces
+
+| Key | Action |
+|---|---|
+| `Super + 1` – `9` | Switch to workspace 1–9 |
+| `Super + 0` | Switch to workspace 10 |
+| `Super + Ctrl + 1` – `9` | Move window to workspace 1–9 |
+| `Super + Ctrl + 0` | Move window to workspace 10 |
+| `Super + Mouse Wheel Up` | Previous workspace |
+| `Super + Mouse Wheel Down` | Next workspace |
+
+## Repository Structure
+
+```text
+bin/            Personal command-line scripts
+fastfetch/      Fastfetch configuration
+fish/           Fish shell configuration
+fontconfig/     Font configuration
+hypr/           Hyprland configuration and scripts
+kitty/          Kitty terminal configuration
+matugen/        Matugen configuration
+mimeapps.list   Default application associations
+nvim/           Neovim configuration
+nvim-qt/        Neovim-Qt configuration
+quickshell/     Quickshell shell and surfaces
+```
 
 ## Notes
 
-These started as my personal dotfiles, built around my own machine. The installer neutralises the hardware-specific bits, but some paths and choices still lean on how I run things, so read before you borrow.
+These are my personal configurations, built around the way I use my system.
 
-## Support
+They are not intended to be a universal configuration or a one-command
+installation. Some settings, paths, applications and hardware-specific
+choices may need to be changed for another system.
 
-If Ricelin made your setup nicer, you can [buy me a coffee on Ko-fi](https://ko-fi.com/gakuseei). I build this on my own and it keeps the work going.
+Feel free to use anything here as a reference or starting point for your own
+setup.
 
 ## Credits
 
-The lock screen, the SDDM background and the wallpapers are not mine. See [CREDITS](configs/sddm/themes/torii/CREDITS.md).
+This repository is based on [Ricelin](https://github.com/Gakuseei/Ricelin)
+and contains my personal modifications and configuration changes.

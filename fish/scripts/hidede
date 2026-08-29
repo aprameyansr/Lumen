@@ -1,0 +1,37 @@
+#!/usr/bin/env fish
+
+if test (count $argv) -eq 0
+    echo "Usage: hide-desktop-entry.fish <entry> [entry ...]"
+    echo
+    echo "Examples:"
+    echo "  ./hide-desktop-entry.fish foo"
+    echo "  ./hide-desktop-entry.fish foo.desktop bar.desktop"
+    exit 1
+end
+
+for entry in $argv
+
+    # Add .desktop if omitted
+    if not string match -q '*.desktop' "$entry"
+        set entry "$entry.desktop"
+    end
+
+    set file "/usr/share/applications/$entry"
+
+    if not test -f "$file"
+        echo "Not found: $file"
+        continue
+    end
+
+    # Don't add it twice
+    if grep -q '^NoDisplay=true' "$file"
+        echo "Already hidden: $entry"
+        continue
+    end
+
+    echo "Hiding: $entry"
+    sudo sh -c "printf '\\nNoDisplay=true\\n' >> '$file'"
+end
+
+echo
+echo "Done."
