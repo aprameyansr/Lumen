@@ -15,7 +15,6 @@ hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true }) -- Resi
 hl.bind("SUPER + J", hl.dsp.layout("togglesplit")) -- Toggle split
 hl.bind("ALT + Tab", hl.dsp.window.cycle_next()) -- Cycle windows
 
-
 -- ============================================================================
 -- Quickshell — Pill Surfaces
 -- ============================================================================
@@ -23,14 +22,16 @@ hl.bind("ALT + Tab", hl.dsp.window.cycle_next()) -- Cycle windows
 hl.bind(mod .. " + Space", hl.dsp.exec_cmd('qs ipc call pill launcher ""')) -- Launcher
 hl.bind(mod .. " + V", hl.dsp.exec_cmd('qs ipc call pill clipboard ""')) -- Clipboard
 hl.bind(mod .. " + C", hl.dsp.exec_cmd('qs ipc call pill wallpaper ""')) -- Wallpaper
+hl.bind(mod .. " + B", hl.dsp.exec_cmd('~/.config/hypr/scripts/wallpaper.sh ""')) -- Shuffle wallpaper and retheme
 hl.bind(mod .. " + G", hl.dsp.exec_cmd('qs ipc call pill gameMode ""')) -- Game mode
+hl.bind(mod .. " + H", hl.dsp.exec_cmd('qs ipc call pill dnd ""')) -- Toggle DnD
 
 hl.bind(mod .. " + X", hl.dsp.exec_cmd('qs ipc call pill power ""')) -- Power
 hl.bind(mod .. " + A", hl.dsp.exec_cmd('qs ipc call pill link ""')) -- Network
 hl.bind(mod .. " + U", hl.dsp.exec_cmd('qs ipc call pill mixer ""')) -- Audio mixer
 hl.bind(mod .. " + I", hl.dsp.exec_cmd('qs ipc call pill settings ""')) -- Settings
 hl.bind(mod .. " + R", hl.dsp.exec_cmd('qs ipc call pill screenrec ""')) -- Screen recorder
-
+hl.bind(mod .. " + Period", hl.dsp.exec_cmd('qs ipc call pill emoji ""')) -- Power
 
 -- ============================================================================
 -- Applications
@@ -49,7 +50,6 @@ hl.bind(
 	mod .. " + M",
 	hl.dsp.exec_cmd("spotify --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations")
 ) -- Music
-
 
 -- ============================================================================
 -- Workspaces
@@ -87,23 +87,18 @@ hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "r+1" }))
 
 -- Special workspaces
 hl.bind(mod .. " + P", hl.dsp.workspace.toggle_special("private"))
-hl.bind(
-	mod .. " + SHIFT + P",
-	hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh private")
-)
+hl.bind(mod .. " + SHIFT + P", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh private"))
 
 -- Stash workspace is currently disabled
 -- hl.bind(mod .. " + S", hl.dsp.workspace.toggle_special("stash"))
 -- hl.bind(mod .. " + SHIFT + S", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/special-toggle.sh stash"))
 
-
 -- ============================================================================
 -- Screenshots & Color Tools
 -- ============================================================================
 
-hl.bind(mod .. " + SHIFT + S", hl.dsp.exec_cmd("hyprshot -m region"))
+hl.bind(mod .. " + SHIFT + S", hl.dsp.exec_cmd("hyprshot -m region --freeze"))
 hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
-
 
 -- ============================================================================
 -- Hardware Controls
@@ -121,24 +116,11 @@ hl.bind(
 	{ locked = true, repeating = true }
 )
 
-hl.bind(
-	"XF86AudioMute",
-	hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),
-	{ locked = true }
-)
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 
-hl.bind(
-	"XF86MonBrightnessUp",
-	hl.dsp.exec_cmd("brightnessctl set 5%+"),
-	{ locked = true, repeating = true }
-)
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl set 5%+"), { locked = true, repeating = true })
 
-hl.bind(
-	"XF86MonBrightnessDown",
-	hl.dsp.exec_cmd("brightnessctl set 5%-"),
-	{ locked = true, repeating = true }
-)
-
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), { locked = true, repeating = true })
 
 -- ============================================================================
 -- Media Controls

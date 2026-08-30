@@ -201,6 +201,7 @@ ShellRoot {
             }
         }
         function gameMode(mon: string): void { Flags.gameMode = !Flags.gameMode; }
+        function dnd(mon: string): void { Flags.dnd = !Flags.dnd; }
         function sysmon(mon: string): void { root.toggleSurface(mon, "sysmon"); }
         function system(mon: string): void { root.toggleSurface(mon, "sysmon"); }
         function clipboard(mon: string): void { root.toggleSurface(mon, "clipboard"); }
