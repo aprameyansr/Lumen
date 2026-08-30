@@ -183,11 +183,12 @@ PillSurface {
     Rectangle {
         id: divider
         anchors.top: search.bottom
-        anchors.topMargin: 8 * root.s
+        anchors.topMargin: 2 * root.s
         anchors.left: parent.left
         anchors.right: parent.right
         height: 1
         color: Theme.hair
+        opacity: 0
     }
 
     Item {
@@ -215,7 +216,7 @@ PillSurface {
 
         Item {
             anchors.fill: parent
-            anchors.leftMargin: 12 * root.s
+            anchors.leftMargin: 12 * root.sz
             anchors.rightMargin: 12 * root.s
 
             Column {

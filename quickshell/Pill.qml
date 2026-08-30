@@ -36,6 +36,7 @@ Item {
     readonly property bool mixerOpen: surface === "mixer"
     readonly property bool calendarOpen: surface === "calendar"
     readonly property bool launcherOpen: surface === "launcher"
+    readonly property bool emojiOpen: surface === "emoji"
     readonly property bool clipboardOpen: surface === "clipboard"
     readonly property bool wallpaperOpen: surface === "wallpaper"
     readonly property bool powerOpen: surface === "power"
@@ -148,6 +149,8 @@ Item {
     readonly property real mixerH: 214 * s
     readonly property real launcherW: 360 * s
     readonly property real launcherH: 332 * s
+    readonly property real emojiW: 360 * s
+    readonly property real emojiH: 332 * s
     readonly property real clipboardW: 360 * s
     readonly property real clipboardH: 332 * s
     readonly property real wallpaperW: 720 * s
@@ -213,6 +216,7 @@ Item {
     readonly property var surfaces: ({
         calendar:  { size: () => { const it = surfaceItem(ldCalendar); return Qt.size((it.implicitWidth > 0 ? it.implicitWidth : 282 * s) + 36 * s, it.implicitHeight + 32 * s); }, ame: () => surfaceItem(ldCalendar) },
         launcher:  { size: () => { surfaceItem(ldLauncher); return Qt.size(launcherW, launcherH); }, ame: () => surfaceItem(ldLauncher) },
+        emoji: { size: () => { surfaceItem(ldEmoji); return Qt.size(emojiW, emojiH); }, ame: () => surfaceItem(ldEmoji)},
         clipboard: { size: () => { surfaceItem(ldClip); return Qt.size(clipboardW, clipboardH); }, ame: () => surfaceItem(ldClip) },
         wallpaper: { size: () => { surfaceItem(ldWall); return Qt.size(wallpaperW, wallpaperH); }, ame: () => null },
         power:     { size: () => { surfaceItem(ldPower); return Qt.size(powerW, powerH); }, ame: () => surfaceItem(ldPower) },
@@ -1889,6 +1893,17 @@ Item {
         }
     }
 
+    Loader {
+        id: ldEmoji
+        active: false
+        anchors.fill: parent
+        sourceComponent: EmojiPicker {
+            s: pill.s
+            open: pill.emojiOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+        }
+    }
     Loader {
         id: ldClip
         active: false
