@@ -90,6 +90,7 @@ built around warm vermilion and muted cream tones.
 | `Super + U` | Audio mixer |
 | `Super + I` | Settings |
 | `Super + R` | Screen recorder |
+| `Super + H` | Do Not Disturb Toggle |
 
 ### Applications
 
