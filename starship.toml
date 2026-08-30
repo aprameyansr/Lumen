@@ -1,0 +1,83 @@
+# No newline at start
+add_newline = false
+
+format = """
+$cmd_duration 󰜥 $directory $python $git_branch
+$character"""
+
+# --------------------------
+# CHARACTER (PROMPT SYMBOL)
+# --------------------------
+[character]
+success_symbol = "[   ](bold fg:#92b2d3)"
+error_symbol   = "[   ](bold fg:#55789d)"
+
+# --------------------------
+# GIT BRANCH
+# --------------------------
+[git_branch]
+symbol = "󰘬"
+style = "bg:#55789d fg:#f7f7f8"
+truncation_length = 12
+format = "󰜥 [](bold fg:#55789d)[$symbol $branch]($style)[ ](bold fg:#55789d)"
+
+# --------------------------
+# DIRECTORY
+# --------------------------
+[directory]
+home_symbol = "  "
+read_only = "  "
+style = "bg:#22303f fg:#f7f7f8"
+format = '[](bold fg:#22303f)[󰉋 $path]($style)[](bold fg:#22303f)'
+
+[directory.substitutions]
+"Desktop" = "  "
+"Documents" = "  "
+"Downloads" = "  "
+"Music" = " 󰎈 "
+"Pictures" = "  "
+"Videos" = "  "
+"GitHub" = " 󰊤 "
+
+# --------------------------
+# CMD DURATION
+# --------------------------
+[cmd_duration]
+min_time = 0
+style = "bg:#92b2d3 fg:#f7f7f8"
+format = '[](bold fg:#92b2d3)[󰪢 $duration]($style)[](bold fg:#92b2d3)'
+
+# --------------------------
+# HOSTNAME
+# --------------------------
+[hostname]
+style = "bg:#3e5874 fg:#f7f7f8"
+format = "[](bold fg:#3e5874)[•$hostname]($style)[](bold fg:#3e5874)"
+ssh_only = false
+disabled = false
+
+# --------------------------
+# USERNAME
+# --------------------------
+[username]
+style_user = "bold bg:#1d2936 fg:#f7f7f8"
+format = "[](bold fg:#1d2936)[$user]($style)[](bold fg:#1d2936)"
+show_always = true
+
+# --------------------------
+# PACKAGE
+# --------------------------
+[package]
+disabled = true
+
+# --------------------------
+# PYTHON VENV
+# --------------------------
+[python]
+disabled = false
+detect_extensions = []
+detect_files = []
+detect_folders = []
+symbol = ""
+style = "bg:#2b5682 fg:#e4e5e7"
+format = '[](bold fg:#2b5682)[$symbol ($virtualenv)]($style)[](bold fg:#2b5682)'
