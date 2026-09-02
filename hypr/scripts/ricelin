@@ -1,285 +1,302 @@
 #!/bin/sh
 #
-# ricelin — control CLI for the Ricelin shell.
+# lumen — Control CLI for the Lumen shell.
 #
-# Thin wrapper over the Quickshell pill, its watchdog and the update engine.
-# The pill is now the default Quickshell configuration, so it uses plain `qs`.
-# watchdog down too or the surface just comes back, while `restart` leaves the
-# watchdog running and only cycles the instance.
+# Thin wrapper over the Quickshell surface, its watchdog and the update engine.
+# The watchdog is what keeps the surface alive: it respawns `qs -d` whenever the
+# instance dies. So `stop` has to take the watchdog down too or the surface just
+# comes back, while `restart` leaves the watchdog running and only cycles the instance.
 #
-#   ricelin restart [pill|all]   cycle the pill            (default: pill)
-#   ricelin start   [pill|all]   start the watchdog       (default: all)
-#   ricelin stop    [pill|all]   stop watchdog + pill     (default: all)
-#   ricelin log     [pill] [..] follow the quickshell log (default: pill)
-#   ricelin update                    check, show changelog, apply, restart
-#   ricelin status                    what's running and the installed version
+#   lumen restart                 Restart the shell
+#   lumen start                   Start the watchdog
+#   lumen stop                    Stop watchdog + shell
+#   lumen log                     Follow the Quickshell log
+#   lumen update                  Check, show changelog, apply, restart
+#   lumen status                  What's running and the installed version
 
 SCRIPTS="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 ENGINE="$SCRIPTS/ricelin-update.py"
 WATCHDOG="$SCRIPTS/watchdog.sh"
-SURFACES="pill"
 
 # The installer's Hanko skin: a vermilion edge marker, a quiet connector gutter
-# and the rice's ember palette. Dropped whole when stdout is not a terminal or
+# and Lumen's ember palette. Dropped whole when stdout is not a terminal or
 # NO_COLOR is set, so a pipe gets clean plain text.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-  verm=$(printf '\033[38;2;192;68;43m')
-  flame=$(printf '\033[38;2;255;154;100m')
-  cream=$(printf '\033[38;2;230;214;203m')
-  bright=$(printf '\033[38;2;255;246;240m')
-  dim=$(printf '\033[38;2;138;125;116m')
-  faint=$(printf '\033[38;2;111;99;91m')
-  rst=$(printf '\033[0m')
+    verm=$(printf '\033[38;2;192;68;43m')
+    flame=$(printf '\033[38;2;255;154;100m')
+    cream=$(printf '\033[38;2;230;214;203m')
+    bright=$(printf '\033[38;2;255;246;240m')
+    dim=$(printf '\033[38;2;138;125;116m')
+    faint=$(printf '\033[38;2;111;99;91m')
+    rst=$(printf '\033[0m')
 else
-  verm=""
-  flame=""
-  cream=""
-  bright=""
-  dim=""
-  faint=""
-  rst=""
+    verm=""
+    flame=""
+    cream=""
+    bright=""
+    dim=""
+    faint=""
+    rst=""
 fi
 
 # A section header: the vermilion edge marker and a cream title.
 sec() { printf '\n  %s▌%s %s%s%s\n' "$verm" "$rst" "$cream" "$1" "$rst"; }
+
 # A bare connector bar that breathes between rows.
 gap() { printf '  %s▏%s\n' "$faint" "$rst"; }
+
 # A content line hung on the connector gutter (the segment arrives pre-coloured).
 row() { printf '  %s▏%s  %s\n' "$faint" "$rst" "$1"; }
 
 # A one-off action: the ember done marker, the verb in cream, what it touched bright.
-act() { printf '  %s▫%s %s%s%s %s%s%s\n' "$flame" "$rst" "$cream" "$1" "$rst" "$bright" "$2" "$rst"; }
-note() { printf '  %s▫%s %s%s%s\n' "$faint" "$rst" "$dim" "$*" "$rst"; }
-die() {
-  printf '  %s▌%s %s%s%s\n' "$verm" "$rst" "$verm" "$*" "$rst" >&2
-  exit 1
+act() {
+    printf '  %s▫%s %s%s%s %s%s%s\n' \
+        "$flame" "$rst" "$cream" "$1" "$rst" "$bright" "$2" "$rst"
 }
 
-# One help row: command flame, its argument dim, the description cream, default faint.
+note() {
+    printf '  %s▫%s %s%s%s\n' \
+        "$faint" "$rst" "$dim" "$*" "$rst"
+}
+
+die() {
+    printf '  %s▌%s %s%s%s\n' \
+        "$verm" "$rst" "$verm" "$*" "$rst" >&2
+    exit 1
+}
+
+# One help row: command flame, its argument dim, the description cream.
 urow() {
-  row "$(printf '%s%-8s%s %s%-16s%s %s%-30s%s %s%s%s' \
-    "$flame" "$1" "$rst" "$dim" "$2" "$rst" "$cream" "$3" "$rst" "$faint" "$4" "$rst")"
+    row "$(printf '%s%-8s%s %s%-16s%s %s%-30s%s %s%s%s' \
+        "$flame" "$1" "$rst" \
+        "$dim" "$2" "$rst" \
+        "$cream" "$3" "$rst" \
+        "$faint" "$4" "$rst")"
 }
 
 usage() {
-  sec "ricelin · control the shell"
-  gap
-  urow restart "[pill·all]" "cycle a surface" "(pill)"
-  urow start "[pill·all]" "start the watchdog" "(all)"
-  urow stop "[pill·all]" "stop watchdog and surface" "(all)"
-  urow log "[pill]" "follow the quickshell log" "(pill)"
-  urow update "" "check, then apply an update" ""
-  urow status "" "what's running and the version" ""
-  urow uninstall "" "remove the configs, restore backups" ""
-  gap
+    sec "Lumen · Control the Shell"
+    gap
+    urow restart "" "Restart the shell" ""
+    urow start   "" "Start the watchdog" ""
+    urow stop    "" "Stop watchdog and shell" ""
+    urow log     "" "Follow the Quickshell log" ""
+    urow update  "" "Check, then apply an update" ""
+    urow status  "" "What's running and the version" ""
+    gap
 }
 
-# Expand a target argument into the surfaces it names, falling back to the
-# per-command default ($2) when no argument was given.
-targets() {
-  case "${1:-$2}" in
-  all) printf '%s' "$SURFACES" ;;
-  pill) printf '%s' "${1:-$2}" ;;
-  *) die "unknown target '$1' (pill or all)" ;;
-  esac
-}
+is_up() { qs ipc show >/dev/null 2>&1; }
+wd_up() { pgrep -f "watchdog.sh" >/dev/null 2>&1; }
 
-qs_cmd() {
-  shift
-  qs "$@"
-}
-
-is_up() {
-  qs_cmd "$1" ipc show >/dev/null 2>&1
-}
-
-wd_up() {
-  pgrep -f "watchdog.sh $1" >/dev/null 2>&1
-}
-
-# Launch a detached watchdog. A second one for the same surface hits the flock in
-# watchdog.sh and exits at once, so this is safe to call when one already runs.
-start_wd() { setsid sh "$WATCHDOG" "$1" >/dev/null 2>&1 & }
+# Launch a detached watchdog. A second one hits the flock in watchdog.sh and
+# exits at once, so this is safe to call when one already runs.
+start_wd() { setsid sh "$WATCHDOG" >/dev/null 2>&1 & }
 
 installed_version() {
-  qsdir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-  if [ -L "$qsdir" ]; then
-    repo=$(git -C "$(readlink -f "$qsdir")" rev-parse --show-toplevel 2>/dev/null)
-    if [ -n "$repo" ]; then
-      printf 'dev %s' "$(git -C "$repo" rev-parse --short HEAD 2>/dev/null)"
-      return
+    qsdir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+
+    if [ -L "$qsdir" ]; then
+        repo=$(git -C "$(readlink -f "$qsdir")" rev-parse --show-toplevel 2>/dev/null)
+
+        if [ -n "$repo" ]; then
+            printf 'dev %s' \
+                "$(git -C "$repo" rev-parse --short HEAD 2>/dev/null)"
+            return
+        fi
     fi
-  fi
-  mf="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/update.json"
-  if [ -f "$mf" ] && command -v jq >/dev/null 2>&1; then
-    sha=$(jq -r '.syncedSha // empty' "$mf")
-    [ -n "$sha" ] && {
-      printf '%s' "$(echo "$sha" | cut -c1-7)"
-      return
-    }
-  fi
-  printf 'unknown'
+
+    mf="${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/update.json"
+
+    if [ -f "$mf" ] && command -v jq >/dev/null 2>&1; then
+        sha=$(jq -r '.syncedSha // empty' "$mf")
+
+        [ -n "$sha" ] && {
+            printf '%s' "$(echo "$sha" | cut -c1-7)"
+            return
+        }
+    fi
+
+    printf 'unknown'
 }
 
 cmd_start() {
-  for s in $(targets "$1" all); do
-    if wd_up "$s"; then
-      note "$s already running"
+    if wd_up; then
+        note "Watchdog already running"
     else
-      start_wd "$s"
-      act started "$s"
+        start_wd
+        act "Started" "Watchdog"
     fi
-  done
 }
 
 cmd_stop() {
-  for s in $(targets "$1" all); do
-    pkill -f "watchdog.sh $s" 2>/dev/null
-    qs_cmd "$s" kill >/dev/null 2>&1
-    act stopped "$s"
-  done
+    pkill -f "watchdog.sh" 2>/dev/null
+    qs kill >/dev/null 2>&1
+    act "Stopped" "Shell"
 }
 
 cmd_restart() {
-  for s in $(targets "$1" pill); do
     had_wd=no
-    wd_up "$s" && had_wd=yes
-    qs_cmd "$s" kill >/dev/null 2>&1
+    wd_up && had_wd=yes
+
+    qs kill >/dev/null 2>&1
     sleep 0.4
+
     if [ "$had_wd" = yes ]; then
-      is_up "$s" || qs_cmd "$s" -d >/dev/null 2>&1
+        is_up || qs -d >/dev/null 2>&1
     else
-      start_wd "$s"
+        start_wd
     fi
-    act restarted "$s"
-  done
+
+    act "Restarted" "Shell"
 }
 
 cmd_log() {
-  surface=pill
-  case "$1" in
-  pill)
-    surface="$1"
-    shift
-    ;;
-  esac
-  exec qs_cmd "$surface" log -f "$@"
+    exec qs log -f "$@"
 }
 
 cmd_update() {
-  [ -f "$ENGINE" ] || die "update engine missing ($ENGINE)"
-  command -v python3 >/dev/null 2>&1 || die "python3 not found"
-  command -v jq >/dev/null 2>&1 || die "jq not found"
+    [ -f "$ENGINE" ] || die "Update engine missing ($ENGINE)"
+    command -v python3 >/dev/null 2>&1 || die "Python3 not found"
+    command -v jq >/dev/null 2>&1 || die "Jq not found"
 
-  json=$(python3 "$ENGINE" check) || die "update check failed"
-  status=$(printf '%s' "$json" | jq -r '.status // "error"')
-  case "$status" in
-  devmode)
-    note "dev install, update with git pull"
-    return 0
-    ;;
-  offline) die "offline, can't reach the update remote" ;;
-  noclone) die "no update clone yet, open the in-app updater once first" ;;
-  ok) ;;
-  *) die "$(printf '%s' "$json" | jq -r '.error // "update check failed"')" ;;
-  esac
+    json=$(python3 "$ENGINE" check) || die "Update check failed"
+    status=$(printf '%s' "$json" | jq -r '.status // "error"')
 
-  behind=$(printf '%s' "$json" | jq -r '.behind // 0')
-  version=$(printf '%s' "$json" | jq -r '.version // ""')
-  if [ "$behind" = 0 ]; then
-    act "up to date" "$version"
-    return 0
-  fi
+    case "$status" in
+        devmode)
+            note "Dev install, update with git pull"
+            return 0
+            ;;
+        offline)
+            die "Offline, can't reach the update remote"
+            ;;
+        noclone)
+            die "No update clone yet, open the in-app updater once first"
+            ;;
+        ok)
+            ;;
+        *)
+            die "$(printf '%s' "$json" | jq -r '.error // "Update check failed"')"
+            ;;
+    esac
 
-  fromd=$(printf '%s' "$json" | jq -r '.fromDate // ""')
-  tod=$(printf '%s' "$json" | jq -r '.toDate // ""')
-  sec "$behind commit(s) behind"
-  gap
-  row "${faint}$fromd -> $tod${rst}"
-  gap
-  printf '%s' "$json" | jq -r '.changelog[]?' | while IFS= read -r line; do
-    row "${flame}·${rst} ${cream}${line}${rst}"
-  done
-  deps=$(printf '%s' "$json" | jq -r '[.missingDeps[]?.name] | join(", ")')
-  [ -n "$deps" ] && {
+    behind=$(printf '%s' "$json" | jq -r '.behind // 0')
+    version=$(printf '%s' "$json" | jq -r '.version // ""')
+
+    if [ "$behind" = 0 ]; then
+        act "Up to date" "$version"
+        return 0
+    fi
+
+    fromd=$(printf '%s' "$json" | jq -r '.fromDate // ""')
+    tod=$(printf '%s' "$json" | jq -r '.toDate // ""')
+
+    sec "$behind Commit(s) Behind"
     gap
-    row "${dim}new packages${rst}   ${cream}${deps}${rst}"
-  }
-  conf=$(printf '%s' "$json" | jq -r '.conflicts | length')
-  [ "$conf" -gt 0 ] 2>/dev/null && {
+    row "${faint}$fromd -> $tod${rst}"
     gap
-    row "${faint}${conf} edited file(s) clash with upstream, kept as you have them${rst}"
-  }
-  gap
 
-  printf '  %s▌%s %sapply update?%s %s[Y/n]%s ' "$verm" "$rst" "$cream" "$rst" "$dim" "$rst"
-  read -r ans
-  case "$ans" in
-  "" | y | Y | yes | YES) ;;
-  *)
-    note "skipped"
-    return 0
-    ;;
-  esac
+    printf '%s' "$json" | jq -r '.changelog[]?' |
+        while IFS= read -r line; do
+            row "${flame}·${rst} ${cream}${line}${rst}"
+        done
 
-  ids=$(printf '%s' "$json" | jq -r '[.missingDeps[]?.id] | join(",")')
-  if [ -n "$ids" ]; then
-    result=$(python3 "$ENGINE" apply --install-deps "$ids") || die "apply failed"
-  else
-    result=$(python3 "$ENGINE" apply) || die "apply failed"
-  fi
+    deps=$(printf '%s' "$json" | jq -r '[.missingDeps[]?.name] | join(", ")')
 
-  nfail=$(printf '%s' "$result" | jq -r '.depFailures | length')
-  if [ "$nfail" -gt 0 ] 2>/dev/null; then
-    note "some packages didn't install:"
-    printf '%s' "$result" | jq -r '.depFailures[]? | .id + ": " + .error' | while IFS= read -r line; do
-      row "${faint}·${rst} ${dim}${line}${rst}"
-    done
-  fi
+    [ -n "$deps" ] && {
+        gap
+        row "${dim}New Packages${rst}   ${cream}${deps}${rst}"
+    }
 
-  restart=$(printf '%s' "$result" | jq -r '.restartNeeded')
-  [ "$restart" = true ] && cmd_restart pill
-  act "updated to" "$version"
-}
+    conf=$(printf '%s' "$json" | jq -r '.conflicts | length')
 
-cmd_uninstall() {
-  installer="${XDG_DATA_HOME:-$HOME/.local/share}/ricelin/installer/ricelin_install.py"
-  [ -f "$installer" ] || die "installer not found ($installer); remove ~/.config/hypr and ~/.config/quickshell by hand, your originals sit next to them as .bak"
-  command -v python3 >/dev/null 2>&1 || die "python3 not found"
-  exec python3 "$installer" --uninstall
+    [ "$conf" -gt 0 ] 2>/dev/null && {
+        gap
+        row "${faint}${conf} Edited File(s) Clash With Upstream, Kept As You Have Them${rst}"
+    }
+
+    gap
+
+    printf '  %s▌%s %sApply update?%s %s[Y/n]%s ' \
+        "$verm" "$rst" "$cream" "$rst" "$dim" "$rst"
+
+    read -r ans
+
+    case "$ans" in
+        "" | y | Y | yes | YES)
+            ;;
+        *)
+            note "Skipped"
+            return 0
+            ;;
+    esac
+
+    ids=$(printf '%s' "$json" | jq -r '[.missingDeps[]?.id] | join(",")')
+
+    if [ -n "$ids" ]; then
+        result=$(python3 "$ENGINE" apply --install-deps "$ids") ||
+            die "Apply failed"
+    else
+        result=$(python3 "$ENGINE" apply) ||
+            die "Apply failed"
+    fi
+
+    nfail=$(printf '%s' "$result" | jq -r '.depFailures | length')
+
+    if [ "$nfail" -gt 0 ] 2>/dev/null; then
+        note "Some packages didn't install:"
+
+        printf '%s' "$result" |
+            jq -r '.depFailures[]? | .id + ": " + .error' |
+            while IFS= read -r line; do
+                row "${faint}·${rst} ${dim}${line}${rst}"
+            done
+    fi
+
+    restart=$(printf '%s' "$result" | jq -r '.restartNeeded')
+    [ "$restart" = true ] && cmd_restart
+
+    act "Updated to" "$version"
 }
 
 cmd_status() {
-  sec "ricelin"
-  gap
-  for s in $SURFACES; do
-    if is_up "$s"; then
-      mk="${flame}●${rst}"
-      lab="${cream}$s${rst}"
-      stt="${cream}running${rst}"
+    sec "Lumen"
+    gap
+
+    if is_up; then
+        mk="${flame}●${rst}"
+        lab="${cream}Shell${rst}"
+        stt="${cream}Running${rst}"
     else
-      mk="${faint}○${rst}"
-      lab="${dim}$s${rst}"
-      stt="${dim}stopped${rst}"
+        mk="${faint}○${rst}"
+        lab="${dim}Shell${rst}"
+        stt="${dim}Stopped${rst}"
     fi
-    if wd_up "$s"; then wdt="${dim}watchdog up${rst}"; else wdt="${faint}no watchdog${rst}"; fi
+
+    if wd_up; then
+        wdt="${dim}Watchdog Up${rst}"
+    else
+        wdt="${faint}No Watchdog${rst}"
+    fi
+
     row "$mk $lab   $stt   $wdt"
-  done
-  gap
-  row "${dim}version${rst}   ${cream}$(installed_version)${rst}"
-  gap
+
+    gap
+    row "${dim}Version${rst}   ${cream}$(installed_version)${rst}"
+    gap
 }
 
 cmd="$1"
 [ $# -gt 0 ] && shift
+
 case "$cmd" in
-restart) cmd_restart "$1" ;;
-start) cmd_start "$1" ;;
-stop) cmd_stop "$1" ;;
-log) cmd_log "$@" ;;
-update) cmd_update ;;
-status) cmd_status ;;
-uninstall) cmd_uninstall ;;
-"" | -h | --help | help) usage ;;
-*) die "unknown command '$cmd' (try: ricelin help)" ;;
+    restart) cmd_restart ;;
+    start) cmd_start ;;
+    stop) cmd_stop ;;
+    log) cmd_log "$@" ;;
+    update) cmd_update ;;
+    status) cmd_status ;;
+    "" | -h | --help | help) usage ;;
+    *) die "Unknown command '$cmd' (try: lumen help)" ;;
 esac

@@ -17,7 +17,7 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/nvibrant-value"
+    readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/lumen/nvibrant-value"
 
     property int vibrance: 40
 
@@ -107,7 +107,7 @@ Singleton {
                 for (var i = 0; i < blocks.length; i++) {
                     var bus = /I2C bus:\s+\/dev\/i2c-(\d+)/.exec(blocks[i]);
                     var conn = /DRM connector:\s+card\d+-(\S+)/.exec(blocks[i]);
-                    if (bus)
+                    if (bus && (!conn || conn[1].indexOf("eDP-") !== 0))
                         mons.push({ bus: bus[1], label: conn ? conn[1] : "BUS " + bus[1] });
                 }
                 root.ddcMonitors = mons;

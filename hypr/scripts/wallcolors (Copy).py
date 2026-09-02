@@ -263,7 +263,7 @@ def render_hypr(pill, hue, chromatic):
         Uses the wallpaper hue, but is deliberately muted.
 
     Inactive:
-        Uses a very dark version of the wallpaper hue.
+        Uses the wallpaper's surface hue at a very low lightness.
 
     Achromatic wallpapers get a neutral grey treatment.
     """
@@ -325,22 +325,22 @@ def render_kitty(pill):
     )
 
     kitty = (
-        f'tab_title_template "{{fmt.fg._{outline}}}'
-        f'{{fmt.bg._{surface}}}'
-        f'{{fmt.fg._{bright}}}'
-        f'{{fmt.bg._{outline}}} '
-        f'({{index}}) {{title}} '
-        f'{{fmt.fg._{outline}}}'
-        f'{{fmt.bg._{surface}}} "\n'
+        f'tab_title_template "{{{{fmt.fg._{outline}}}}}'
+        f'{{{{fmt.bg._{surface}}}}}'
+        f'{{{{fmt.fg._{bright}}}}}'
+        f'{{{{fmt.bg._{outline}}}}} '
+        f'({{{{index}}}}) {{{{title}}}} '
+        f'{{{{fmt.fg._{outline}}}}}'
+        f'{{{{fmt.bg._{surface}}}}} "\n'
 
         f'active_tab_title_template '
-        f'"{{fmt.fg._{primary}}}'
-        f'{{fmt.bg._{surface}}}'
-        f'{{fmt.fg._{bright}}}'
-        f'{{fmt.bg._{primary}}} '
-        f'({{index}}) {{title}} '
-        f'{{fmt.fg._{primary}}}'
-        f'{{fmt.bg._{surface}}} "\n'
+        f'"{{{{fmt.fg._{primary}}}}}'
+        f'{{{{fmt.bg._{surface}}}}}'
+        f'{{{{fmt.fg._{bright}}}}}'
+        f'{{{{fmt.bg._{primary}}}}} '
+        f'({{{{index}}}}) {{{{title}}}} '
+        f'{{{{fmt.fg._{primary}}}}}'
+        f'{{{{fmt.bg._{surface}}}}} "\n'
     )
 
     (
@@ -546,7 +546,7 @@ def main():
             )
         )
         if chromatic
-        else 0.0
+        else 0.05
     )
 
     if light:
@@ -645,15 +645,12 @@ def main():
     )
 
     render_fastfetch(pill)
-
     render_hypr(
         pill,
         hue,
         chromatic,
     )
-
     render_kitty(pill)
-
     render_starship(pill)
 
     return 0

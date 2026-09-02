@@ -22,6 +22,7 @@ text/vnd.trolltech.linguist=firefox.desktop
 text/x-c++hdr=codium.desktop
 application/xml=codium.desktop
 inode/directory=org.gnome.Nautilus.desktop
+text/x-shellscript=codium.desktop
 
 [Added Associations]
 application/schema+json=codium.desktop;
@@ -45,3 +46,4 @@ application/pdf=firefox.desktop;
 text/vnd.trolltech.linguist=firefox.desktop;
 text/x-c++hdr=codium.desktop;
 application/xml=codium.desktop;
+text/x-shellscript=codium.desktop;

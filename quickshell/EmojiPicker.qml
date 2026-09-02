@@ -1043,6 +1043,7 @@ PillSurface {
         anchors.right: parent.right
 
         s: root.s
+        kanji: "絵"
         placeholder: "Search emojis"
         counterText: ""
 

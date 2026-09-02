@@ -73,18 +73,12 @@ ShellRoot {
     Process {
         id: updatedToast
         command: ["sh", "-c",
-            "m=\"${XDG_STATE_HOME:-$HOME/.local/state}/ricelin/updated\"; [ -f \"$m\" ] || exit 0; "
+            "m=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen/updated\"; [ -f \"$m\" ] || exit 0; "
             + "b=$(cat \"$m\"); rm -f \"$m\"; "
             + "gdbus call --session --dest org.freedesktop.Notifications "
             + "--object-path /org/freedesktop/Notifications "
             + "--method org.freedesktop.Notifications.Notify "
-            + "Ricelin 0 '' 'Ricelin updated' \"$b\" '[]' '{}' 5000 >/dev/null 2>&1"]
-    }
-
-    Binding {
-        target: Notifsz
-        property: "dnd"
-        value: Flags.dnd
+            + "Lumen 0 '' 'Lumen updated' \"$b\" '[]' '{}' 5000 >/dev/null 2>&1"]
     }
 
     PanelWindow {
@@ -109,7 +103,7 @@ ShellRoot {
      */
     Process {
         running: Flags.keepAwake
-        command: ["systemd-inhibit", "--what=idle:sleep", "--who=Ricelin",
+        command: ["systemd-inhibit", "--what=idle:sleep", "--who=Lumen",
                   "--why=keep awake", "--mode=block", "sleep", "infinity"]
     }
 

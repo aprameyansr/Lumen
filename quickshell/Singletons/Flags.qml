@@ -5,7 +5,7 @@ import Quickshell.Io
 
 /**
  * Shared session flags persisted to a small JSON file and watched for external
- * change, so every Ricelin daemon (pill, lock) reads and writes the same
+ * change, so every Lumen daemon (pill, lock) reads and writes the same
  * Do-Not-Disturb and Keep-Awake state live without a second notification server
  * or idle inhibitor. Toggling in one surface updates the others on the next file
  * event, and the state survives a daemon restart.
@@ -39,9 +39,6 @@ Singleton {
     property alias recordMic: adapter.recordMic
     property alias recordDesktop: adapter.recordDesktop
     property alias recordClearedBefore: adapter.recordClearedBefore
-    property alias idleLockMin: adapter.idleLockMin
-    property alias idleScreenOffMin: adapter.idleScreenOffMin
-    property alias idleSuspendMin: adapter.idleSuspendMin
     property alias weatherCity: adapter.weatherCity
     property alias musicViz: adapter.musicViz
     property alias gameMode: adapter.gameMode
@@ -56,7 +53,7 @@ Singleton {
 
     FileView {
         id: file
-        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/flags.json"
+        path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/lumen/flags.json"
         blockLoading: true
         watchChanges: true
         printErrors: false
@@ -76,7 +73,7 @@ Singleton {
             property bool clockSeconds: false
             property bool showGlyphs: true
             property string paletteMode: "static"
-            /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (ricelin-wallpaper-dir state file), then ~/Ricelin/wallpapers. Lives in user state so an in-app update never clobbers a custom folder. */
+            /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (lumen-wallpaper-dir state file), then $HOME/Pictures/Wallpapers. Lives in user state so an in-app update never clobbers a custom folder. */
             property string wallpaperDir: ""
             /** Super+B random target: "all" repaints every monitor, "cursor" only the one under the pointer. */
             property string randomScope: "all"
@@ -100,9 +97,6 @@ Singleton {
             property bool recordMic: true
             property bool recordDesktop: true
             property real recordClearedBefore: 0
-            property int idleLockMin: 5
-            property int idleScreenOffMin: 6
-            property int idleSuspendMin: 0
             property string weatherCity: ""
             property bool musicViz: true
             property bool gameMode: false

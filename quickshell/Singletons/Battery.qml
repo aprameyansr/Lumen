@@ -47,7 +47,7 @@ Singleton {
     function notifyBattery(title, body, urgency, icon) {
         Quickshell.execDetached([
             "notify-send",
-            "-a", "Ricelin",
+            "-a", "Lumen",
             "-u", urgency,
             "-i", icon,
             title,
@@ -74,7 +74,7 @@ Singleton {
                 "Battery critical",
                 "Battery is critically low at " + pct + "%.",
                 "critical",
-                "/usr/share/icons/breeze/status/32/battery-empty.svg"
+                "/usr/share/icons/Adwaita/symbolic/legacy/battery-empty-symbolic.svg"
             );
             return;
         }
@@ -86,7 +86,7 @@ Singleton {
                 "Battery low",
                 "Battery is at " + pct + "%.",
                 "normal",
-                "/usr/share/icons/breeze/status/32/battery-low.svg"
+                "/usr/share/icons/Adwaita/symbolic/status/battery-level-10-symbolic.svg"
             );
         }
     }
