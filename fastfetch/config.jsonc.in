@@ -1,5 +1,4 @@
 {
-  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
     "type": "file",
     "source": "__LANTERN__",
@@ -19,7 +18,7 @@
     "color": {
       "keys": "38;2;__KEYS__"
     },
-    "key": { "width": 10 }
+    "key": { "width": 12 }
   },
   "modules": [
     "break",
@@ -27,13 +26,14 @@
     { "type": "os", "key": "  os", "format": "{pretty-name}" },
     { "type": "kernel", "key": "  kernel", "format": "{release}" },
     { "type": "uptime", "key": "  up" },
+    { "type": "disk", "key": "  storage", "format": "{size-used} / {size-total} [{size-percentage}]" },
     { "type": "packages", "key": " 󰏖 pkgs", "format": "{all}" },
     "break",
-    { "type": "custom", "format": "\u001b[38;2;__SEP__m── rice ────────────────" },
+    { "type": "custom", "format": "\u001b[38;2;__SEP__m── rice ─────l───────────" },
     { "type": "wm", "key": "  wm", "format": "{pretty-name}" },
     { "type": "shell", "key": "  shell", "format": "{exe-name}" },
     { "type": "terminal", "key": "  term", "format": "{pretty-name}" },
-    { "type": "custom", "key": " 󰂜 bar", "format": "pill (quickshell)" },
+    { "type": "custom", "key": " 󰂜 bar", "format": "lumen (Quickshell)" },
     { "type": "custom", "key": "  font", "format": "JetBrains Mono Nerd" },
     { "type": "command", "key": " 󰸉 wall", "text": "basename \"$(cat ${XDG_STATE_HOME:-$HOME/.local/state}/lumen-wallpaper)\"" }
   ]
