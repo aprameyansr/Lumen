@@ -47,12 +47,12 @@ PROTECTED = [
 
 def data_dir():
     base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
-    return Path(base) / "ricelin-update"
+    return Path(base) / "lumen-update"
 
 
 def manifest_path():
     base = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
-    return Path(base) / "ricelin" / "update.json"
+    return Path(base) / "lumen" / "update.json"
 
 
 def git(repo, *args, check=True):
@@ -112,7 +112,7 @@ def backup_protected(config_root):
     was live to back up.
     """
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    dest_root = data_dir().parent / "ricelin-update-backup" / stamp
+    dest_root = data_dir().parent / "lumen-update-backup" / stamp
     made = None
     for rel in PROTECTED:
         live = config_root / rel

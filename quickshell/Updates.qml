@@ -8,7 +8,7 @@ import "Singletons"
 /**
  * 更 UPDATES sub-surface: a terminal-free face for the Lumen update engine. It
  * never touches git itself; it shells out to the python engine at
- * ~/.config/hypr/scripts/ricelin-update.py, which prints one JSON object, and
+ * ~/.config/hypr/scripts/lumen-update.py, which prints one JSON object, and
  * renders that. `check` is a safe dry-run that reports how far behind the install
  * is, the changelog, and any protected file whose local edits clash with upstream;
  * `apply` performs the update, taking upstream wholesale only for the conflicting
@@ -28,7 +28,7 @@ SettingsSurface {
     implicitHeight: content.implicitHeight
     rows: []
 
-    readonly property string engine: Quickshell.env("HOME") + "/.config/hypr/scripts/ricelin-update.py"
+    readonly property string engine: Quickshell.env("HOME") + "/.config/hypr/scripts/lumen-update.py"
 
     property string status: ""
     property string version: ""
@@ -336,7 +336,7 @@ SettingsSurface {
         id: markerProc
         property string body: ""
         command: ["sh", "-c",
-            "d=\"${XDG_STATE_HOME:-$HOME/.local/state}/ricelin\"; mkdir -p \"$d\"; printf '%s' \"$1\" > \"$d/updated\"",
+            "d=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen\"; mkdir -p \"$d\"; printf '%s' \"$1\" > \"$d/updated\"",
             "sh", body]
     }
 

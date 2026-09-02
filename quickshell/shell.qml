@@ -51,7 +51,6 @@ ShellRoot {
             Quickshell.execDetached([
                 "notify-send",
                 "-a", "Quickshell",
-                "-i", "/usr/share/icons/breeze/status/64/dialog-information.svg",
                 "Quickshell",
                 "Configuration reloaded successfully"
             ]);

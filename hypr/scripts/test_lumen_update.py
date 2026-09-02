@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Self-test for ricelin-update.py against throwaway git repos in a temp dir. No
+Self-test for lumen-update.py against throwaway git repos in a temp dir. No
 network, no touching the user's real config. Builds a fake origin with a couple of
 commits (some carrying changelog: trailers, some not) and a fake live config, then
 drives check/apply through the engine and asserts the merge classes behave.
@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location("ricelin_update", HERE / "ricelin-update.py")
+spec = importlib.util.spec_from_file_location("lumen_update", HERE / "lumen-update.py")
 ru = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ru)
 
@@ -36,7 +36,7 @@ def write(path, text):
 def main():
     tmp = Path(tempfile.mkdtemp())
     origin = tmp / "origin"
-    data = tmp / "data" / "ricelin-update"
+    data = tmp / "data" / "lumen-update"
     state = tmp / "state"
     config = tmp / "config"
 
@@ -90,7 +90,6 @@ def main():
     before the config bump so the engine sees an upstream change to merge.
     """
     base_before_bump = ru.git(data, "rev-parse", "HEAD~1").strip()
-    head = ru.git(data, "rev-parse", "HEAD").strip()
     import json
     m = json.loads(ru.manifest_path().read_text())
     m["syncedSha"] = base_before_bump
