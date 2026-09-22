@@ -37,7 +37,7 @@ hl.bind(mod .. " + Period", hl.dsp.exec_cmd('qs ipc call pill emoji ""')) -- Pow
 -- ============================================================================
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd("kitty")) -- Terminal
-hl.bind("f23", hl.dsp.exec_cmd("kitty")) -- Alternate terminal
+hl.bind(mod .. "+SHIFT + F23", hl.dsp.exec_cmd("kitty")) -- Alternate terminal
 hl.bind(mod .. " + W", hl.dsp.exec_cmd("firefox")) -- Browser
 hl.bind(mod .. " + L", hl.dsp.exec_cmd("hyprlock")) -- Lockscreen
 hl.bind(mod .. " + E", hl.dsp.exec_cmd("nautilus -w")) -- File manager

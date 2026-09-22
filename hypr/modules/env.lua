@@ -1,4 +1,4 @@
-hl.env("XCURSOR_THEME", "Bibata-Original-Classic-Right")
+hl.env("XCURSOR_THEME", "Bibata-Original-Ice-Right")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 hl.env("EDITOR", "/usr/bin/nvim")
