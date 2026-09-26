@@ -114,7 +114,7 @@ Singleton {
                 for (var i = 0; i < blocks.length; i++) {
                     var bus = /I2C bus:\s+\/dev\/i2c-(\d+)/.exec(blocks[i]);
                     var conn = /DRM connector:\s+card\d+-(\S+)/.exec(blocks[i]);
-                    if (bus)
+                    if (bus && (!conn || !conn[1].startsWith("eDP-")))
                         mons.push({ bus: bus[1], label: conn ? conn[1] : "BUS " + bus[1] });
                 }
                 root.ddcMonitors = mons;
