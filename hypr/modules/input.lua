@@ -7,6 +7,7 @@ hl.config({
         repeat_rate        = 50,
         repeat_delay       = 400,
         numlock_by_default = false,
+        left_handed        = true, 
         touchpad = {
             natural_scroll = true,
             clickfinger_behavior=true,
