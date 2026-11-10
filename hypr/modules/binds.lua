@@ -38,7 +38,7 @@ hl.bind(mod .. " + Period", hl.dsp.exec_cmd('qs ipc call pill emoji ""')) -- Pow
 
 hl.bind(mod .. " + Return", hl.dsp.exec_cmd("kitty")) -- Terminal
 hl.bind(mod .. "+SHIFT + F23", hl.dsp.exec_cmd("kitty")) -- Alternate terminal
-hl.bind(mod .. " + W", hl.dsp.exec_cmd("zen-browser")) -- Browser
+hl.bind(mod .. " + W", hl.dsp.exec_cmd("zen-browser --disable-features=WaylandFractionalScaleV1")) -- Browser
 hl.bind(mod .. " + L", hl.dsp.exec_cmd("hyprlock")) -- Lockscreen
 hl.bind(mod .. " + E", hl.dsp.exec_cmd("nautilus -w")) -- File manager
 hl.bind("CTRL + SHIFT + escape", hl.dsp.exec_cmd("resources")) -- Task Manager

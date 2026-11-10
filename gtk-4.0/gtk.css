@@ -1,0 +1,7 @@
+/* Original theme (was a symlink to /usr/share/themes/adw-gtk3-dark/gtk-4.0/gtk.css) */
+@import url("file:///usr/share/themes/adw-gtk3-dark/gtk-4.0/libadwaita.css");
+@import url("file:///usr/share/themes/adw-gtk3-dark/gtk-4.0/libadwaita-tweaks.css");
+
+/* Frosted-glass overrides (kept in a separate file so it's easy to re-add
+   if nwg-look recreates this file as a symlink) */
+@import url("glass.css");

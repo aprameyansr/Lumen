@@ -174,3 +174,28 @@ setup.
 
 This repository is based on the upstream [Ricelin] project(https://github.com/Gakuseei/Ricelin)
 and contains my personal modifications and configuration changes.
+
+## Frosted-glass styling (GTK + Zen)
+
+Translucent backgrounds that Hyprland blurs behind. Blur itself comes from
+`hypr/modules/decoration.lua` (`blur.popups = true` covers menus and popovers).
+
+**GTK** (needs the `adw-gtk-theme` package, with `adw-gtk3-dark` selected):
+
+```sh
+cp gtk-3.0/gtk.css ~/.config/gtk-3.0/
+rm -f ~/.config/gtk-4.0/gtk.css   # nwg-look makes this a symlink
+cp gtk-4.0/gtk.css gtk-4.0/glass.css ~/.config/gtk-4.0/
+```
+
+GTK 4.24+ only gets blurred because `glass.css` sets `backdrop-filter` on
+windows. Re-applying a theme in nwg-look replaces `~/.config/gtk-4.0/gtk.css`,
+so copy it back afterwards.
+
+**Zen Browser:** copy into the profile folder (find it in `about:profiles`),
+then fully restart Zen:
+
+```sh
+cp zen/user.js <profile>/
+mkdir -p <profile>/chrome && cp zen/chrome/*.css <profile>/chrome/
+```

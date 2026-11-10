@@ -1,0 +1,169 @@
+/* ==========================================================================
+   Frosted-glass menus & panels for Zen
+   --------------------------------------------------------------------------
+   The blur itself is done by Hyprland (decoration:blur:popups = true in
+   ~/.config/hypr/modules/decoration.lua). This file only makes the menu
+   surfaces translucent so the blur shows through, and tidies them up.
+   Tweak the variables below, then fully restart Zen.
+   ========================================================================== */
+
+:root {
+  /* Dark theme defaults */
+  --glass-bg: rgba(24, 24, 30, 0.55);       /* tint + opacity of menus */
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-hover: rgba(255, 255, 255, 0.10);
+  --glass-active: rgba(255, 255, 255, 0.16);
+  --glass-separator: rgba(255, 255, 255, 0.08);
+  --glass-text: #f2f2f5;
+  --glass-radius: 12px;
+  --glass-item-radius: 7px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --glass-bg: rgba(250, 250, 252, 0.62);
+    --glass-border: rgba(0, 0, 0, 0.10);
+    --glass-hover: rgba(0, 0, 0, 0.07);
+    --glass-active: rgba(0, 0, 0, 0.12);
+    --glass-separator: rgba(0, 0, 0, 0.08);
+    --glass-text: #1b1b1f;
+  }
+}
+
+/* ---- Point Firefox/Zen's own colour variables at the glass tint -------- */
+menupopup:not(#tab-preview-panel),
+panel:not(#tab-preview-panel) {
+  appearance: none !important;
+  --panel-background: var(--glass-bg) !important;
+  --arrowpanel-background: var(--glass-bg) !important;
+  --menu-background-color: var(--glass-bg) !important;
+  --panel-border-color: var(--glass-border) !important;
+  --arrowpanel-border-color: var(--glass-border) !important;
+  --menu-border-color: var(--glass-border) !important;
+  --panel-color: var(--glass-text) !important;
+  --arrowpanel-color: var(--glass-text) !important;
+  --menu-color: var(--glass-text) !important;
+  --menuitem-hover-background-color: var(--glass-hover) !important;
+  --panel-item-hover-bgcolor: var(--glass-hover) !important;
+  --panel-item-active-bgcolor: var(--glass-active) !important;
+  --arrowpanel-dimmed: var(--glass-hover) !important;
+  --arrowpanel-dimmed-further: var(--glass-active) !important;
+  --panel-separator-color: var(--glass-separator) !important;
+  --panel-border-radius: var(--glass-radius) !important;
+  --arrowpanel-border-radius: var(--glass-radius) !important;
+  /* <select> dropdowns on web pages inject their own colours */
+  --content-select-background-image: none !important;
+}
+
+/* ---- The actual popup surface ------------------------------------------ */
+menupopup:not(#tab-preview-panel)::part(content),
+panel:not(#tab-preview-panel)::part(content) {
+  background: var(--glass-bg) !important;
+  background-image: none !important;
+  color: var(--glass-text) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+}
+
+menupopup:not(#tab-preview-panel)::part(content) {
+  padding: 5px !important;
+}
+
+/* Inner panel views (three-dots / app menu, extensions, etc.) */
+panel .panel-viewcontainer,
+panel .panel-viewstack,
+panel panelview,
+panel .panel-subview-body,
+panel .panel-header,
+panel .panel-footer {
+  background: transparent !important;
+}
+
+/* ---- Menu items ---------------------------------------------------------- */
+menupopup > menuitem,
+menupopup > menu {
+  border-radius: var(--glass-item-radius) !important;
+  margin-inline: 0 !important;
+  color: var(--glass-text) !important;
+}
+
+menupopup > menuitem[_moz-menuactive],
+menupopup > menu[_moz-menuactive] {
+  background-color: var(--glass-hover) !important;
+  color: var(--glass-text) !important;
+}
+
+menupopup > menuitem[disabled="true"],
+menupopup > menu[disabled="true"] {
+  opacity: 0.45;
+}
+
+menupopup > menuseparator {
+  border-top-color: var(--glass-separator) !important;
+  margin-inline: 6px !important;
+}
+
+/* App-menu / panel buttons */
+panel .subviewbutton,
+panel toolbarbutton.subviewbutton {
+  border-radius: var(--glass-item-radius) !important;
+}
+
+panel .subviewbutton:not([disabled]):hover {
+  background-color: var(--glass-hover) !important;
+}
+
+panel .subviewbutton:not([disabled]):hover:active {
+  background-color: var(--glass-active) !important;
+}
+
+panel toolbarseparator {
+  border-top-color: var(--glass-separator) !important;
+}
+
+/* ==========================================================================
+   Floating URL bar ("spotlight" on new tab / Ctrl+L) - frosted glass
+   This one lives inside the window, so CSS backdrop-filter blurs the page
+   behind it directly.
+   ========================================================================== */
+:root {
+  --spotlight-bg: rgba(22, 22, 28, 0.50);
+  --spotlight-blur: 32px;
+  --spotlight-border: rgba(255, 255, 255, 0.12);
+  --spotlight-highlight: rgba(255, 255, 255, 0.07);
+  --spotlight-separator: rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --spotlight-bg: rgba(255, 255, 255, 0.55);
+    --spotlight-border: rgba(0, 0, 0, 0.10);
+    --spotlight-highlight: rgba(255, 255, 255, 0.60);
+    --spotlight-separator: rgba(0, 0, 0, 0.08);
+  }
+}
+
+#urlbar[breakout-extend] {
+  --urlbarview-separator-color: var(--spotlight-separator) !important;
+}
+
+#urlbar[breakout-extend] .urlbar-background {
+  background-color: var(--spotlight-bg) !important;
+  backdrop-filter: blur(var(--spotlight-blur)) saturate(180%) !important;
+  outline: 1px solid var(--spotlight-border) !important;
+  outline-offset: 0 !important;
+  box-shadow:
+    inset 0 1px 0 var(--spotlight-highlight),
+    0 30px 100px -15px rgba(0, 0, 0, 0.55),
+    0 8px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Keep it glassy even when the window loses focus */
+#urlbar[breakout-extend] .urlbar-background:-moz-window-inactive {
+  background-color: var(--spotlight-bg) !important;
+}
+
+/* Result rows: rounded, softer hover */
+#urlbar[breakout-extend] .urlbarView-row {
+  border-radius: 10px !important;
+}

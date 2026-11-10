@@ -51,6 +51,8 @@ hl.config({
 			vibrancy = 0.17,
 			noise = 0.01,
 			new_optimizations = true,
+			popups = true,
+			popups_ignorealpha = 0.2,
 		},
 	},
 })

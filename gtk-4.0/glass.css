@@ -1,0 +1,155 @@
+/* ==========================================================================
+   Frosted glass for GTK4 / libadwaita apps (Nautilus, Loupe, Resources, ...)
+   Hyprland blurs whatever is behind transparent pixels, so we only need to
+   give the backgrounds some alpha. Text/icons stay fully opaque.
+
+   Layers stack inside a window (window -> sidebar/view -> cards), so the
+   window base carries most of the tint and inner layers stay light.
+   Tweak the alpha (the "/ NN%" part) and relaunch the app.
+   ========================================================================== */
+
+/* Named colours (plain GTK4 widgets + adw-gtk3 theme) */
+@define-color window_bg_color            rgba(28, 28, 34, 0.66);
+@define-color view_bg_color              rgba(18, 18, 22, 0.35);
+@define-color headerbar_bg_color         rgba(40, 40, 46, 0.42);
+@define-color headerbar_backdrop_color   rgba(40, 40, 46, 0.42);
+@define-color sidebar_bg_color           rgba(40, 40, 46, 0.40);
+@define-color sidebar_backdrop_color     rgba(40, 40, 46, 0.40);
+@define-color secondary_sidebar_bg_color       rgba(40, 40, 46, 0.32);
+@define-color secondary_sidebar_backdrop_color rgba(40, 40, 46, 0.32);
+@define-color popover_bg_color           rgba(24, 24, 30, 0.55);
+@define-color dialog_bg_color            rgba(32, 32, 38, 0.92);
+
+/* libadwaita variables */
+:root {
+  --window-bg-color: rgb(28 28 34 / 66%);
+  --view-bg-color: rgb(18 18 22 / 35%);
+  --headerbar-bg-color: rgb(40 40 46 / 42%);
+  --headerbar-backdrop-color: rgb(40 40 46 / 42%);
+  --sidebar-bg-color: rgb(40 40 46 / 40%);
+  --sidebar-backdrop-color: rgb(40 40 46 / 40%);
+  --secondary-sidebar-bg-color: rgb(40 40 46 / 32%);
+  --secondary-sidebar-backdrop-color: rgb(40 40 46 / 32%);
+  --popover-bg-color: rgb(24 24 30 / 55%);
+  /* in-window dialogs are NOT blurred (they sit inside the window), keep readable */
+  --dialog-bg-color: rgb(32 32 38 / 92%);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --window-bg-color: rgb(250 250 252 / 72%);
+    --view-bg-color: rgb(255 255 255 / 42%);
+    --headerbar-bg-color: rgb(240 240 244 / 45%);
+    --headerbar-backdrop-color: rgb(240 240 244 / 45%);
+    --sidebar-bg-color: rgb(235 235 240 / 42%);
+    --sidebar-backdrop-color: rgb(235 235 240 / 42%);
+    --secondary-sidebar-bg-color: rgb(235 235 240 / 36%);
+    --secondary-sidebar-backdrop-color: rgb(235 235 240 / 36%);
+    --popover-bg-color: rgb(250 250 252 / 62%);
+    --dialog-bg-color: rgb(250 250 252 / 94%);
+  }
+}
+
+/* GTK 4.24 tells Hyprland (ext-background-effect protocol) which area to blur.
+   Without this it reports an empty area and Hyprland skips the blur. */
+window,
+popover {
+  backdrop-filter: blur(20px);
+}
+
+/* Menus / popovers: same look as Zen's glass menus */
+popover > contents {
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  padding: 5px;
+}
+popover > arrow { background: none; border: none; }
+popover.menu modelbutton,
+popover.menu row {
+  border-radius: 7px;
+  min-height: 28px;
+}
+popover.menu modelbutton:hover,
+popover.menu modelbutton:selected {
+  background-color: rgb(255 255 255 / 10%);
+}
+popover.menu separator { background-color: rgb(255 255 255 / 8%); margin: 4px 6px; }
+
+@media (prefers-color-scheme: light) {
+  popover > contents { border-color: rgb(0 0 0 / 10%); }
+  popover.menu modelbutton:hover,
+  popover.menu modelbutton:selected { background-color: rgb(0 0 0 / 7%); }
+  popover.menu separator { background-color: rgb(0 0 0 / 8%); }
+}
+
+/* Stand-alone dialog windows (Zenity, message boxes, file pickers) are their
+   own surfaces, so Hyprland blurs behind them: give them the glass look. */
+window.dialog {
+  --dialog-bg-color: rgb(28 28 34 / 66%);
+}
+/* Message dialogs paint the dialog colour on top of the window colour, so the
+   window layer alone gives the same glass level as other apps. */
+window.messagedialog {
+  --dialog-bg-color: transparent;
+}
+@media (prefers-color-scheme: light) {
+  window.dialog {
+    --dialog-bg-color: rgb(250 250 252 / 72%);
+  }
+}
+
+/* In-window dialogs (e.g. Nautilus batch rename) sit inside the window, so
+   nothing blurs behind them. Make them a solid, readable sheet instead. */
+dialog {
+  --window-bg-color: rgb(30 30 36);
+  --view-bg-color: rgb(30 30 36);
+  --dialog-bg-color: rgb(30 30 36);
+  --headerbar-bg-color: rgb(30 30 36);
+  --headerbar-backdrop-color: rgb(30 30 36);
+}
+dialog > sheet,
+dialog.floating > sheet {
+  background-color: rgb(30 30 36);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 14px;
+}
+@media (prefers-color-scheme: light) {
+  dialog {
+    --window-bg-color: rgb(250 250 252);
+    --view-bg-color: rgb(250 250 252);
+    --dialog-bg-color: rgb(250 250 252);
+    --headerbar-bg-color: rgb(250 250 252);
+    --headerbar-backdrop-color: rgb(250 250 252);
+  }
+  dialog > sheet, dialog.floating > sheet {
+    background-color: rgb(250 250 252);
+    border-color: rgb(0 0 0 / 10%);
+  }
+}
+
+/* Nautilus path bar: flat text crumbs instead of stacked boxes */
+.nautilus-pathbar {
+  background-color: rgb(255 255 255 / 6%);
+}
+.nautilus-pathbar .nautilus-path-button,
+.nautilus-pathbar button {
+  background: none;
+  box-shadow: none;
+}
+.nautilus-pathbar .nautilus-path-button:hover,
+.nautilus-pathbar button:hover {
+  background-color: rgb(255 255 255 / 8%);
+}
+
+/* Loupe: floating prev/next + zoom controls over the image. They're drawn
+   inside the window, so GTK renders this blur itself (GTK 4.22+). */
+.osd-box {
+  background-color: rgb(24 24 30 / 55%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 10%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
+}
+.osd-box button:hover {
+  background-color: rgb(255 255 255 / 10%);
+}

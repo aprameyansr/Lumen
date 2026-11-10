@@ -1,0 +1,46 @@
+/* ==========================================================================
+   Frosted glass for GTK3 apps (nwg-look, blueman, ...)
+   Overrides adw-gtk3-dark's named colours with translucent versions;
+   Hyprland blurs what's behind. Tweak the last number (alpha) and relaunch.
+   ========================================================================== */
+
+@define-color window_bg_color            rgba(28, 28, 34, 0.62);
+@define-color view_bg_color              rgba(18, 18, 22, 0.25);
+@define-color headerbar_bg_color         rgba(40, 40, 46, 0.30);
+@define-color headerbar_backdrop_color   rgba(40, 40, 46, 0.30);
+@define-color sidebar_bg_color           rgba(40, 40, 46, 0.28);
+@define-color sidebar_backdrop_color     rgba(40, 40, 46, 0.28);
+@define-color secondary_sidebar_bg_color       rgba(40, 40, 46, 0.22);
+@define-color secondary_sidebar_backdrop_color rgba(40, 40, 46, 0.22);
+@define-color popover_bg_color           rgba(24, 24, 30, 0.55);
+@define-color dialog_bg_color            rgba(32, 32, 38, 0.92);
+
+/* Menus: same look as Zen's glass menus */
+menu, .menu, .context-menu {
+  background-color: rgba(24, 24, 30, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  padding: 5px;
+}
+menu menuitem, .menu menuitem, .context-menu menuitem {
+  border-radius: 7px;
+  min-height: 26px;
+}
+menu menuitem:hover, .menu menuitem:hover, .context-menu menuitem:hover {
+  background-color: rgba(255, 255, 255, 0.10);
+}
+menu separator, .menu separator { background-color: rgba(255, 255, 255, 0.08); margin: 4px 6px; }
+popover.background, popover.background > contents {
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+}
+
+/* File picker (xdg-desktop-portal-gtk): lighter inner layers so it isn't
+   darker than other glass windows. Other GTK3 apps are unaffected. */
+filechooser .view,
+filechooser treeview.view,
+filechooser placessidebar,
+filechooser placessidebar list,
+filechooser .sidebar {
+  background-color: transparent;
+}
