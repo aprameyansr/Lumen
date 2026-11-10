@@ -4,7 +4,7 @@ Thumbs.db
 
 # Editor swap
 *.swp
-*.bak
+*.bak*
 *.tmp
 
 # Legacy migration artifacts
