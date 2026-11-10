@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import "Singletons"
 
 PillSurface {
@@ -16,7 +15,6 @@ PillSurface {
     property string query: ""
     property int selectedIndex: 0
     property int category: 0
-    property var recent: []
 
     /*
      * Keep the same caret tracking used by Launcher.
@@ -49,11 +47,6 @@ PillSurface {
      * rather than adding another column.
      */
     readonly property int columns: 6
-
-    readonly property real cellGap: 4 * root.s
-
-    readonly property real gridCellWidth:
-        emojiGrid.width / root.columns
 
     /*
      * Emoji data:
@@ -980,22 +973,10 @@ PillSurface {
         );
     }
 
-    function addRecent(value) {
-        var next = [value];
-
-        for (var i = 0; i < root.recent.length; ++i) {
-            if (root.recent[i] !== value)
-                next.push(root.recent[i]);
-        }
-
-        root.recent = next.slice(0, 24);
-    }
-
     /*
      * Copy AND type.
      */
     function copyEmoji(value) {
-        root.addRecent(value);
         root.requestClose();
 
         Quickshell.execDetached([

@@ -265,14 +265,6 @@ PillSurface {
         hintDwell.restart();
     }
 
-    Connections {
-        target: Walls
-        function onEntriesChanged() {
-            if (!root.searching && root.focusIndex >= Walls.count)
-                root.focusIndex = Math.max(0, Walls.count - 1);
-        }
-    }
-
     readonly property string searchScript: Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper-search.sh"
 
     /**
@@ -663,7 +655,6 @@ PillSurface {
             readonly property real sat: root.slotLerp(root.slotSat, ao)
             readonly property real corner: (8 + 2 * Math.max(0, 1 - ao)) * root.s
 
-            readonly property real hold: trashHeat.hold
             readonly property bool committing: trashHeat.hold >= trashHeat.tapThreshold
             readonly property real commitProgress: Math.max(0, (trashHeat.hold - trashHeat.tapThreshold) / (1 - trashHeat.tapThreshold))
 

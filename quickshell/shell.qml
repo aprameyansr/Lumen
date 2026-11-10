@@ -57,29 +57,6 @@ ShellRoot {
         }
     }
 
-    /**
-     * After an update relaunches the shell, raise a one-shot toast naming what
-     * landed, so the apply ends in a confirmation instead of a silent restart. The
-     * updater drops the marker just before it restarts; the short delay lets the
-     * notification server own the bus before we post to it, and the marker is
-     * removed as it is read so the toast only ever fires once.
-     */
-    Timer {
-        interval: 2500
-        running: true
-        onTriggered: updatedToast.running = true
-    }
-    Process {
-        id: updatedToast
-        command: ["sh", "-c",
-            "m=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen/updated\"; [ -f \"$m\" ] || exit 0; "
-            + "b=$(cat \"$m\"); rm -f \"$m\"; "
-            + "gdbus call --session --dest org.freedesktop.Notifications "
-            + "--object-path /org/freedesktop/Notifications "
-            + "--method org.freedesktop.Notifications.Notify "
-            + "Lumen 0 '' 'Lumen updated' \"$b\" '[]' '{}' 5000 >/dev/null 2>&1"]
-    }
-
     PanelWindow {
         id: inhibitWin
         visible: Flags.keepAwake
@@ -102,7 +79,7 @@ ShellRoot {
      */
     Process {
         running: Flags.keepAwake
-        command: ["systemd-inhibit", "--what=idle:sleep", "--who=Lumen",
+        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=Lumen",
                   "--why=keep awake", "--mode=block", "sleep", "infinity"]
     }
 
@@ -265,7 +242,7 @@ ShellRoot {
             readonly property real topGap: 8 * Flags.topGap * s
             readonly property string surface: root.openMon === modelData.name ? root.openSurface : ""
             readonly property bool surfaceOpen: surface.length > 0
-            readonly property bool modal: pill.authPending ? false : (surfaceOpen || pill.held || pill.quickChoosing)
+            readonly property bool modal: surfaceOpen || pill.held || pill.quickChoosing
 
             /**
              * True while this monitor's active workspace reports a fullscreen
@@ -333,7 +310,7 @@ ShellRoot {
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: ((surfaceOpen || pill.quickChoosing) && !pill.authPending) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: (surfaceOpen || pill.quickChoosing) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             WlrLayershell.namespace: "pill"
 
             anchors { top: true; left: true; right: true; bottom: true }
@@ -460,7 +437,7 @@ ShellRoot {
                     readonly property real pad: 56 * overlay.s
                     readonly property bool swiping: pill.swipeX !== 0 || pill.swipeY !== 0
                     anchors.top: parent.top
-                    anchors.topMargin: (pill.mode === "game" ? 0 : overlay.topGap) - pad
+                    anchors.topMargin: overlay.topGap - pad
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: pill.width + 2 * pad
                     height: pill.height + 2 * pad

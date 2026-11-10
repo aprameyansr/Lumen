@@ -16,14 +16,12 @@ Singleton {
     id: root
 
     readonly property string surface: adapter.surface
-    readonly property string surfaceContainer: adapter.surface_container
     readonly property string surfaceContainerLow: adapter.surface_container_low
     readonly property string surfaceContainerHigh: adapter.surface_container_high
     readonly property string surfaceContainerHighest: adapter.surface_container_highest
     readonly property string primary: adapter.primary
     readonly property string primaryContainer: adapter.primary_container
     readonly property string onPrimaryContainer: adapter.on_primary_container
-    readonly property string outline: adapter.outline
     readonly property string outlineVariant: adapter.outline_variant
     readonly property string cream: adapter.cream
     readonly property string bright: adapter.bright

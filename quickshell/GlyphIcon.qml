@@ -16,7 +16,6 @@ Item {
     property string name: ""
     property color color: Theme.iconDim
     property real stroke: 1.8
-    property real fillProgress: 1
 
     readonly property real u: Math.min(width, height) / 24
 

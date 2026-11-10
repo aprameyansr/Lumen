@@ -66,14 +66,14 @@ Item {
     readonly property bool recorderOpen: surface === "recorder"
     readonly property bool sysmonOpen: surface === "sysmon"
     readonly property bool appearanceOpen: surface === "appearance"
-    readonly property bool updatesOpen: surface === "updates"
     readonly property bool displayOpen: surface === "display"
     readonly property bool inputOpen: surface === "input"
     readonly property bool lookOpen: surface === "look"
     readonly property bool animationOpen: surface === "animation"
+    readonly property bool notificationsOpen: surface === "notifications"
     readonly property bool fontpickerOpen: surface === "fontpicker"
-    readonly property bool settingsLike: settingsOpen || appearanceOpen || updatesOpen
-        || lookOpen || inputOpen || displayOpen || animationOpen || fontpickerOpen
+    readonly property bool settingsLike: settingsOpen || appearanceOpen
+        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || fontpickerOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -103,14 +103,6 @@ Item {
     }
 
     readonly property bool expanded: surfaceOpen || held || hoverLatch
-
-    /**
-     * True while the open surface is waiting on an external auth dialog (the
-     * updater's pkexec password prompt). The shell drops its modal grab for this
-     * so the polkit window underneath is clickable and typeable, instead of the
-     * backdrop swallowing the reach for it and dismissing the whole pill.
-     */
-    readonly property bool authPending: updatesOpen && ldUpdates.item !== null && ldUpdates.item.applying
 
     /**
      * The special workspace shown on this pill's monitor, surfaced as a plain word
@@ -182,11 +174,11 @@ Item {
     readonly property real recorderW: 384 * s
     readonly property real sysmonW: 392 * s
     readonly property real appearanceW: 392 * s
-    readonly property real updatesW: 360 * s
     readonly property real displayW: 392 * s
     readonly property real inputW: 392 * s
     readonly property real lookW: 392 * s
     readonly property real animationW: 392 * s
+    readonly property real notificationsW: 392 * s
     readonly property real fontpickerW: 360 * s
     readonly property real toastW: 342 * s
     readonly property real quickChooseW: 344 * s
@@ -195,8 +187,6 @@ Item {
     readonly property real quickCountH: 64 * s
     readonly property real dragOverW: 300 * s
     readonly property real dragOverH: 126 * s
-    readonly property real gameH: 34 * s
-    readonly property real gameW: barWindow ? barWindow.width : 1920
     readonly property real restCorner: 18 * s
     readonly property real openCorner: 22 * s
 
@@ -245,11 +235,11 @@ Item {
         recorder:  { size: () => Qt.size(recorderW, surfaceItem(ldRecorder).implicitHeight + 33 * s), ame: () => surfaceItem(ldRecorder) },
         sysmon:    { size: () => Qt.size(sysmonW, surfaceItem(ldSysmon).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmon) },
         appearance: { size: () => Qt.size(appearanceW, surfaceItem(ldAppearance).implicitHeight + 29 * s), ame: () => surfaceItem(ldAppearance) },
-        updates:    { size: () => Qt.size(updatesW, surfaceItem(ldUpdates).implicitHeight + 29 * s), ame: () => surfaceItem(ldUpdates) },
         display:    { size: () => Qt.size(displayW, surfaceItem(ldDisplay).implicitHeight + 29 * s), ame: () => surfaceItem(ldDisplay) },
         input:      { size: () => Qt.size(inputW, surfaceItem(ldInput).implicitHeight + 29 * s), ame: () => surfaceItem(ldInput) },
         look:       { size: () => Qt.size(lookW, surfaceItem(ldLook).implicitHeight + 29 * s), ame: () => surfaceItem(ldLook) },
         animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
+        notifications: { size: () => Qt.size(notificationsW, surfaceItem(ldNotifications).implicitHeight + 29 * s), ame: () => surfaceItem(ldNotifications) },
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
     })
 
@@ -315,6 +305,8 @@ Item {
             return ldDisplay.item;
         if (pill.animationOpen)
             return ldAnimation.item;
+        if (pill.notificationsOpen)
+            return ldNotifications.item;
         if (pill.fontpickerOpen)
             return ldFontpicker.item;
         return null;
@@ -437,7 +429,7 @@ Item {
             ldWorkspaces.item.closeForm();
             return;
         }
-        if (pill.appearanceOpen || pill.updatesOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.animationOpen || pill.workspacesOpen) {
+        if (pill.appearanceOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.animationOpen || pill.notificationsOpen || pill.workspacesOpen) {
             pill.requestSurface("settings");
             return;
         }
@@ -538,7 +530,7 @@ Item {
         precision: Flags.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 
-    property real morphRadius: (mode === "rest" || mode === "hover" || mode === "game") ? restCorner : openCorner
+    property real morphRadius: (mode === "rest" || mode === "hover") ? restCorner : openCorner
 
     /**
      * Target geometry for the non-surface morph modes. Surface sizes come from
@@ -552,8 +544,7 @@ Item {
         hover: () => Qt.size(hoverW, hoverH),
         quickChoose: () => Qt.size(quickChooseW, quickChooseH),
         quickCount:  () => Qt.size(quickCountW, quickCountH),
-        dragOver:    () => Qt.size(dragOverW, dragOverH),
-        game:        () => Qt.size(gameW, gameH)
+        dragOver:    () => Qt.size(dragOverW, dragOverH)
     })
 
     readonly property size targetSize: {
@@ -695,18 +686,7 @@ Item {
         id: body
         anchors.fill: parent
 
-        /**
-         * Corner flatness rides the morph curve so docking into the game bar
-         * squares the corners as one continuous shape change instead of a snap.
-         */
-        property real gameFlat: pill.mode === "game" ? 1 : 0
-        Behavior on gameFlat { NumberAnimation { duration: Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
-
         radius: pill.morphRadius
-        topLeftRadius: pill.morphRadius * (1 - gameFlat)
-        topRightRadius: pill.morphRadius * (1 - gameFlat)
-        bottomLeftRadius: pill.morphRadius * (1 - gameFlat)
-        bottomRightRadius: pill.morphRadius * (1 - gameFlat)
         border.width: 1
         border.color: Theme.border
         gradient: Gradient {
@@ -1132,134 +1112,10 @@ Item {
         }
     }
 
-    /**
-     * Game-mode face: the pill docks into a flush top bar carrying only the clock
-     * and, when something plays, the current track. Everything else the desktop
-     * usually shows is deliberately gone.
-     */
-    Item {
-        id: gameBar
-        anchors.fill: parent
-        enabled: pill.mode === "game"
-        opacity: pill.mode === "game" ? Math.pow(pill.morphCloseness, 1.2) : 0
-        visible: opacity > 0.01
-
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-
-        Row {
-            anchors.left: parent.left
-            anchors.leftMargin: 18 * pill.s
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 9 * pill.s
-            opacity: Players.has ? 1 : 0
-            visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 26 * pill.s
-                height: 26 * pill.s
-                radius: 7 * pill.s
-                color: Theme.tileBg
-                clip: true
-                Image {
-                    anchors.fill: parent
-                    source: Players.artUrl
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    visible: status === Image.Ready
-                }
-            }
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                Text {
-                    text: Players.title
-                    color: Theme.cream
-                    font.family: Theme.font
-                    font.pixelSize: 12.5 * pill.s
-                    font.weight: Font.Medium
-                    elide: Text.ElideRight
-                    width: Math.min(implicitWidth, 220 * pill.s)
-                }
-                Text {
-                    text: Players.artist
-                    color: Theme.dim
-                    font.family: Theme.font
-                    font.pixelSize: 10.5 * pill.s
-                    elide: Text.ElideRight
-                    width: Math.min(implicitWidth, 220 * pill.s)
-                    visible: text.length > 0
-                }
-            }
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: clock.hhmm
-            color: Theme.cream
-            font.family: Theme.font
-            font.pixelSize: 16 * pill.s
-            font.weight: Font.DemiBold
-            font.features: ({ "tnum": 1 })
-        }
-
-        /**
-         * Volume/brightness feedback stays visible while gaming as a compact
-         * chip on the bar's right, since the full OSD face is parked behind
-         * game mode in the mode ladder. Notifications stay suppressed.
-         */
-        Row {
-            anchors.right: parent.right
-            anchors.rightMargin: 18 * pill.s
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 9 * pill.s
-            opacity: osd.flashing && (osd.kind === "volume" || osd.kind === "brightness") ? 1 : 0
-            visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-
-            GlyphIcon {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 14 * pill.s
-                height: 14 * pill.s
-                name: osd.kind === "brightness" ? "sun" : (osd.muted ? "speaker-off" : "speaker")
-                color: osd.kind === "volume" && osd.muted ? Theme.dim : Theme.iconDim
-                stroke: 1.7
-            }
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 64 * pill.s
-                height: 3 * pill.s
-                radius: 1.5 * pill.s
-                color: Theme.threadBg
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: parent.width * (osd.kind === "brightness" ? osd.brightness : osd.volume)
-                    radius: parent.radius
-                    color: osd.kind === "volume" && osd.muted ? Theme.vermDim : Theme.vermLit
-                    Behavior on width { NumberAnimation { duration: Motion.fast } }
-                }
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Math.round((osd.kind === "brightness" ? osd.brightness : osd.volume) * 100) + "%"
-                color: osd.kind === "volume" && osd.muted ? Theme.dim : Theme.cream
-                font.family: Theme.font
-                font.pixelSize: 10.5 * pill.s
-                font.weight: Font.DemiBold
-                font.features: ({ "tnum": 1 })
-            }
-        }
-    }
-
     Item {
         id: rest
         anchors.fill: parent
-        opacity: (pill.expanded || pill.dragActive || pill.mode === "game" || pill.mode === "toast" || pill.mode === "osd" || pill.mode === "quickChoose" || pill.mode === "quickCount") ? 0 : Math.pow(pill.morphCloseness, 1.5)
+        opacity: (pill.expanded || pill.dragActive || pill.mode === "toast" || pill.mode === "osd" || pill.mode === "quickChoose" || pill.mode === "quickCount") ? 0 : Math.pow(pill.morphCloseness, 1.5)
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: pill.mode === "rest" ? Motion.fast : Math.round(260 * Motion.mult) } }
 
@@ -1610,7 +1466,7 @@ Item {
                             id: btLowPct
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            visible: Peripherals.lowPct >= 0 && Peripherals.lowPct <= Peripherals.lowAt
+                            visible: Peripherals.lowestPct >= 0 && Peripherals.lowestPct <= Peripherals.lowAt
                             text: Peripherals.lowestPct + "%"
                             color: Theme.vermLit
                             font.family: Theme.font
@@ -2046,7 +1902,6 @@ Item {
             open: pill.keybindsOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
@@ -2072,7 +1927,6 @@ Item {
             open: pill.stashOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
@@ -2085,7 +1939,6 @@ Item {
             open: pill.spaceappsOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
@@ -2121,19 +1974,6 @@ Item {
         sourceComponent: Appearance {
             s: pill.s
             open: pill.appearanceOpen
-            morphCloseness: pill.morphCloseness
-            onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
-        }
-    }
-
-    Loader {
-        id: ldUpdates
-        active: false
-        anchors.fill: parent
-        sourceComponent: Updates {
-            s: pill.s
-            open: pill.updatesOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
             onRequestSurface: (name) => pill.requestSurface(name)
@@ -2193,6 +2033,19 @@ Item {
     }
 
     Loader {
+        id: ldNotifications
+        active: false
+        anchors.fill: parent
+        sourceComponent: NotificationsSurface {
+            s: pill.s
+            open: pill.notificationsOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
         id: ldFontpicker
         active: false
         anchors.fill: parent
@@ -2201,7 +2054,6 @@ Item {
             open: pill.fontpickerOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 

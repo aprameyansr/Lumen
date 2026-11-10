@@ -606,7 +606,6 @@ PillSurface {
                                     anchors.bottom: parent.bottom
                                     visible: conItem.hasBattery
                                     s: root.s
-                                    kind: "battery"
                                     level: Math.max(0, conItem.battery) / 100
                                 }
 

@@ -268,6 +268,7 @@ Singleton {
         blockLoading: true
         watchChanges: true
         printErrors: false
+        onFileChanged: reload()
     }
 
     FileView {

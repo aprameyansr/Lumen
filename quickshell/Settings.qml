@@ -15,13 +15,13 @@ SettingsSurface {
 
     rows: [
         { item: appearanceRow, kind: "nav", surface: "appearance" },
+        { item: notificationsRow, kind: "nav", surface: "notifications" },
         { item: lookRow, kind: "nav", surface: "look" },
         { item: displayRow, kind: "nav", surface: "display" },
         { item: inputRow, kind: "nav", surface: "input" },
         { item: animationRow, kind: "nav", surface: "animation" },
         { item: keybindsRow, kind: "nav", surface: "keybinds" },
-        { item: workspacesRow, kind: "nav", surface: "workspaces" },
-        { item: updatesRow, kind: "nav", surface: "updates" }
+        { item: workspacesRow, kind: "nav", surface: "workspaces" }
     ]
 
     Column {
@@ -50,6 +50,23 @@ SettingsSurface {
                 height: 16 * root.s
                 name: "chevron-right"
                 color: root.focusRowItem === appearanceRow ? Theme.cream : Theme.iconDim
+                stroke: 2.2
+            }
+        }
+
+        SettingsRow {
+            id: notificationsRow
+            surface: root
+            captionOnFocus: true
+            icon: "inbox"
+            name: "Notifications"
+            sub: "Flashes, toasts, muted apps"
+
+            GlyphIcon {
+                width: 16 * root.s
+                height: 16 * root.s
+                name: "chevron-right"
+                color: root.focusRowItem === notificationsRow ? Theme.cream : Theme.iconDim
                 stroke: 2.2
             }
         }
@@ -146,30 +163,13 @@ SettingsSurface {
             icon: "layers"
             name: "Workspaces"
             sub: "Special spaces and their keys"
-
-            GlyphIcon {
-                width: 16 * root.s
-                height: 16 * root.s
-                name: "chevron-right"
-                color: root.focusRowItem === workspacesRow ? Theme.cream : Theme.iconDim
-                stroke: 2.2
-            }
-        }
-
-        SettingsRow {
-            id: updatesRow
-            surface: root
-            captionOnFocus: true
-            icon: "download"
-            name: "Updates"
-            sub: "Version and check for updates"
             last: true
 
             GlyphIcon {
                 width: 16 * root.s
                 height: 16 * root.s
                 name: "chevron-right"
-                color: root.focusRowItem === updatesRow ? Theme.cream : Theme.iconDim
+                color: root.focusRowItem === workspacesRow ? Theme.cream : Theme.iconDim
                 stroke: 2.2
             }
         }

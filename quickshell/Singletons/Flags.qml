@@ -41,14 +41,14 @@ Singleton {
     property alias recordClearedBefore: adapter.recordClearedBefore
     property alias weatherCity: adapter.weatherCity
     property alias musicViz: adapter.musicViz
-    property alias gamePrevDnd: adapter.gamePrevDnd
-    property alias gamePrevViz: adapter.gamePrevViz
-    property alias gamePrevAwake: adapter.gamePrevAwake
-    property alias gamePrevProfile: adapter.gamePrevProfile
     property alias nightLightMode: adapter.nightLightMode
     property alias nightLightTemp: adapter.nightLightTemp
     property alias nightLightOnMin: adapter.nightLightOnMin
     property alias nightLightOffMin: adapter.nightLightOffMin
+    property alias osdOff: adapter.osdOff
+    property alias osdTime: adapter.osdTime
+    property alias notifSecs: adapter.notifSecs
+    property alias notifMuted: adapter.notifMuted
 
     FileView {
         id: file
@@ -72,7 +72,7 @@ Singleton {
             property bool clockSeconds: false
             property bool showGlyphs: true
             property string paletteMode: "static"
-            /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (lumen-wallpaper-dir state file), then $HOME/Pictures/Wallpapers. Lives in user state so an in-app update never clobbers a custom folder. */
+            /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (lumen-wallpaper-dir state file), then $HOME/Pictures/Wallpapers. */
             property string wallpaperDir: ""
             /** Super+B random target: "all" repaints every monitor, "cursor" only the one under the pointer. */
             property string randomScope: "all"
@@ -98,14 +98,18 @@ Singleton {
             property real recordClearedBefore: 0
             property string weatherCity: ""
             property bool musicViz: true
-            property bool gamePrevDnd: false
-            property bool gamePrevViz: true
-            property bool gamePrevAwake: false
-            property string gamePrevProfile: ""
             property string nightLightMode: "off"
             property int nightLightTemp: 4000
             property int nightLightOnMin: 1260
             property int nightLightOffMin: 450
+            /** Pill flashes switched off: volume, brightness, battery, workspace, record, play (play and pause) and song. */
+            property var osdOff: []
+            /** Multiplier on how long every pill flash stays. */
+            property real osdTime: 1.0
+            /** Seconds a notification card stays in the pill; low urgency gets two thirds of it. */
+            property real notifSecs: 6
+            /** App names whose notifications skip the pill and only land in the inbox. */
+            property var notifMuted: []
         }
     }
 }

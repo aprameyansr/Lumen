@@ -12,14 +12,13 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    property bool present: false
     property real brightness: 0
     property int lastPct: -1
 
     signal changed()
 
     Process {
-        command: ["sh", "-c", "dev=$(ls /sys/class/backlight 2>/dev/null | head -n1); [ -n \"$dev\" ] || exit 0; max=$(cat /sys/class/backlight/$dev/max_brightness); last=\"\"; while true; do val=$(cat /sys/class/backlight/$dev/brightness); if [ \"$val\" != \"$last\" ]; then echo \"$(( val * 100 / max ))\"; last=\"$val\"; fi; sleep 1; done"]
+        command: ["sh", "-c", "dev=$(ls /sys/class/backlight 2>/dev/null | head -n1); [ -n \"$dev\" ] || exit 0; max=$(cat /sys/class/backlight/$dev/max_brightness); last=\"\"; while true; do val=$(cat /sys/class/backlight/$dev/brightness); if [ \"$val\" != \"$last\" ]; then echo \"$(( val * 100 / max ))\"; last=\"$val\"; fi; sleep 0.01; done"]
         running: true
         stdout: SplitParser {
             onRead: (line) => {
@@ -27,7 +26,6 @@ Singleton {
                 if (isNaN(pct))
                     return;
                 var seen = root.lastPct >= 0;
-                root.present = true;
                 root.brightness = Math.max(0, Math.min(100, pct)) / 100.0;
                 root.lastPct = pct;
                 if (seen)

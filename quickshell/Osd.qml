@@ -100,8 +100,15 @@ Item {
      */
     readonly property bool onFocusedMonitor: !Hyprland.focusedMonitor || Hyprland.focusedMonitor.name === screenName
 
+    /** Volume and brightness answer a key press, so Do not disturb keeps them. */
+    function allowed(which) {
+        if ((Flags.osdOff || []).indexOf(which) >= 0)
+            return false;
+        return !Flags.dnd || which === "volume" || which === "brightness";
+    }
+
     function flash(which) {
-        if (!armed || suppressed)
+        if (!armed || suppressed || !allowed(which))
             return false;
         if (which !== "workspace" && !onFocusedMonitor)
             return false;
@@ -111,7 +118,7 @@ Item {
             holdExtends = 0;
         kind = which;
         flashing = true;
-        hideTimer.interval = (which === "battery" || which === "record") ? 2000 : 1800;
+        hideTimer.interval = Math.max(0.25, Flags.osdTime || 1) * ((which === "battery" || which === "record") ? 2000 : 1800);
         hideTimer.restart();
         return true;
     }
@@ -175,7 +182,9 @@ Item {
 
     Connections {
         target: Players
-        function onAnnounce(player) {
+        function onAnnounce(player, why) {
+            if ((Flags.osdOff || []).indexOf(why) >= 0)
+                return;
             root.pendingSubject = player;
             root.dirty = true;
             root.tryShow();
@@ -289,7 +298,7 @@ Item {
                 /** Art that arrives late still earns a moment on screen, so a cover
                  *  decoded near the end of the flash is actually seen. */
                 onStatusChanged: if (status === Image.Ready && root.flashing && root.kind === "track") {
-                    hideTimer.interval = 1300;
+                    hideTimer.interval = Math.max(0.25, Flags.osdTime || 1) * 1300;
                     hideTimer.restart();
                 }
             }
@@ -497,7 +506,7 @@ Item {
                         to: battFill.width
                         duration: 1200
                         loops: Animation.Infinite
-                        running: root.kind === "battery" && Battery.charging
+                        running: root.flashing && root.kind === "battery" && Battery.charging
                     }
                 }
             }
@@ -538,7 +547,7 @@ Item {
             color: root.recordStarted ? Theme.verm : Theme.dim
 
             SequentialAnimation on opacity {
-                running: root.recordStarted && root.kind === "record"
+                running: root.flashing && root.recordStarted && root.kind === "record"
                 loops: Animation.Infinite
                 NumberAnimation { to: 0.4; duration: 500; easing.type: Easing.InOutSine }
                 NumberAnimation { to: 1; duration: 500; easing.type: Easing.InOutSine }

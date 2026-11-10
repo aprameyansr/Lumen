@@ -36,8 +36,6 @@ PillSurface {
 
     implicitHeight: content.implicitHeight
 
-    signal requestSurface(string name)
-
     readonly property string bindsPath: Quickshell.env("HOME") + "/.config/hypr/modules/binds.lua"
 
     property var binds: []

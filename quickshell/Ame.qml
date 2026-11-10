@@ -6,7 +6,7 @@ import "Singletons"
 
 /**
  * 飴 Ame, the shapeshifter. One molten-glass bead, the shell's only glowing
- * element. Idle it just breathes (2.5% scale over ~8s). No music/audio/physics
+ * element. No music/audio/physics
  * coupling; every motion is a fixed, scripted timeline.
  *
  * Travel: a form change runs the full shapeshift over `Motion.shapeshift` ms.
@@ -340,8 +340,6 @@ Item {
         renderStrategy: Canvas.Cooperative
         antialiasing: true
 
-        readonly property real breathe: 1 + 0.0125 * Math.sin(root.swirl * 0.32)
-
         function bead(ctx, x, y, R, stretch, ang, alpha) {
             ctx.save();
             if (alpha !== undefined)
@@ -566,8 +564,7 @@ Item {
             }
 
             const land = settling ? (0.7 + 0.3 * e) : 1;
-            const breathe = (f === "rest") ? canvas.breathe : 1;
-            const r = baseR * breathe * land * (f === "dock" ? root.heatScale : 1);
+            const r = baseR * land * (f === "dock" ? root.heatScale : 1);
             bead(ctx, bx, by, r, settling ? (1 - q) * 0.4 : 0, root.flightAng);
         }
     }

@@ -20,7 +20,6 @@ import "Singletons"
 SettingsSurface {
     id: root
 
-    backSurface: "settings"
     implicitHeight: content.implicitHeight
 
     /**
@@ -165,10 +164,6 @@ SettingsSurface {
             root.autostartText = auto.text;
             autostartWriter.setText(auto.text);
         }
-    }
-
-    function clampSensitivity(v) {
-        return Math.max(-1, Math.min(1, Math.round(v * 10) / 10));
     }
 
     FileView {

@@ -34,7 +34,7 @@ Item {
      * notification replaces the map.
      */
     property double deadline: 0
-    function armDeadline() { deadline = notif ? (Notifs.expireAt[notif.id] || (Date.now() + 6000)) : 0; }
+    function armDeadline() { deadline = notif ? (Notifs.expireAt[notif.id] || (Date.now() + Math.max(1, Flags.notifSecs || 6) * 1000)) : 0; }
     Component.onCompleted: armDeadline()
 
     Timer {

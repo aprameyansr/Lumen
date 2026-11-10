@@ -29,10 +29,13 @@ PillSurface {
      * Calc mode: when the whole query parses as a real calculation (an
      * expression with at least one operation, so lone numbers and app names like
      * i3 or python3 fall through to app search), a result row appears above the
-     * list and Enter copies the value. The parser in lib/calc.js never evals, so
-     * a query cannot run code.
+     * list and Enter copies the value. Beyond + - * / ^ % it knows functions
+     * (sqrt/√, sin, ln, log...), constants (pi/π, e, tau), x × ÷ spellings and
+     * implicit products like 2pi. `ans` is the last copied result. The parser in
+     * lib/calc.js never evals, so a query cannot run code.
      */
-    readonly property var calc: Calc.evaluate(query)
+    property real lastAnswer: NaN
+    readonly property var calc: Calc.evaluate(query, lastAnswer)
     readonly property bool calcActive: calc.ok
     property bool calcCopied: false
     onQueryChanged: calcCopied = false
@@ -40,6 +43,7 @@ PillSurface {
     function copyResult() {
         if (!root.calcActive)
             return;
+        root.lastAnswer = root.calc.value;
         Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", root.calc.display]);
         root.calcCopied = true;
     }
@@ -225,7 +229,7 @@ PillSurface {
 
         Item {
             anchors.fill: parent
-            anchors.leftMargin: 12 * root.sz
+            anchors.leftMargin: 12 * root.s
             anchors.rightMargin: 12 * root.s
 
             Column {

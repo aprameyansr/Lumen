@@ -23,7 +23,6 @@ PillSurface {
 
     implicitHeight: content.implicitHeight
 
-    signal requestSurface(string name)
 
     ameForm: "off"
 
