@@ -1,0 +1,13 @@
+# Re-installs Zen's autoconfig files (glass tooltips) after zen-browser-bin
+# is installed or upgraded, since updates can replace /opt/zen-browser-bin.
+# Source files live in /etc/zen-autoconfig/ (root-owned).
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = zen-browser-bin
+
+[Action]
+Description = Restoring Zen autoconfig (glass tooltips)...
+When = PostTransaction
+Exec = /usr/bin/sh -c 'install -Dm644 /etc/zen-autoconfig/autoconfig.js /opt/zen-browser-bin/defaults/pref/autoconfig.js && install -Dm644 /etc/zen-autoconfig/mozilla.cfg /opt/zen-browser-bin/mozilla.cfg'

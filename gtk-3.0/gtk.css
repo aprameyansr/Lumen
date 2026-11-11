@@ -44,3 +44,13 @@ filechooser placessidebar list,
 filechooser .sidebar {
   background-color: transparent;
 }
+
+/* Tooltips: glass tint. Zen/Firefox also reads these colours for its built-in
+   tooltips (e.g. Zen's workspace / Library buttons). */
+tooltip,
+tooltip.background {
+  background-color: rgba(24, 24, 30, 0.55);
+  color: #f2f2f5;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+}

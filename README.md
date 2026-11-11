@@ -197,5 +197,18 @@ then fully restart Zen:
 
 ```sh
 cp zen/user.js <profile>/
-mkdir -p <profile>/chrome && cp zen/chrome/*.css <profile>/chrome/
+mkdir -p <profile>/chrome && cp zen/chrome/*.css zen/chrome/*.svg <profile>/chrome/
+```
+
+**Zen glass tooltips (optional, needs root):** Zen's space/Library button
+tooltips use Firefox's built-in tooltip, which userChrome.css can't reach.
+`zen/autoconfig/mozilla.cfg` gives them a stylable tooltip. It's loaded via
+Firefox autoconfig from the install folder, and a pacman hook puts it back
+after every `zen-browser-bin` update:
+
+```sh
+sudo install -Dm644 zen/autoconfig/autoconfig.js zen/autoconfig/mozilla.cfg -t /etc/zen-autoconfig/
+sudo install -Dm644 zen/autoconfig/zen-autoconfig.hook /etc/pacman.d/hooks/zen-autoconfig.hook
+sudo install -Dm644 /etc/zen-autoconfig/autoconfig.js /opt/zen-browser-bin/defaults/pref/autoconfig.js
+sudo install -Dm644 /etc/zen-autoconfig/mozilla.cfg /opt/zen-browser-bin/mozilla.cfg
 ```

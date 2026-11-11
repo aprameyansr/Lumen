@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0">
+  <!-- Pass-through filter: changes nothing visually. Used by userChrome.css on
+       the page area while Zen's spotlight is open, so Firefox draws web content
+       into the same layer as the UI and the spotlight's backdrop-filter can
+       blur it. (A plain CSS no-op filter gets optimised away, this one doesn't.) -->
+  <filter id="passthrough" x="0" y="0" width="1" height="1" filterUnits="objectBoundingBox">
+    <feOffset in="SourceGraphic" dx="0" dy="0"/>
+  </filter>
+</svg>

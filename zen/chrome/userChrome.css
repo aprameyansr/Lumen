@@ -167,3 +167,44 @@ panel toolbarseparator {
 #urlbar[breakout-extend] .urlbarView-row {
   border-radius: 10px !important;
 }
+
+/* ==========================================================================
+   Tooltips (tab hover, toolbar/Zen buttons) + tab hover preview - glass.
+   Native popups, so Hyprland's popup blur does the blurring.
+   ========================================================================== */
+tooltip,
+#tab-preview-panel {
+  appearance: none !important;
+  --tooltip-bgcolor: var(--glass-bg) !important;
+  --tooltip-color: var(--glass-text) !important;
+  --tooltip-border-color: var(--glass-border) !important;
+  --panel-background: var(--glass-bg) !important;
+  --panel-border-color: var(--glass-border) !important;
+}
+
+tooltip {
+  backdrop-filter: blur(16px) saturate(170%) !important;
+  background: var(--glass-bg) !important;
+  color: var(--glass-text) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 8px !important;
+  padding: 5px 9px !important;
+  box-shadow: none !important;
+}
+
+#tab-preview-panel::part(content) {
+  background: var(--glass-bg) !important;
+  color: var(--glass-text) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+}
+
+/* Spotlight blur fix.
+   Web pages are drawn in a separate process/layer, so the spotlight's
+   backdrop-filter (above) can't see them and only the tint shows. Putting a
+   pass-through SVG filter on the page area while the spotlight is open makes
+   Firefox render the page into the UI layer, and the blur starts working,
+   clipped exactly to the spotlight's rounded shape. */
+:root:has(#urlbar[breakout-extend][zen-floating-urlbar="true"]) #tabbrowser-tabbox {
+  filter: url("spotlight-blur.svg#passthrough");
+}
