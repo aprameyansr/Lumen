@@ -36,13 +36,19 @@ popover.background, popover.background > contents {
 }
 
 /* File picker (xdg-desktop-portal-gtk): lighter inner layers so it isn't
-   darker than other glass windows. Other GTK3 apps are unaffected. */
-filechooser .view,
-filechooser treeview.view,
+   darker than other glass windows. Other GTK3 apps are unaffected.
+   :not(:selected) keeps the theme's blue highlight on selected files. */
+filechooser .view:not(:selected),
+filechooser treeview.view:not(:selected),
 filechooser placessidebar,
 filechooser placessidebar list,
 filechooser .sidebar {
   background-color: transparent;
+}
+/* Stronger highlight: the theme's 25% blue is too faint on glass */
+filechooser .view:selected,
+filechooser treeview.view:selected {
+  background-color: alpha(@accent_bg_color, 0.50);
 }
 
 /* Tooltips: glass tint. Zen/Firefox also reads these colours for its built-in
