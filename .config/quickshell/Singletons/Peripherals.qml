@@ -84,7 +84,7 @@ Singleton {
             if (p <= lowAt && !charging(d)) {
                 if (!notified[key]) {
                     notified[key] = true;
-                    notifyProc.command = ["notify-send", "-a", "Ricelin", "-i", "battery-caution",
+                    notifyProc.command = ["notify-send", "-a", "Lumen", "-i", "battery-caution",
                         (d.model || "Device") + " at " + p + "%", "Charge it soon"];
                     notifyProc.running = true;
                 }

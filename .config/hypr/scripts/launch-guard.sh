@@ -18,6 +18,6 @@ err="$(cat "$tmp")"
 [ -n "$err" ] || err="(no output)"
 tail3="$(printf '%s\n' "$err" | grep -v '^[[:space:]]*$' | tail -n 3)"
 
-picked="$(notify-send -u critical -a Ricelin ${icon:+-i "$icon"} -A copy=Copy \
+picked="$(notify-send -u critical -a Lumen ${icon:+-i "$icon"} -A copy=Copy \
        "$name failed (exit $rc)" "$tail3")"
 [ "$picked" = "copy" ] && printf '%s: exit %s\n%s\n' "$name" "$rc" "$err" | wl-copy
