@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell.Widgets
 import Quickshell.Hyprland
-import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "Singletons"
 
@@ -210,73 +209,21 @@ Item {
     }
 
     /**
-     * Volume and brightness key presses, read straight from libinput (the user
-     * is in the input group). The OSD otherwise flashes only on a value change,
-     * so a press at 0% or 100% showed nothing; this flashes it at the limit too.
-     * Only the focused monitor's OSD runs the reader, so there is one at a time.
-     * Every other line is dropped on read, never kept. Run without a shell
-     * wrapper so stopping it really stops libinput. Restarts if it dies.
+     * Volume and brightness keys (bound as quickshell global shortcuts) flash on
+     * every press, not only when the level changes, so the OSD also shows when
+     * it's already at 0 % or 100 %.
      */
-    Process {
-        id: keyReader
-        running: root.onFocusedMonitor
-        command: ["libinput", "debug-events", "--show-keycodes"]
-        stdout: SplitParser {
-            onRead: (line) => {
-                /** Super silences a timer alarm and clears its notification; the key still does its usual job. */
-                if ((Clocks.ringing || Clocks.timerPopupUp) && /KEY_(LEFT|RIGHT)META .* pressed/.test(line)) {
-                    Clocks.dismissAlarm();
-                    return;
-                }
-                var m = /KEY_(VOLUME|BRIGHTNESS)(UP|DOWN) .* pressed/.exec(line);
-                if (m) {
-                    root.flash(m[1] === "BRIGHTNESS" ? "brightness" : "volume");
-                    return;
-                }
-                root.trackWorkspaceKey(line);
-            }
-        }
-        onExited: if (root.onFocusedMonitor) keyRestart.restart()
-    }
-
-    /**
-     * Super + a number re-shows the workspace flash when it targets the
-     * workspace you're already on (a real switch already flashes through
-     * activeWsName). Modifier state is tracked from the same key stream, so
-     * Super+Ctrl+N (move window) and other combos never count.
-     */
-    property bool superDown: false
-    property int otherMods: 0
-
-    function trackWorkspaceKey(line) {
-        var k = /KEY_(\w+) \(\d+\) (pressed|released)/.exec(line);
-        if (!k)
-            return;
-        var down = k[2] === "pressed";
-        if (k[1] === "LEFTMETA" || k[1] === "RIGHTMETA") {
-            superDown = down;
-            return;
-        }
-        if (/^(LEFT|RIGHT)(CTRL|SHIFT|ALT)$/.test(k[1])) {
-            otherMods = Math.max(0, otherMods + (down ? 1 : -1));
-            return;
-        }
-        if (!down || !superDown || otherMods > 0 || !/^[0-9]$/.test(k[1]))
-            return;
-        var target = k[1] === "0" ? "10" : k[1];
-        if (target === activeWsName && !expanded)
-            flash("workspace");
-    }
-
-    Timer {
-        id: keyRestart
-        interval: 3000
-        onTriggered: keyReader.running = root.onFocusedMonitor
+    Connections {
+        target: Sound
+        function onVolumeKey() { root.flash("volume"); }
     }
 
     Connections {
         target: Backlight
         function onChanged() {
+            root.flash("brightness");
+        }
+        function onKeyPressed() {
             root.flash("brightness");
         }
     }

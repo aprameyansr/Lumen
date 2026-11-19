@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 
 /**
@@ -65,5 +66,24 @@ Singleton {
         repeat: true
         running: root.dev.length > 0 && root.maxRaw > 0
         onTriggered: curFile.reload()
+    }
+
+    /**
+     * Brightness keys, bound in binds.lua as hl.dsp.global("quickshell:brightness*").
+     * Every press also asks the OSD to show, so it appears even at 0 % or 100 %.
+     */
+    signal keyPressed()
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "brightnessUp"
+        description: "Raise the screen brightness"
+        onPressed: { Quickshell.execDetached(["brightnessctl", "set", "5%+"]); root.keyPressed(); }
+    }
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "brightnessDown"
+        description: "Lower the screen brightness"
+        onPressed: { Quickshell.execDetached(["brightnessctl", "set", "5%-"]); root.keyPressed(); }
     }
 }

@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Services.Pipewire
 
@@ -537,5 +538,31 @@ Singleton {
         path: root.stateDir + "/sound.json"
         blockLoading: true
         printErrors: false
+    }
+
+    /**
+     * Volume keys, bound in binds.lua as hl.dsp.global("quickshell:volume*").
+     * Up stops at the output's boost cap from this page. Every press also asks
+     * the OSD to show, so it appears even when the level is already at a limit.
+     */
+    signal volumeKey()
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "volumeUp"
+        description: "Raise the volume, up to the boost cap"
+        onPressed: { Quickshell.execDetached(["wpctl", "set-volume", "-l", String(root.limit), "@DEFAULT_AUDIO_SINK@", "5%+"]); root.volumeKey(); }
+    }
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "volumeDown"
+        description: "Lower the volume"
+        onPressed: { Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"]); root.volumeKey(); }
+    }
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "volumeMute"
+        description: "Mute or unmute the output"
+        onPressed: { Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]); root.volumeKey(); }
     }
 }

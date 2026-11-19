@@ -24,6 +24,7 @@ hl.bind(mod .. " + V", hl.dsp.exec_cmd('qs ipc call pill clipboard ""')) -- Clip
 hl.bind(mod .. " + C", hl.dsp.exec_cmd('qs ipc call pill wallpaper ""')) -- Wallpaper
 hl.bind(mod .. " + B", hl.dsp.exec_cmd('~/.config/hypr/scripts/wallpaper.sh ""')) -- Shuffle wallpaper and retheme
 hl.bind(mod .. " + H", hl.dsp.exec_cmd('qs ipc call pill dnd ""')) -- Toggle DnD
+hl.bind(mod .. " + Super_L", hl.dsp.global("quickshell:superRelease"), { release = true }) -- Silence a ringing timer
 
 hl.bind(mod .. " + X", hl.dsp.exec_cmd('qs ipc call pill power ""')) -- Power
 hl.bind(mod .. " + A", hl.dsp.exec_cmd('qs ipc call pill link ""')) -- Network
@@ -104,23 +105,15 @@ hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
 -- Hardware Controls
 -- ============================================================================
 
-hl.bind(
-	"XF86AudioRaiseVolume",
-	hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/volume.sh"),
-	{ locked = true, repeating = true }
-)
+hl.bind("XF86AudioRaiseVolume", hl.dsp.global("quickshell:volumeUp"), { locked = true, repeating = true })
 
-hl.bind(
-	"XF86AudioLowerVolume",
-	hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),
-	{ locked = true, repeating = true }
-)
+hl.bind("XF86AudioLowerVolume", hl.dsp.global("quickshell:volumeDown"), { locked = true, repeating = true })
 
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
+hl.bind("XF86AudioMute", hl.dsp.global("quickshell:volumeMute"), { locked = true })
 
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl set 5%+"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.global("quickshell:brightnessUp"), { locked = true, repeating = true })
 
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.global("quickshell:brightnessDown"), { locked = true, repeating = true })
 
 -- ============================================================================
 -- Media Controls

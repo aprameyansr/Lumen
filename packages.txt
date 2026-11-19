@@ -1,0 +1,108 @@
+# Lumen: packages for Arch Linux
+#
+# One package per line; everything after # is a comment. Packages marked
+# "AUR" come from the Arch User Repository and need an AUR helper (paru/yay);
+# the rest are in the official repos.
+#
+# Install everything that isn't commented out (see README.md, step 3):
+#
+#   paru -S --needed $(grep -vE '^\s*(#|$)' packages.txt | awk '{print $1}')
+#
+# Lines starting with "# " inside a section are optional: remove the "# " to
+# include them.
+
+
+# ── base ────────────────────────────────────────────────────────────────
+# Needed to build AUR packages and fetch this repo.
+base-devel
+git
+
+# ── compositor & session ────────────────────────────────────────────────
+hyprland                    # the compositor (configured in Lua); provides start-hyprland
+xorg-xwayland               # X11 apps inside Hyprland
+hypridle                    # screen off, lock and suspend after idle
+hyprlock                    # lock screen (also shown on every login)
+hyprsunset                  # night light, driven from the pill
+hyprpolkitagent             # password prompts for GUI apps
+polkit
+xdg-desktop-portal-hyprland # screen sharing and screenshots for apps
+xdg-desktop-portal-gtk      # file pickers and settings for GTK apps
+xdg-utils                   # xdg-open (links and files from the pill)
+xdg-user-dirs               # ~/Pictures, ~/Videos and friends
+
+# ── audio ───────────────────────────────────────────────────────────────
+pipewire
+pipewire-alsa
+pipewire-pulse
+pavucontrol
+pipewire-audio              # pw-play (timer alarm sound)
+wireplumber                 # session manager, wpctl (volume keys)
+
+# ── hardware & system services ──────────────────────────────────────────
+networkmanager              # Wi-Fi page (nmcli)
+bluez                       # Bluetooth page
+bluez-utils
+upower                      # battery page and charging flashes
+brightnessctl               # laptop brightness (keys, mixer, OSD)
+ddcutil                     # brightness of external monitors over DDC/CI
+# sof-firmware              # audio on many Intel laptops (needed on mine)
+
+# ── the pill (Quickshell) and its helpers ───────────────────────────────
+quickshell                  # the whole desktop shell
+awww                        # wallpaper daemon (still images)
+mpvpaper                    # AUR: video wallpapers
+mpv                         # player behind mpvpaper
+imagemagick                 # wallpaper colours, thumbnails
+ffmpeg                      # recording, video-wallpaper and clip thumbnails
+gpu-screen-recorder         # screen recorder page
+python                      # wallcolors.py: the palette engine
+jq                          # scripts read the pill's settings
+curl                        # weather and AutoEQ headphone list
+cliphist                    # clipboard history
+wl-clipboard                # wl-copy / wl-paste
+wtype                       # the emoji picker types the emoji
+libnotify                   # notify-send
+libarchive                  # bsdtar: the app installer unpacks archives
+cava                        # music visualiser in the resting pill
+xorg-xrandr                 # XWayland primary monitor after a display swap
+hyprshot                    # Print: region screenshot
+hyprpicker                  # Super+Shift+C: colour picker
+
+# ── fonts ───────────────────────────────────────────────────────────────
+inter-font                  # the pill's UI font
+ttf-zen-kakugothic-new      # AUR: the kanji in the pill (時, 刻, 覚 ...)
+noto-fonts-emoji            # emoji picker and emoji everywhere
+ttf-jetbrains-mono-nerd     # terminal, prompt and icons in it
+# noto-fonts-cjk            # Chinese and Korean text in apps (~300 MB); without it they show as boxes
+
+# ── theming ─────────────────────────────────────────────────────────────
+adw-gtk-theme               # base for the frosted-glass GTK styling
+# The cursor is not a package: install the one you like into
+# ~/.local/share/icons (README.md, step 8).
+
+# ── terminal & shell ────────────────────────────────────────────────────
+kitty                       # Super+Return
+fish                        # interactive shell inside kitty
+starship                    # prompt, coloured from the wallpaper
+eza                         # `ls` alias in fish
+fastfetch                   # system info, recoloured from the wallpaper
+
+# ── apps the default keybinds and file associations open ───────────────
+# Swap any of these for your own and change the binds in
+# .config/hypr/modules/binds.lua (or Settings > Keybinds in the pill).
+zen-browser-bin             # AUR: Super+W, glass styling in .config/zen
+nautilus                    # Super+E, file manager
+loupe                       # default image viewer
+resources                   # Ctrl+Shift+Esc, task manager
+obsidian                    # Super+N, notes
+spotify                     # AUR: Super+M
+spicetify-cli               # AUR: Spotify themed from the wallpaper (Comfy)
+neovim                      # EDITOR in .config/hypr/modules/env.lua
+vscodium-bin                # GUI Editor
+
+
+
+
+# ── optional ────────────────────────────────────────────────────────────
+# noise-suppression-for-voice # mic noise filter on the Sound page (its toggle hides without it)
+# qt6ct                     # QT_QPA_PLATFORMTHEME in env.lua: themed Qt apps

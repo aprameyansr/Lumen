@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 
 /**
@@ -199,6 +200,15 @@ Singleton {
     function stopAlarm() {
         root.ringing = false;
         alarmProc.running = false;
+    }
+
+    /** Super on its own (a release bind in binds.lua) silences the alarm and clears its notification. */
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "superRelease"
+        description: "Silence a ringing timer"
+        onPressed: if (root.ringing || root.timerPopupUp) root.dismissAlarm()
+        onReleased: if (root.ringing || root.timerPopupUp) root.dismissAlarm()
     }
 
     /** A Timer notification is still up in the pill. */
