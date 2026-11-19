@@ -66,41 +66,25 @@ Singleton {
     property alias notifSecs: adapter.notifSecs
     property alias notifMuted: adapter.notifMuted
 
-    property bool selfWrite: false
-
-    Timer {
-        id: writeTimer
-        interval: 20
-        onTriggered: {
-            file.writeAdapter();
-            echoTimer.restart();
-        }
-    }
-
-    Timer {
-        id: echoTimer
-        interval: 400
-        onTriggered: root.selfWrite = false
+    function flush() {
+        file.writeAdapter();
     }
 
     FileView {
         id: file
         path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/lumen/flags.json"
         blockLoading: true
+        /** Synchronous writes: an async write in flight gets joined by the next one, which reloads its older text over values set since. */
+        blockWrites: true
         watchChanges: true
         printErrors: false
 
-        /**
-         * Several fields often change in one go (a keep-awake start sets its span
-         * and the switch together). Writing per field let the watcher reload a
-         * half-written file over the newer values, so changes coalesce into one
-         * write and the watcher's echo of our own write is ignored.
-         */
-        onFileChanged: if (!root.selfWrite) reload()
-        onAdapterUpdated: {
-            root.selfWrite = true;
-            writeTimer.restart();
-        }
+        /** Read the file before any binding sees the defaults. */
+        Component.onCompleted: text()
+
+        onFileChanged: reload()
+        /** Several fields often change in one go (a keep-awake start sets its span and the switch together): one write per event-loop turn. */
+        onAdapterUpdated: Qt.callLater(root.flush)
         onLoadFailed: function(error) {
             if (error === FileViewError.FileNotFound)
                 writeAdapter();

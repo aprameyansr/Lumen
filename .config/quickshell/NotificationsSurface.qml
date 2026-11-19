@@ -24,6 +24,7 @@ SettingsSurface {
         return base.sort(function (a, b) { return a - b; });
     }
 
+
     function flashOn(k) {
         return (Flags.osdOff || []).indexOf(k) < 0;
     }
@@ -184,7 +185,7 @@ SettingsSurface {
             surface: root
             captionOnFocus: true
             icon: "clock"
-            name: "How long they stay"
+            name: "Flash length"
             sub: "Scales every flash, the song card included"
             SettingsSeg {
                 s: root.s

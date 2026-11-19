@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import "lib/monitors.js" as Mon
 import "Singletons"
@@ -273,11 +274,8 @@ SettingsSurface {
         mainName = mainFromLua(res.text);
         xrandrProc.out = name;
         xrandrProc.running = true;
-        wsMoveProc.mainOut = name;
-        wsMoveProc.otherOut = other.name;
-        wsMoveProc.mainRange = res.mainRange;
-        wsMoveProc.otherRange = res.otherRange;
-        wsMoveProc.running = true;
+        moveWorkspaces(res.mainRange, name);
+        moveWorkspaces(res.otherRange, other.name);
         if (!card.dirty)
             note = "Saved. " + name + " is the main monitor now.";
     }
@@ -331,18 +329,10 @@ SettingsSurface {
         command: ["sh", "-c", "sh \"$1\" revert \"$2\"", "sh", root.helper, out]
     }
 
-    /** Drags each live workspace onto its new monitor after a main swap. */
-    Process {
-        id: wsMoveProc
-        property string mainOut: ""
-        property string otherOut: ""
-        property var mainRange: [1, 5]
-        property var otherRange: [6, 10]
-        command: ["sh", "-c",
-            "for i in $(seq \"$1\" \"$2\"); do hyprctl dispatch moveworkspacetomonitor \"$i\" \"$3\" >/dev/null 2>&1; done; " +
-            "for i in $(seq \"$4\" \"$5\"); do hyprctl dispatch moveworkspacetomonitor \"$i\" \"$6\" >/dev/null 2>&1; done",
-            "sh", String(mainRange[0]), String(mainRange[1]), mainOut,
-            String(otherRange[0]), String(otherRange[1]), otherOut]
+    /** Drags each workspace in `range` onto `out` after a main swap (Lua dispatcher). */
+    function moveWorkspaces(range, out) {
+        for (var i = range[0]; i <= range[1]; i++)
+            Hyprland.dispatch("hl.dsp.workspace.move({ workspace = " + i + ", monitor = '" + out + "' })");
     }
 
     /** XWayland primary flag; runs only when a main swap is applied. */

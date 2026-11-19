@@ -1,13 +1,12 @@
 #!/bin/sh
-
-exec 9>"${XDG_RUNTIME_DIR:-/tmp}/lumen-watchdog.lock"
+# Keeps the pill alive for this Hyprland session: runs quickshell in the
+# foreground and restarts it a second after it exits, until Hyprland is gone.
+run="${XDG_RUNTIME_DIR:-/tmp}"
+exec 9>"$run/lumen-${HYPRLAND_INSTANCE_SIGNATURE}-watchdog.lock"
 flock -n 9 || exit 0
 
-launch() {
-  qs -d 9>&- 2>/dev/null
-}
-
-while true; do
-  qs ipc show >/dev/null 2>&1 || launch
-  sleep 5
+while :; do
+    qs 9>&- >/dev/null 2>&1
+    [ -S "$run/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" ] || exit 0
+    sleep 1
 done

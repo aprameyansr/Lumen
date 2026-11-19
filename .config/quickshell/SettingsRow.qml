@@ -83,6 +83,8 @@ Item {
         spacing: 5 * srow.s
 
         Text {
+            width: parent.width
+            elide: Text.ElideRight
             text: srow.name
             color: Theme.cream
             font.family: Theme.font

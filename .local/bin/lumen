@@ -3,7 +3,7 @@
 # lumen — Control CLI for the Lumen shell.
 #
 # Thin wrapper over the Quickshell surface, its watchdog and the dotfiles sync.
-# The watchdog is what keeps the surface alive: it respawns `qs -d` whenever the
+# The watchdog is what keeps the surface alive: it reruns `qs` a second after the
 # instance dies. So `stop` has to take the watchdog down too or the surface just
 # comes back, while `restart` leaves the watchdog running and only cycles the instance.
 #
@@ -120,17 +120,8 @@ cmd_stop() {
 }
 
 cmd_restart() {
-    had_wd=no
-    wd_up && had_wd=yes
-
     qs kill >/dev/null 2>&1
-    sleep 0.4
-
-    if [ "$had_wd" = yes ]; then
-        is_up || qs -d >/dev/null 2>&1
-    else
-        start_wd
-    fi
+    wd_up || start_wd
 
     act "Restarted" "Shell"
 }
