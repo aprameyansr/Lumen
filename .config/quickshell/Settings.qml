@@ -16,6 +16,7 @@ SettingsSurface {
     rows: [
         { item: appearanceRow, kind: "nav", surface: "appearance" },
         { item: notificationsRow, kind: "nav", surface: "notifications" },
+        { item: timeRow, kind: "nav", surface: "time" },
         { item: lookRow, kind: "nav", surface: "look" },
         { item: displayRow, kind: "nav", surface: "display" },
         { item: inputRow, kind: "nav", surface: "input" },
@@ -67,6 +68,23 @@ SettingsSurface {
                 height: 16 * root.s
                 name: "chevron-right"
                 color: root.focusRowItem === notificationsRow ? Theme.cream : Theme.iconDim
+                stroke: 2.2
+            }
+        }
+
+        SettingsRow {
+            id: timeRow
+            surface: root
+            captionOnFocus: true
+            icon: "clock"
+            name: "Clock & weather"
+            sub: "Time format, date, language, week, units"
+
+            GlyphIcon {
+                width: 16 * root.s
+                height: 16 * root.s
+                name: "chevron-right"
+                color: root.focusRowItem === timeRow ? Theme.cream : Theme.iconDim
                 stroke: 2.2
             }
         }

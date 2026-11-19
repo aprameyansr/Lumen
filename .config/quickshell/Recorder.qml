@@ -637,7 +637,7 @@ PillSurface {
                                 { label: "144", value: 144 }
                             ]
                             value: ScreenRec.fps
-                            onPicked: (v) => ScreenRec.fps = v
+                            onPicked: (v) => Flags.recordFps = v
                         }
                     }
                     ORow {
@@ -650,7 +650,7 @@ PillSurface {
                                 { label: "Loss", value: "lossless" }
                             ]
                             value: ScreenRec.quality
-                            onPicked: (v) => ScreenRec.quality = v
+                            onPicked: (v) => Flags.recordQuality = v
                         }
                     }
                     ORow {
@@ -658,7 +658,7 @@ PillSurface {
                         LinkToggle {
                             s: root.s
                             on: ScreenRec.captureCursor
-                            onToggled: ScreenRec.captureCursor = !ScreenRec.captureCursor
+                            onToggled: Flags.recordCursor = !Flags.recordCursor
                         }
                     }
                     ORow {
@@ -985,7 +985,7 @@ PillSurface {
                 width: 80 * root.s
                 height: parent.height
                 cursorShape: Qt.PointingHandCursor
-                onClicked: ScreenRec.micOn = !ScreenRec.micOn
+                onClicked: Flags.recordMic = !Flags.recordMic
             }
         }
 
@@ -1003,7 +1003,7 @@ PillSurface {
                 width: 80 * root.s
                 height: parent.height
                 cursorShape: Qt.PointingHandCursor
-                onClicked: ScreenRec.desktopOn = !ScreenRec.desktopOn
+                onClicked: Flags.recordDesktop = !Flags.recordDesktop
             }
         }
 

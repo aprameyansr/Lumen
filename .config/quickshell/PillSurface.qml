@@ -36,18 +36,36 @@ Item {
     readonly property bool active: open
 
     /**
-     * Latched true once the open morph has first settled. The morphCloseness gate
-     * is only there for the rest-to-surface open fade. A relayout inside an open
-     * surface (a collapsible dropdown snapping its height into implicitHeight) also
-     * jumps the pill's target geometry, so closeness craters and the whole surface
-     * dims for one frame until the body height Behavior catches up. That one frame
-     * is the flicker on the Display, Recorder and Appearance collapsibles. After
-     * the surface has settled, hold full opacity and let the body morph alone do
-     * the reveal. Reset on close so the next open still fades in.
+     * Latched true once the open morph has first settled, so a relayout inside
+     * (a collapsible snapping its height) never dims the surface for a frame.
      */
     property bool settled: false
-    onOpenChanged: if (!open) settled = false
     onMorphClosenessChanged: if (open && morphCloseness > 0.92) settled = true
+
+    /**
+     * Fade-in follows the open morph; the exit is cut loose from it. Before,
+     * opacity stayed tied to the shrinking geometry on close, so a surface could
+     * dim, reappear or pop as the pill reshaped. Now a close fades out on its own
+     * 150 ms curve from wherever it was, with a slight shrink from the top edge.
+     */
+    readonly property real enter: settled ? 1 : Math.min(gate, Math.pow(morphCloseness, 1.3))
+    property real exitFade: 0
+    property real lastShown: 0
+
+    /** Held at 0 briefly when this surface replaces another, so the two never cross-fade. Set by the pill. */
+    property real gate: 1
+    function arrive(swap) {
+        gateIn.stop();
+        gate = swap ? 0 : 1;
+        if (swap)
+            gateIn.start();
+    }
+
+    SequentialAnimation {
+        id: gateIn
+        PauseAnimation { duration: 90 }
+        NumberAnimation { target: surface; property: "gate"; to: 1; duration: 150; easing.type: Easing.OutCubic }
+    }
 
     anchors.fill: parent
     anchors.topMargin: mTop * s
@@ -56,10 +74,34 @@ Item {
     anchors.bottomMargin: mBottom * s
 
     enabled: open
-    opacity: open ? (settled ? 1 : Math.pow(morphCloseness, 1.3)) : 0
-    visible: opacity > 0.01
+    opacity: open ? enter : exitFade
+    visible: open || opacity > 0.01
 
-    Behavior on opacity {
-        NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+    onOpacityChanged: if (open) lastShown = opacity
+    onOpenChanged: {
+        if (open) {
+            fadeOut.stop();
+        } else {
+            settled = false;
+            exitFade = lastShown;
+            fadeOut.restart();
+        }
+    }
+
+    transform: Scale {
+        readonly property bool closing: !surface.open && !Flags.reduceMotion
+        origin.x: surface.width / 2
+        origin.y: 0
+        xScale: closing ? 0.95 + 0.05 * surface.exitFade / Math.max(0.01, surface.lastShown) : 1
+        yScale: xScale
+    }
+
+    NumberAnimation {
+        id: fadeOut
+        target: surface
+        property: "exitFade"
+        to: 0
+        duration: 150
+        easing.type: Easing.OutCubic
     }
 }

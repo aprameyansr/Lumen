@@ -394,6 +394,8 @@ PillSurface {
         property bool local: false
         property bool focused: false
         property bool removable: false
+        /** Being dragged: lifted above the list, brighter, with an accent edge. */
+        property bool lifted: false
         signal removed()
         signal hovered()
 
@@ -410,7 +412,10 @@ PillSurface {
             anchors.topMargin: 3 * root.s
             anchors.bottomMargin: 3 * root.s
             radius: 9 * root.s
-            color: (wrowHover.hovered || wrow.focused) ? Theme.frameBg : "transparent"
+            color: wrow.lifted ? Qt.alpha(Theme.onGlow, 0.14)
+                : ((wrowHover.hovered || wrow.focused) ? Theme.frameBg : "transparent")
+            border.width: wrow.lifted ? 1 : 0
+            border.color: Qt.alpha(Theme.vermLit, 0.45)
             Behavior on color { ColorAnimation { duration: Motion.fast } }
         }
 
@@ -916,11 +921,28 @@ PillSurface {
                 id: zoneCol
                 width: parent.width
                 readonly property real rowH: 44 * root.s
-                property int dragIndex: -1
+                /**
+                 * Drag state. The list never reorders mid-drag (that rebuilt
+                 * every row and made them jump): the held row follows the
+                 * pointer, the rows it passes slide one slot to open a gap, and
+                 * the move is committed once on release.
+                 */
+                property int dragFrom: -1
+                property int dragTo: -1
+                property real dragDy: 0
+                property bool slide: true
 
-                function slotAt(y) {
-                    var n = (Flags.worldZones || []).length;
-                    return Math.max(0, Math.min(n - 1, Math.floor(y / zoneCol.rowH)));
+                function offsetFor(i) {
+                    var f = zoneCol.dragFrom, t = zoneCol.dragTo;
+                    if (f < 0)
+                        return 0;
+                    if (i === f)
+                        return zoneCol.dragDy;
+                    if (f < t && i > f && i <= t)
+                        return -zoneCol.rowH;
+                    if (f > t && i >= t && i < f)
+                        return zoneCol.rowH;
+                    return 0;
                 }
 
                 HoverHandler {
@@ -932,22 +954,34 @@ PillSurface {
                     target: null
                     xAxis.enabled: false
                     onActiveChanged: {
+                        var n = (Flags.worldZones || []).length;
                         if (active) {
-                            zoneCol.dragIndex = zoneCol.slotAt(centroid.pressPosition.y);
-                            root.worldIndex = zoneCol.dragIndex;
-                        } else {
-                            zoneCol.dragIndex = -1;
-                        }
-                    }
-                    onCentroidChanged: {
-                        if (!active || zoneCol.dragIndex < 0)
+                            zoneCol.slide = true;
+                            zoneCol.dragFrom = Math.max(0, Math.min(n - 1, Math.floor(centroid.pressPosition.y / zoneCol.rowH)));
+                            zoneCol.dragTo = zoneCol.dragFrom;
+                            zoneCol.dragDy = 0;
+                            root.worldIndex = zoneCol.dragFrom;
                             return;
-                        var to = zoneCol.slotAt(centroid.position.y);
-                        if (to !== zoneCol.dragIndex) {
-                            Clocks.moveZoneTo(Flags.worldZones[zoneCol.dragIndex], to);
-                            zoneCol.dragIndex = to;
+                        }
+                        var from = zoneCol.dragFrom, to = zoneCol.dragTo;
+                        /** A real move snaps rows to rest (the list is rebuilt in the new order); a drop in place glides home. */
+                        zoneCol.slide = from >= 0 && to !== from ? false : true;
+                        zoneCol.dragFrom = -1;
+                        zoneCol.dragTo = -1;
+                        zoneCol.dragDy = 0;
+                        if (from >= 0 && to !== from) {
+                            Clocks.moveZoneTo(Flags.worldZones[from], to);
                             root.worldIndex = to;
                         }
+                        zoneCol.slide = true;
+                    }
+                    onCentroidChanged: {
+                        if (!active || zoneCol.dragFrom < 0)
+                            return;
+                        var n = (Flags.worldZones || []).length;
+                        var lo = -zoneCol.dragFrom * zoneCol.rowH, hi = (n - 1 - zoneCol.dragFrom) * zoneCol.rowH;
+                        zoneCol.dragDy = Math.max(lo, Math.min(hi, centroid.position.y - centroid.pressPosition.y));
+                        zoneCol.dragTo = Math.max(0, Math.min(n - 1, Math.round(zoneCol.dragFrom + zoneCol.dragDy / zoneCol.rowH)));
                     }
                 }
 
@@ -967,7 +1001,18 @@ PillSurface {
                     time: root.zoneTime(modelData)
                     removable: true
                     focused: root.worldIndex === index
-                    onHovered: if (zoneCol.dragIndex < 0) root.worldIndex = index
+                    lifted: zoneCol.dragFrom === index
+                    z: lifted ? 10 : 0
+                    scale: lifted ? 1.02 : 1
+                    Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                    transform: Translate {
+                        y: zoneCol.offsetFor(index)
+                        Behavior on y {
+                            enabled: zoneCol.slide && zoneCol.dragFrom !== index
+                            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    onHovered: if (zoneCol.dragFrom < 0) root.worldIndex = index
                     onRemoved: Clocks.removeZone(modelData)
                 }
             }

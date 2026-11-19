@@ -31,7 +31,7 @@ PillSurface {
     mRight: 18
     mBottom: 16
 
-    readonly property var loc: Qt.locale("en_US")
+    readonly property var loc: Qt.locale(Clocks.localeName(Flags.dateLang))
 
     signal requestSurface(string name)
 
@@ -151,7 +151,7 @@ PillSurface {
 
     function firstWeekdayOffset(year, month) {
         var d = new Date(year, month, 1).getDay();
-        return (d + 6) % 7;
+        return (d - Flags.weekStart + 7) % 7;
     }
 
     function daysInMonth(year, month) {
@@ -316,6 +316,16 @@ PillSurface {
                         font.family: Theme.font
                         font.pixelSize: 10 * root.s
                         font.weight: Font.Medium
+                    }
+                    Text {
+                        visible: Weather.updatedAt > 0
+                        topPadding: 2 * root.s
+                        text: "Updated " + Clocks.wallTime(Weather.updatedAt)
+                        color: Theme.faint
+                        font.family: Theme.font
+                        font.pixelSize: 8.5 * root.s
+                        font.weight: Font.Medium
+                        font.features: { "tnum": 1 }
                     }
                 }
             }
@@ -694,13 +704,14 @@ PillSurface {
                 Item {
                     id: wd
                     required property int index
-                    readonly property bool weekend: index >= 5
+                    readonly property int dow: (index + Flags.weekStart) % 7
+                    readonly property bool weekend: dow === 0 || dow === 6
                     width: weekdays.width / 7
                     height: 16 * root.s
 
                     Text {
                         anchors.centerIn: parent
-                        text: root.loc.standaloneDayName((wd.index + 1) % 7, Locale.NarrowFormat)
+                        text: root.loc.standaloneDayName(wd.dow, Locale.NarrowFormat)
                         color: wd.weekend ? Theme.faint : Theme.dim
                         font.family: Theme.font
                         font.pixelSize: 9 * root.s
@@ -726,8 +737,8 @@ PillSurface {
                 Item {
                     id: cell
                     required property int index
-                    readonly property int weekday: index % 7
-                    readonly property bool weekend: weekday >= 5
+                    readonly property int weekday: (index + Flags.weekStart) % 7
+                    readonly property bool weekend: weekday === 0 || weekday === 6
                     width: grid.width / 7
                     height: root.cellH
 

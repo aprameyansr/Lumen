@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import Quickshell
 import Quickshell.Io
 import "Singletons"
 
@@ -38,6 +39,23 @@ SettingsSurface {
         modeArg = Flags.manualDark ? "dark" : "light";
         satArg = String(Flags.manualSat);
         applyTimer.restart();
+    }
+
+    /** GTK apps follow the pill palette; open apps pick it up when relaunched. */
+    function setAppTheme(v) {
+        Flags.appTheme = v;
+        appsProc.command = ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/wallcolors.py", "--apps", v ? "on" : "off"];
+        appsProc.running = true;
+    }
+
+    Process {
+        id: appsProc
+    }
+
+    /** Dynamic palette strength; re-runs the palette on the current wallpaper. */
+    function setVibrancy(v) {
+        Flags.paletteVibrancy = v;
+        dynamicProc.running = true;
     }
 
     function applyMode(v) {
@@ -81,16 +99,18 @@ SettingsSurface {
     }
 
     rows: [
-        { item: timeRow, kind: "seg", vals: [false, true], get: function () { return Flags.time12h; }, set: function (v) { Flags.time12h = v; } },
-        { item: secRow, kind: "toggle", get: function () { return Flags.clockSeconds; }, set: function (v) { Flags.clockSeconds = v; } },
         { item: glyphRow, kind: "toggle", get: function () { return Flags.showGlyphs; }, set: function (v) { Flags.showGlyphs = v; } },
         { item: vizRow, kind: "toggle", get: function () { return Flags.musicViz; }, set: function (v) { Flags.musicViz = v; } },
         { item: paletteRow, kind: "seg", vals: ["static", "dynamic", "manual"], get: function () { return Flags.paletteMode; }, set: function (v) { root.applyMode(v); } },
+        { item: appThemeRow, kind: "toggle", get: function () { return Flags.appTheme; }, set: function (v) { root.setAppTheme(v); } },
+    ].concat(Flags.paletteMode === "dynamic" ? [
+        { item: vibrancyRow, kind: "seg", vals: [0, 0.5, 1], get: function () { return Flags.paletteVibrancy; }, set: function (v) { root.setVibrancy(v); } }
+    ] : []).concat([
         { item: randomRow, kind: "seg", vals: ["all", "cursor"], get: function () { return Flags.randomScope; }, set: function (v) { Flags.randomScope = v; } },
         { item: scaleRow, kind: "seg", vals: [0.9, 1.0, 1.1, 1.25], get: function () { return Flags.uiScale; }, set: function (v) { Flags.uiScale = v; } },
         { item: motionRow, kind: "toggle", get: function () { return Flags.reduceMotion; }, set: function (v) { Flags.reduceMotion = v; } },
         { item: fontRow, kind: "nav", surface: "fontpicker" }
-    ]
+    ])
 
     Column {
         id: content
@@ -107,33 +127,6 @@ SettingsSurface {
         }
 
         Item { width: 1; height: 12 * root.s }
-
-        SettingsRow {
-            id: timeRow
-            surface: root
-            name: "Time format"
-            icon: "clock"
-
-            SettingsSeg {
-                s: root.s
-                options: [{ label: "24H", value: false }, { label: "12H", value: true }]
-                value: Flags.time12h
-                onPicked: (v) => Flags.time12h = v
-            }
-        }
-
-        SettingsRow {
-            id: secRow
-            surface: root
-            name: "Clock seconds"
-            icon: "stopwatch"
-
-            LinkToggle {
-                s: root.s
-                on: Flags.clockSeconds
-                onToggled: Flags.clockSeconds = !Flags.clockSeconds
-            }
-        }
 
         SettingsRow {
             id: glyphRow
@@ -172,6 +165,39 @@ SettingsSurface {
                 options: [{ label: "Static", value: "static" }, { label: "Dynamic", value: "dynamic" }, { label: "Manual", value: "manual" }]
                 value: Flags.paletteMode
                 onPicked: (v) => root.applyMode(v)
+            }
+        }
+
+        SettingsRow {
+            id: appThemeRow
+            surface: root
+            name: "App theme"
+            sub: "GTK apps take the pill colours (reopen them to see it)"
+            captionOnFocus: true
+            icon: "app-window"
+
+            LinkToggle {
+                s: root.s
+                on: Flags.appTheme
+                onToggled: root.setAppTheme(!Flags.appTheme)
+            }
+        }
+
+        SettingsRow {
+            id: vibrancyRow
+            visible: Flags.paletteMode === "dynamic"
+            height: visible ? implicitHeight : 0
+            surface: root
+            name: "Vibrancy"
+            sub: "How strongly the wallpaper colours the pill"
+            captionOnFocus: true
+            icon: "sparkles"
+
+            SettingsSeg {
+                s: root.s
+                options: [{ label: "Muted", value: 0 }, { label: "Natural", value: 0.5 }, { label: "Vivid", value: 1 }]
+                value: Flags.paletteVibrancy
+                onPicked: (v) => root.setVibrancy(v)
             }
         }
 

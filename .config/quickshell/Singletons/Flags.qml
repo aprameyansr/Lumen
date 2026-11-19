@@ -33,8 +33,27 @@ Singleton {
     property alias worldZones: adapter.worldZones
     property alias time12h: adapter.time12h
     property alias clockSeconds: adapter.clockSeconds
+    property alias dateStyle: adapter.dateStyle
+    property alias dateLang: adapter.dateLang
+    property alias weekStart: adapter.weekStart
+    property alias weatherUnit: adapter.weatherUnit
     property alias showGlyphs: adapter.showGlyphs
     property alias paletteMode: adapter.paletteMode
+    property alias paletteVibrancy: adapter.paletteVibrancy
+    property alias appTheme: adapter.appTheme
+    property alias expandMode: adapter.expandMode
+    property alias openDelay: adapter.openDelay
+    property alias closeDelay: adapter.closeDelay
+    property alias wsStyle: adapter.wsStyle
+    property alias wsShow: adapter.wsShow
+    property alias wsScroll: adapter.wsScroll
+    property alias pillHeight: adapter.pillHeight
+    property alias pillRounding: adapter.pillRounding
+    property alias idleWidth: adapter.idleWidth
+    property alias pillShadow: adapter.pillShadow
+    property alias pillBorder: adapter.pillBorder
+    property alias pillSheen: adapter.pillSheen
+    property alias springFeel: adapter.springFeel
     property alias wallpaperDir: adapter.wallpaperDir
     property alias randomScope: adapter.randomScope
     property alias uiScale: adapter.uiScale
@@ -126,8 +145,46 @@ Singleton {
             ]
             property bool time12h: false
             property bool clockSeconds: false
+            /** Pill date: "ddd d MMM", "ddd d", "d MMM" or "dd.MM.". */
+            property string dateStyle: "ddd d MMM"
+            /** Date and weekday language: "en" or "de". */
+            property string dateLang: "en"
+            /** First calendar column: 1 Monday, 0 Sunday. */
+            property int weekStart: 1
+            /** Temperature unit: "c" or "f". */
+            property string weatherUnit: "c"
             property bool showGlyphs: true
             property string paletteMode: "static"
+            /** Dynamic palette strength: 0 muted, 0.5 natural, 1 vivid. */
+            property real paletteVibrancy: 0.5
+            /** GTK apps take the pill palette (lumen-palette.css next to each glass.css). */
+            property bool appTheme: false
+            /** "hover" expands on pointer entry, "click" only when the pill is clicked. */
+            property string expandMode: "hover"
+            /** Ms the pointer rests on the pill before it expands. */
+            property int openDelay: 0
+            /** Ms after the pointer leaves before the hover pill folds. */
+            property int closeDelay: 300
+            /** Workspaces as "dots", "numbers" or "names". */
+            property string wsStyle: "dots"
+            /** "occupied" shows ruled and live workspaces, "all" fills the gaps up to the highest. */
+            property string wsShow: "occupied"
+            /** Mouse wheel over the workspaces switches them. */
+            property bool wsScroll: false
+            /** Resting pill height in px (24 to 64). */
+            property real pillHeight: 38
+            /** Pill corner radius in px, capped at half the height. */
+            property real pillRounding: 18
+            /** Minimum resting pill width in px. */
+            property real idleWidth: 160
+            /** Drop shadow under the pill. */
+            property bool pillShadow: true
+            /** Hairline border around the pill. */
+            property bool pillBorder: true
+            /** Highlight line along the pill's top edge. */
+            property bool pillSheen: true
+            /** Pill morph springs: "soft" (a gentle overshoot when growing) or "snappy". */
+            property string springFeel: "soft"
             /** Explicit wallpaper folder override. Empty means autodetect: the dir wallpaper.sh last resolved (lumen-wallpaper-dir state file), then $HOME/Pictures/Wallpapers. */
             property string wallpaperDir: ""
             /** Super+B random target: "all" repaints every monitor, "cursor" only the one under the pointer. */

@@ -5,3 +5,7 @@
 /* Frosted-glass overrides (kept in a separate file so it's easy to re-add
    if nwg-look recreates this file as a symlink) */
 @import url("glass.css");
+
+/* Pill palette for GTK apps (Settings > Appearance > App theme); empty when off.
+   Reuses glass.css's opacities, so the glass keeps its translucency. */
+@import url("lumen-palette.css");

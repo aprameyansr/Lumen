@@ -106,7 +106,7 @@ hl.bind(mod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
 
 hl.bind(
 	"XF86AudioRaiseVolume",
-	hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"),
+	hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/volume.sh"),
 	{ locked = true, repeating = true }
 )
 

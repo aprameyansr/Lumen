@@ -192,7 +192,7 @@ cmd_sync() {
 
     # GTK glass theme overrides and settings (theme, cursor, font)
     mkdir -p "$DOTFILES/.config/gtk-3.0" "$DOTFILES/.config/gtk-4.0"
-    for f in gtk.css settings.ini; do
+    for f in gtk.css glass.css settings.ini; do
         [ -f "$CFG/gtk-3.0/$f" ] && cp "$CFG/gtk-3.0/$f" "$DOTFILES/.config/gtk-3.0/"
     done
     for f in gtk.css glass.css settings.ini; do

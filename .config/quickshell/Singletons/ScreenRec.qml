@@ -55,16 +55,12 @@ Singleton {
 
     onOutDirChanged: refreshRecent()
 
-    property int fps: Flags.recordFps
-    onFpsChanged: Flags.recordFps = fps
-    property string quality: Flags.recordQuality
-    onQualityChanged: Flags.recordQuality = quality
-    property bool captureCursor: Flags.recordCursor
-    onCaptureCursorChanged: Flags.recordCursor = captureCursor
-    property bool micOn: Flags.recordMic
-    onMicOnChanged: Flags.recordMic = micOn
-    property bool desktopOn: Flags.recordDesktop
-    onDesktopOnChanged: Flags.recordDesktop = desktopOn
+    /** Read straight from Flags (the recorder page writes Flags), so what the page shows is what gets recorded. */
+    readonly property int fps: Flags.recordFps
+    readonly property string quality: Flags.recordQuality
+    readonly property bool captureCursor: Flags.recordCursor
+    readonly property bool micOn: Flags.recordMic
+    readonly property bool desktopOn: Flags.recordDesktop
 
     property bool recording: false
     property bool recorderOpen: false
@@ -234,7 +230,8 @@ Singleton {
     function buildArgs(captureToken, file) {
         var args = ["gpu-screen-recorder", "-w", captureToken,
                     "-f", String(fps), "-q", qualityPreset[quality] || "high",
-                    "-cursor", captureCursor ? "yes" : "no"];
+                    "-cursor", captureCursor ? "yes" : "no",
+                    "-fallback-cpu-encoding", "yes"];
         var a = audioArg();
         if (a.length > 0)
             args = args.concat(["-a", a]);
@@ -251,6 +248,8 @@ Singleton {
         if (recording || recProc.running)
             return;
         var file = outDir + "/recording_" + timestamp() + ".mp4";
+        stopGuard.stop();
+        forcedStop = false;
         mkdirProc.command = ["mkdir", "-p", outDir];
         mkdirProc.pendingToken = captureToken;
         mkdirProc.pendingFile = file;
@@ -262,6 +261,24 @@ Singleton {
             return;
         stopProc.command = ["pkill", "-SIGINT", "-f", "(^|/)gpu-screen-recorder"];
         stopProc.running = true;
+        stopGuard.restart();
+    }
+
+    property bool forcedStop: false
+
+    /** gsr sometimes hangs after SIGINT with its file already finalized, and ignores SIGTERM too, so a stop still running after 5 s is killed. */
+    Timer {
+        id: stopGuard
+        interval: 5000
+        onTriggered: {
+            root.forcedStop = true;
+            killProc.running = true;
+        }
+    }
+
+    Process {
+        id: killProc
+        command: ["pkill", "-KILL", "-f", "(^|/)gpu-screen-recorder"]
     }
 
     /**
@@ -380,8 +397,11 @@ Singleton {
             root.recording = true;
         }
         onExited: function(exitCode) {
+            stopGuard.stop();
             root.recording = false;
-            if (exitCode !== 0) {
+            var forced = root.forcedStop;
+            root.forcedStop = false;
+            if (exitCode !== 0 && !forced) {
                 var msg = recErr.text.trim();
                 failProc.command = ["notify-send", "-a", "Lumen", "-u", "critical",
                     "Recording failed", msg.length > 0 ? msg : "gpu-screen-recorder exited " + exitCode];

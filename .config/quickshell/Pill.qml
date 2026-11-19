@@ -67,6 +67,7 @@ Item {
      */
     readonly property string shownSurface: criticalToast ? "" : surface
     readonly property bool mixerOpen: surface === "mixer"
+    readonly property bool soundOpen: surface === "sound"
     readonly property bool calendarOpen: surface === "calendar"
     readonly property bool clockOpen: surface === "clock"
     readonly property bool launcherOpen: surface === "launcher"
@@ -93,9 +94,10 @@ Item {
     readonly property bool lookOpen: surface === "look"
     readonly property bool animationOpen: surface === "animation"
     readonly property bool notificationsOpen: surface === "notifications"
+    readonly property bool timeOpen: surface === "time"
     readonly property bool fontpickerOpen: surface === "fontpicker"
     readonly property bool settingsLike: settingsOpen || appearanceOpen
-        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || fontpickerOpen || awakeOpen
+        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || timeOpen || fontpickerOpen || awakeOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -177,11 +179,13 @@ Item {
     readonly property bool quickChoosing: quickHere && ScreenRec.quickChoosing && !surfaceOpen
     readonly property bool quickCounting: quickHere && ScreenRec.counting && !recorderOpen
 
-    readonly property real restW: 160 * s
-    readonly property real restH: 38 * s
+    /** Pill shape from Settings > Look > Pill: height 24-64, rounding capped at half the height. */
+    readonly property real baseH: Math.max(24, Math.min(64, Flags.pillHeight))
+    readonly property real restW: Math.max(0, Flags.idleWidth) * s
+    readonly property real restH: baseH * s
     readonly property real hoverPad: 20 * s
     readonly property real hoverW: hoverRow.implicitWidth + 2 * hoverPad
-    readonly property real hoverH: 58 * s
+    readonly property real hoverH: restH * 58 / 38
     readonly property real mixerH: 214 * s
     readonly property real launcherW: 360 * s
     readonly property real launcherH: 332 * s
@@ -198,6 +202,7 @@ Item {
     readonly property real batteryW: 316 * s
     readonly property real wifiW: 272 * s
     readonly property real btW: 286 * s
+    readonly property real soundW: 400 * s
     readonly property real awakeW: 392 * s
     readonly property real clockW: 380 * s
     readonly property real settingsW: 392 * s
@@ -213,6 +218,7 @@ Item {
     readonly property real lookW: 392 * s
     readonly property real animationW: 392 * s
     readonly property real notificationsW: 392 * s
+    readonly property real timeW: 392 * s
     readonly property real fontpickerW: 360 * s
     readonly property real toastW: 342 * s
     readonly property real quickChooseW: 344 * s
@@ -221,8 +227,8 @@ Item {
     readonly property real quickCountH: 64 * s
     readonly property real dragOverW: 300 * s
     readonly property real dragOverH: 126 * s
-    readonly property real restCorner: 18 * s
-    readonly property real openCorner: 22 * s
+    readonly property real restCorner: Math.max(0, Math.min(Flags.pillRounding, baseH / 2)) * s
+    readonly property real openCorner: restCorner * 22 / 18
 
     /**
      * Latch-once lazy load. Every surface sleeps in an inactive Loader until its
@@ -232,7 +238,7 @@ Item {
      * fires mid-evaluation (that read-then-write would be a binding loop). The
      * write is idempotent and the Loader loads synchronously, so a first open
      * reads the real implicitHeight in the same evaluation and the morph target
-     * is exact. Nothing ever deactivates a loaded surface.
+     * is exact. unloadIdle drops it again two minutes after the pill closes.
      */
     function surfaceItem(ld) {
         ld.active = true;
@@ -256,6 +262,7 @@ Item {
         wallpaper: { size: () => { surfaceItem(ldWall); return Qt.size(wallpaperW, wallpaperH); }, ame: () => null },
         power:     { size: () => { surfaceItem(ldPower); return Qt.size(powerW, powerH); }, ame: () => surfaceItem(ldPower) },
         media:     { size: () => { surfaceItem(ldMedia); return Qt.size(mediaW, mediaH); }, ame: () => surfaceItem(ldMedia) },
+        sound:     { size: () => Qt.size(soundW, surfaceItem(ldSound).implicitHeight + 34 * s), ame: () => surfaceItem(ldSound) },
         mixer:     { size: () => Qt.size(93 * Math.max(4, surfaceItem(ldMixer).faderCount) * s, mixerH), ame: () => surfaceItem(ldMixer) },
         link:      { size: () => { const it = surfaceItem(ldLink); return Qt.size(it.desiredW, it.implicitHeight + 26 * s); }, ame: () => surfaceItem(ldLink) },
         wifi:      { size: () => Qt.size(wifiW, surfaceItem(ldWifi).implicitHeight + 26 * s), ame: () => surfaceItem(ldWifi) },
@@ -275,6 +282,7 @@ Item {
         input:      { size: () => Qt.size(inputW, surfaceItem(ldInput).implicitHeight + 29 * s), ame: () => surfaceItem(ldInput) },
         look:       { size: () => Qt.size(lookW, surfaceItem(ldLook).implicitHeight + 29 * s), ame: () => surfaceItem(ldLook) },
         animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
+        time: { size: () => Qt.size(timeW, surfaceItem(ldTime).implicitHeight + 29 * s), ame: () => surfaceItem(ldTime) },
         notifications: { size: () => Qt.size(notificationsW, surfaceItem(ldNotifications).implicitHeight + 29 * s), ame: () => surfaceItem(ldNotifications) },
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
     })
@@ -302,6 +310,15 @@ Item {
     property string dragStage: ""
 
     signal requestSurface(string name)
+
+    /** A page replacing another holds back a beat (PillSurface.arrive) so the two never cross-fade. */
+    property string lastSurface: ""
+    onSurfaceChanged: {
+        var it = (surface.length > 0 && surfaces[surface] !== undefined) ? surfaces[surface].ame() : null;
+        if (it && typeof it.arrive === "function")
+            it.arrive(lastSurface.length > 0);
+        lastSurface = surface;
+    }
     signal requestClose()
 
     /**
@@ -349,6 +366,8 @@ Item {
             return ldAnimation.item;
         if (pill.notificationsOpen)
             return ldNotifications.item;
+        if (pill.timeOpen)
+            return ldTime.item;
         if (pill.fontpickerOpen)
             return ldFontpicker.item;
         if (pill.awakeOpen)
@@ -477,7 +496,7 @@ Item {
             ldWorkspaces.item.closeForm();
             return;
         }
-        if (pill.appearanceOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.animationOpen || pill.notificationsOpen || pill.workspacesOpen) {
+        if (pill.appearanceOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.animationOpen || pill.notificationsOpen || pill.timeOpen || pill.workspacesOpen) {
             pill.requestSurface("settings");
             return;
         }
@@ -567,9 +586,31 @@ Item {
 
     onSurfaceOpenChanged: if (surfaceOpen) {
         pinned = false;
+        unloadIdle.stop();
         if (quickHere && ScreenRec.quickChoosing) {
             ScreenRec.quickChoosing = false;
             ScreenRec.quickScreenChoosing = false;
+        }
+    } else {
+        unloadIdle.restart();
+    }
+
+    /**
+     * Closed pages unload after two idle minutes to give back memory; they
+     * rebuild on the next open (their state lives in the singletons). The
+     * preloaded trio (mixer, media, inbox) and a busy page stay.
+     */
+    Timer {
+        id: unloadIdle
+        interval: 120000
+        onTriggered: {
+            const cold = [ldSound, ldCalendar, ldClock, ldLauncher, ldEmoji, ldClip, ldWall, ldPower, ldWifi, ldBt,
+                          ldAwake, ldBattery, ldSettings, ldKeybinds, ldWorkspaces, ldStash, ldSpaceapps,
+                          ldRecorder, ldSysmon, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
+                          ldTime, ldNotifications, ldFontpicker];
+            for (const ld of cold)
+                if (ld.active && !(ld.item && ld.item.busy === true))
+                    ld.active = false;
         }
     }
 
@@ -581,7 +622,7 @@ Item {
             + (Flags.clockSeconds ? ":ss" : "")
             + (Flags.time12h ? " AP" : "")
         readonly property string hhmm: Qt.formatTime(now, timeFormat)
-        readonly property string date: loc.toString(now, "ddd d MMM")
+        readonly property string date: Clocks.dateFor(Flags.dateStyle, Flags.dateLang, now)
     }
 
     SystemClock {
@@ -589,7 +630,8 @@ Item {
         precision: Flags.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 
-    property real morphRadius: (mode === "rest" || mode === "hover") ? restCorner : openCorner
+    readonly property real targetRadius: (mode === "rest" || mode === "hover") ? restCorner : openCorner
+    readonly property real morphRadius: springR.value
 
     /**
      * Target geometry for the non-surface morph modes. Surface sizes come from
@@ -616,8 +658,42 @@ Item {
     readonly property real targetW: targetSize.width
     readonly property real targetH: targetSize.height
 
-    width: targetW
-    height: targetH
+    /**
+     * Width, height and corner ride damped springs that keep their velocity
+     * when the target moves, so an interrupted morph bends toward the new shape
+     * instead of restarting a curve. Rest <-> hover uses the quicker hop tuning.
+     */
+    readonly property var feel: Flags.springFeel === "snappy"
+        ? ({ hop: 0.19, shrink: 0.25, grow: 0.29, growDamping: 0.9 })
+        : ({ hop: 0.26, shrink: 0.34, grow: 0.4, growDamping: 0.82 })
+
+    Spring {
+        id: springW
+        target: pill.targetW
+        response: pill.hoverHop ? pill.feel.hop : pill.feel.shrink
+        growResponse: pill.hoverHop ? pill.feel.hop : pill.feel.grow
+        growDamping: pill.hoverHop ? 1 : pill.feel.growDamping
+    }
+    Spring {
+        id: springH
+        target: pill.targetH
+        response: springW.response
+        growResponse: springW.growResponse
+        growDamping: springW.growDamping
+    }
+    Spring {
+        id: springR
+        target: pill.targetRadius
+        response: springW.response
+    }
+    Component.onCompleted: {
+        springW.snap(targetW);
+        springH.snap(targetH);
+        springR.snap(targetRadius);
+    }
+
+    width: springW.value
+    height: springH.value
 
     /**
      * How settled the pill is into its target geometry: 0 while the morph is far
@@ -671,9 +747,6 @@ Item {
         NumberAnimation { target: pill; property: "kanjiFlash"; to: 0; duration: 320; easing.type: Easing.OutCubic }
     }
 
-    Behavior on width { NumberAnimation { id: morphAnimW; duration: pill.hoverHop ? Motion.glide : Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
-    Behavior on height { NumberAnimation { id: morphAnimH; duration: pill.hoverHop ? Motion.glide : Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
-    Behavior on morphRadius { NumberAnimation { id: morphAnimR; duration: pill.hoverHop ? Motion.glide : Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
 
     /**
      * True while any morph axis animates. The body's effect layer (live drop
@@ -681,7 +754,7 @@ Item {
      * monitor, so it is the top per-frame cost of a morph; dropping the shadow
      * mid-flight and restoring it on settle keeps the morph cheap (issue #20).
      */
-    readonly property bool morphing: morphAnimW.running || morphAnimH.running || morphAnimR.running
+    readonly property bool morphing: springW.running || springH.running || springR.running
 
     Rectangle {
         id: bud
@@ -746,14 +819,14 @@ Item {
         anchors.fill: parent
 
         radius: pill.morphRadius
-        border.width: 1
+        border.width: Flags.pillBorder ? 1 : 0
         border.color: Theme.border
         gradient: Gradient {
             GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
             GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
         }
 
-        layer.enabled: !pill.morphing
+        layer.enabled: !pill.morphing && Flags.pillShadow
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowColor: Qt.rgba(0, 0, 0, Theme.shadowOpacity)
@@ -769,6 +842,7 @@ Item {
             anchors.leftMargin: body.radius * 0.6
             anchors.rightMargin: body.radius * 0.6
             height: 1
+            visible: Flags.pillSheen
             color: Theme.sheen
         }
     }
@@ -813,6 +887,8 @@ Item {
             return batteryIcon.mapToItem(pill, batteryIcon.width / 2, batteryIcon.height + drop * 0.55);
         if (soulTarget === "inbox")
             return inboxIcon.mapToItem(pill, inboxIcon.width / 2, inboxIcon.height + drop * 0.55);
+        if (soulTarget === "sound")
+            return soundIcon.mapToItem(pill, soundIcon.width / 2, soundIcon.height + drop * 0.55);
         if (soulTarget === "mixer")
             return mixerIcon.mapToItem(pill, mixerIcon.width / 2, mixerIcon.height + drop * 0.55);
         if (soulTarget === "power")
@@ -869,17 +945,29 @@ Item {
     onHoveredChanged: {
         if (hovered) {
             hoverClean = mode === "rest" || mode === "hover";
-            if (bootSettled)
-                hoverLatch = true;
             graceTimer.stop();
+            /** Click mode expands only through a tap (the pin); hover mode after the open delay. */
+            if (bootSettled && Flags.expandMode !== "click") {
+                if (Flags.openDelay > 0)
+                    openTimer.restart();
+                else
+                    hoverLatch = true;
+            }
         } else {
+            openTimer.stop();
             graceTimer.restart();
         }
     }
 
     Timer {
+        id: openTimer
+        interval: Math.max(0, Flags.openDelay)
+        onTriggered: if (pill.hovered) pill.hoverLatch = true
+    }
+
+    Timer {
         id: graceTimer
-        interval: 300
+        interval: Math.max(0, Flags.closeDelay)
         onTriggered: {
             if (pill.morphCloseness < 0.95) {
                 graceTimer.restart();
@@ -1291,6 +1379,9 @@ Item {
                 width: implicitWidth
                 screenName: pill.screenName
                 s: pill.s
+                style: Flags.wsStyle
+                show: Flags.wsShow
+                scroll: Flags.wsScroll
                 gap: 8 * pill.s
                 enabled: hover.live
                 onHoverIndexChanged: if (hoverIndex >= 0) {
@@ -1694,6 +1785,31 @@ Item {
                 }
 
                 Item {
+                    id: soundIcon
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 17 * pill.s
+                    height: 17 * pill.s
+
+                    GlyphIcon {
+                        anchors.fill: parent
+                        name: "music"
+                        color: soundArea.containsMouse ? Theme.cream : (Sound.eq ? Theme.vermLit : Theme.iconDim)
+                        stroke: 1.7
+                    }
+
+                    MouseArea {
+                        id: soundArea
+                        anchors.fill: parent
+                        anchors.margins: -6 * pill.s
+                        hoverEnabled: true
+                        enabled: hover.live
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: pill.requestSurface("sound")
+                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "sound"
+                    }
+                }
+
+                Item {
                     id: sysmonIcon
                     anchors.verticalCenter: parent.verticalCenter
                     width: 17 * pill.s
@@ -1957,6 +2073,7 @@ Item {
             open: pill.mediaOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
@@ -2009,6 +2126,20 @@ Item {
             open: pill.awakeOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
+        }
+    }
+
+    Loader {
+        id: ldSound
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: SoundSurface {
+            s: pill.s
+            open: pill.soundOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
@@ -2183,6 +2314,20 @@ Item {
         sourceComponent: AnimationSurface {
             s: pill.s
             open: pill.animationOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldTime
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: TimeSurface {
+            s: pill.s
+            open: pill.timeOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
             onRequestSurface: (name) => pill.requestSurface(name)

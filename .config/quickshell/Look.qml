@@ -77,6 +77,22 @@ SettingsSurface {
             r.push({ item: appGapRow, kind: "scrub", bump: function (d) { appGapScrub.bump(d); } });
             r.push({ item: pillOpRow, kind: "scrub", bump: function (d) { pillOpScrub.bump(d); } });
             r.push({ item: pillBlurRow, kind: "toggle", get: function () { return Flags.pillBlur; }, set: function (v) { Flags.pillBlur = v; root.applyPillBlur(v); } });
+            r.push({ item: pillHRow, kind: "scrub", bump: function (d) { pillHScrub.bump(d); } });
+            r.push({ item: pillRoundRow, kind: "scrub", bump: function (d) { pillRoundScrub.bump(d); } });
+            r.push({ item: idleWRow, kind: "scrub", bump: function (d) { idleWScrub.bump(d); } });
+            r.push({ item: shadowPillRow, kind: "toggle", get: function () { return Flags.pillShadow; }, set: function (v) { Flags.pillShadow = v; } });
+            r.push({ item: borderPillRow, kind: "toggle", get: function () { return Flags.pillBorder; }, set: function (v) { Flags.pillBorder = v; } });
+            r.push({ item: sheenRow, kind: "toggle", get: function () { return Flags.pillSheen; }, set: function (v) { Flags.pillSheen = v; } });
+            r.push({ item: springRow, kind: "seg", vals: ["soft", "snappy"], get: function () { return Flags.springFeel; }, set: function (v) { Flags.springFeel = v; } });
+            r.push({ item: expandRow, kind: "seg", vals: ["hover", "click"], get: function () { return Flags.expandMode; }, set: function (v) { Flags.expandMode = v; } });
+            r.push({ item: openDelayRow, kind: "scrub", bump: function (d) { openDelayScrub.bump(d); } });
+            r.push({ item: closeDelayRow, kind: "scrub", bump: function (d) { closeDelayScrub.bump(d); } });
+        }
+        r.push(root.headEntry(wsGrp));
+        if (wsGrp.open) {
+            r.push({ item: wsStyleRow, kind: "seg", vals: ["dots", "numbers", "names"], get: function () { return Flags.wsStyle; }, set: function (v) { Flags.wsStyle = v; } });
+            r.push({ item: wsShowRow, kind: "seg", vals: ["occupied", "all"], get: function () { return Flags.wsShow; }, set: function (v) { Flags.wsShow = v; } });
+            r.push({ item: wsScrollRow, kind: "toggle", get: function () { return Flags.wsScroll; }, set: function (v) { Flags.wsScroll = v; } });
         }
         return r;
     }
@@ -186,6 +202,11 @@ SettingsSurface {
             activeOpacity: root.activeOpacity,
             inactiveOpacity: root.inactiveOpacity,
             pillOpacity: Flags.pillOpacity,
+            pillHeight: Flags.pillHeight,
+            pillRounding: Flags.pillRounding,
+            idleWidth: Flags.idleWidth,
+            openDelay: Flags.openDelay,
+            closeDelay: Flags.closeDelay,
             topGap: Flags.topGap,
             appGap: Flags.appGap,
             nlTemp: Flags.nightLightTemp,
@@ -486,11 +507,15 @@ SettingsSurface {
         Column {
             anchors.left: parent.left
             anchors.leftMargin: root.textInset
+            anchors.right: ctrl.left
+            anchors.rightMargin: 12 * root.s
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2 * root.s
 
             Text {
                 id: lbl
+                width: parent.width
+                elide: Text.ElideRight
                 text: frow.label
                 color: Theme.cream
                 font.family: Theme.font
@@ -499,6 +524,8 @@ SettingsSurface {
             }
 
             Text {
+                width: parent.width
+                elide: Text.ElideRight
                 visible: frow.expanded && frow.caption.length > 0
                 text: frow.caption
                 color: Theme.faint
@@ -960,6 +987,177 @@ SettingsSurface {
                         Flags.pillBlur = !Flags.pillBlur;
                         root.applyPillBlur(Flags.pillBlur);
                     }
+                }
+            }
+
+            FieldRow {
+                id: pillHRow
+                label: "Height"
+                caption: "Resting pill height"
+                ScrubValue {
+                    id: pillHScrub
+                    s: root.s
+                    value: Flags.pillHeight
+                    openValue: root.base.pillHeight
+                    from: 24; to: 64; step: 1; decimals: 0
+                    unit: "px"
+                    onEdited: v => Flags.pillHeight = v
+                }
+            }
+
+            FieldRow {
+                id: pillRoundRow
+                label: "Rounding"
+                caption: "Corner radius, up to fully round"
+                ScrubValue {
+                    id: pillRoundScrub
+                    s: root.s
+                    value: Flags.pillRounding
+                    openValue: root.base.pillRounding
+                    from: 0; to: 32; step: 1; decimals: 0
+                    unit: "px"
+                    onEdited: v => Flags.pillRounding = v
+                }
+            }
+
+            FieldRow {
+                id: idleWRow
+                label: "Idle width"
+                caption: "Narrowest the resting pill gets"
+                ScrubValue {
+                    id: idleWScrub
+                    s: root.s
+                    value: Flags.idleWidth
+                    openValue: root.base.idleWidth
+                    from: 100; to: 320; step: 5; decimals: 0
+                    unit: "px"
+                    onEdited: v => Flags.idleWidth = v
+                }
+            }
+
+            FieldRow {
+                id: shadowPillRow
+                label: "Shadow"
+                caption: "Drop shadow under the pill"
+                LinkToggle {
+                    s: root.s
+                    on: Flags.pillShadow
+                    onToggled: Flags.pillShadow = !Flags.pillShadow
+                }
+            }
+
+            FieldRow {
+                id: borderPillRow
+                label: "Border"
+                caption: "Hairline around the pill"
+                LinkToggle {
+                    s: root.s
+                    on: Flags.pillBorder
+                    onToggled: Flags.pillBorder = !Flags.pillBorder
+                }
+            }
+
+            FieldRow {
+                id: sheenRow
+                label: "Sheen"
+                caption: "Highlight along the top edge"
+                LinkToggle {
+                    s: root.s
+                    on: Flags.pillSheen
+                    onToggled: Flags.pillSheen = !Flags.pillSheen
+                }
+            }
+
+            FieldRow {
+                id: springRow
+                label: "Spring feel"
+                caption: "How the pill reshapes"
+                SettingsSeg {
+                    s: root.s
+                    options: [{ label: "Soft", value: "soft" }, { label: "Snappy", value: "snappy" }]
+                    value: Flags.springFeel
+                    onPicked: (v) => Flags.springFeel = v
+                }
+            }
+
+            FieldRow {
+                id: expandRow
+                label: "Expand on"
+                caption: "What opens the icon row"
+                SettingsSeg {
+                    s: root.s
+                    options: [{ label: "Hover", value: "hover" }, { label: "Click", value: "click" }]
+                    value: Flags.expandMode
+                    onPicked: (v) => Flags.expandMode = v
+                }
+            }
+
+            FieldRow {
+                id: openDelayRow
+                label: "Open delay"
+                caption: "Wait before the hover row opens"
+                ScrubValue {
+                    id: openDelayScrub
+                    s: root.s
+                    value: Flags.openDelay
+                    openValue: root.base.openDelay
+                    from: 0; to: 1000; step: 50; decimals: 0
+                    unit: "ms"
+                    onEdited: v => Flags.openDelay = v
+                }
+            }
+
+            FieldRow {
+                id: closeDelayRow
+                label: "Close delay"
+                caption: "Wait before it folds after you leave"
+                ScrubValue {
+                    id: closeDelayScrub
+                    s: root.s
+                    value: Flags.closeDelay
+                    openValue: root.base.closeDelay
+                    from: 0; to: 2000; step: 50; decimals: 0
+                    unit: "ms"
+                    onEdited: v => Flags.closeDelay = v
+                }
+            }
+
+            }
+
+            Group { id: wsGrp; title: "Workspaces"
+
+            FieldRow {
+                id: wsStyleRow
+                label: "Style"
+                caption: "In the hover row"
+                SettingsSeg {
+                    s: root.s
+                    options: [{ label: "Dots", value: "dots" }, { label: "Numbers", value: "numbers" }, { label: "Names", value: "names" }]
+                    value: Flags.wsStyle
+                    onPicked: (v) => Flags.wsStyle = v
+                }
+            }
+
+            FieldRow {
+                id: wsShowRow
+                label: "Show"
+                caption: "Or every one up to the last"
+                SettingsSeg {
+                    s: root.s
+                    options: [{ label: "Occupied", value: "occupied" }, { label: "All", value: "all" }]
+                    value: Flags.wsShow
+                    onPicked: (v) => Flags.wsShow = v
+                }
+            }
+
+            FieldRow {
+                id: wsScrollRow
+                label: "Scroll to switch"
+                caption: "Mouse wheel over the workspaces"
+                LinkToggle {
+                    s: root.s
+                    on: Flags.wsScroll
+                    onToggled: Flags.wsScroll = !Flags.wsScroll
                 }
             }
 

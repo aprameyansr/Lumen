@@ -28,6 +28,43 @@ Singleton {
     /** A timer just ran out (the resting pill pulses its outline). */
     signal finished()
 
+    // ── date formatting ──
+
+    function localeName(lang) {
+        return lang === "de" ? "de_DE" : "en_US";
+    }
+
+    /** Short weekday name ("Mon", "Mo") for a Date or a weekday number 0-6 from Sunday. */
+    function weekday(when, lang) {
+        const dow = typeof when === "number" ? when : when.getDay();
+        return Qt.locale(localeName(lang)).dayName(dow, Locale.ShortFormat).replace(/\.$/, "");
+    }
+
+    /**
+     * `when` in a date preset; German drops the abbreviation dots ("Mo 27",
+     * "27. Okt") and unknown styles go to Qt as a format string.
+     */
+    function dateFor(style, lang, when) {
+        const d = when || new Date();
+        const loc = Qt.locale(localeName(lang));
+        const de = lang === "de";
+        const day = d.getDate();
+        const dayNum = de ? day + "." : String(day);
+        const mon = loc.monthName(d.getMonth(), Locale.ShortFormat).replace(/\.$/, "");
+        switch (style) {
+        case "ddd d":
+            return weekday(d, lang) + " " + day;
+        case "d MMM":
+            return dayNum + " " + mon;
+        case "ddd d MMM":
+            return weekday(d, lang) + " " + dayNum + " " + mon;
+        case "dd.MM.":
+            return String(day).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + ".";
+        default:
+            return loc.toString(d, style || "ddd d MMM");
+        }
+    }
+
     // ── stopwatch ──
 
     readonly property bool swRunning: Flags.swStart > 0
@@ -100,6 +137,15 @@ Singleton {
             Flags.tmEnd = t + Flags.tmDur;
         }
         root.now = t;
+    }
+
+    /** Start a fresh `min`-minute timer (from IPC); 0 cancels the running one. */
+    function tmStartMinutes(min) {
+        root.tmReset();
+        if (min > 0) {
+            root.tmSet(min * 60000);
+            root.tmToggle();
+        }
     }
 
     function tmReset() {

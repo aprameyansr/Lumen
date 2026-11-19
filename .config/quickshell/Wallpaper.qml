@@ -192,8 +192,11 @@ PillSurface {
         focusIndex = Math.max(0, Math.min(itemCount - 1, focusIndex + delta));
     }
 
+    /** True while a touchpad swipe drives `pos` directly; the glide below waits for it to end. */
+    property bool scrubbing: false
+
     FrameAnimation {
-        running: root.active && root.pos !== root.focusIndex
+        running: root.active && !root.scrubbing && root.pos !== root.focusIndex
         onTriggered: {
             var k = 1 - Math.exp(-frameTime / 0.07);
             var next = root.pos + (root.focusIndex - root.pos) * k;
@@ -1053,20 +1056,84 @@ PillSurface {
         }
     }
 
+    /**
+     * Wheel and touchpad. A mouse wheel steps one wallpaper per notch. A
+     * touchpad (pixel deltas) scrubs the strip continuously along its dominant
+     * axis, about 110 px of travel per wallpaper, with rubber-band resistance
+     * past either end. When the fingers lift (ScrollEnd, or a short pause) the
+     * flick's speed carries it on a little and the existing glide snaps to the
+     * nearest wallpaper.
+     */
     MouseArea {
         id: wheelArea
         anchors.fill: parent
         z: 20
         acceptedButtons: Qt.NoButton
         property real acc: 0
+        property real raw: 0
+        property real vel: 0
+        property real lastT: 0
+        readonly property real perItem: 110 * root.s
+
+        /** Pull `pos` back toward the ends with growing resistance. */
+        function band(x) {
+            var max = Math.max(0, root.itemCount - 1);
+            if (x < 0)
+                return -(1 - Math.exp(x * 0.9)) * 0.6;
+            if (x > max)
+                return max + (1 - Math.exp((max - x) * 0.9)) * 0.6;
+            return x;
+        }
+
+        function release() {
+            if (!root.scrubbing)
+                return;
+            var max = Math.max(0, root.itemCount - 1);
+            var aim = Math.max(0, Math.min(max, wheelArea.raw + wheelArea.vel * 0.18));
+            root.focusIndex = Math.round(aim);
+            root.scrubbing = false;
+        }
+
+        Timer {
+            id: swipeEnd
+            interval: 120
+            onTriggered: wheelArea.release()
+        }
+
         onWheel: (event) => {
-            acc += event.angleDelta.y / 120;
-            const notches = Math.trunc(acc);
-            if (notches !== 0) {
-                root.move(-notches);
-                acc -= notches;
-            }
             event.accepted = true;
+            if (root.itemCount === 0)
+                return;
+            var px = event.pixelDelta;
+            if (px.x === 0 && px.y === 0) {
+                acc += event.angleDelta.y / 120;
+                const notches = Math.trunc(acc);
+                if (notches !== 0) {
+                    root.move(-notches);
+                    acc -= notches;
+                }
+                return;
+            }
+            var d = Math.abs(px.x) > Math.abs(px.y) ? px.x : px.y;
+            var now = Date.now();
+            if (!root.scrubbing) {
+                root.scrubbing = true;
+                raw = root.pos;
+                vel = 0;
+                lastT = now;
+            }
+            var step = -d / perItem;
+            var dt = Math.max(1, now - lastT) / 1000;
+            vel = vel * 0.6 + (step / dt) * 0.4;
+            lastT = now;
+            raw = Math.max(-1.2, Math.min(Math.max(0, root.itemCount - 1) + 1.2, raw + step));
+            root.pos = band(raw);
+            var max = Math.max(0, root.itemCount - 1);
+            root.focusIndex = Math.max(0, Math.min(max, Math.round(raw)));
+            if (event.phase === Qt.ScrollEnd)
+                release();
+            else
+                swipeEnd.restart();
         }
     }
 }

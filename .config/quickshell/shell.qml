@@ -72,6 +72,8 @@ ShellRoot {
 
     /** The logind half of keep-awake (lid mode, timer, end action) lives in Singletons/Awake.qml; reading it here instantiates the lazy singleton at startup so a persisted session resumes. */
     readonly property bool awakeReady: Awake.on
+    /** Instantiates the sound engine at startup so a saved EQ or mic filter comes back on. */
+    readonly property bool soundReady: Sound.eq
 
     /**
      * Only these raw events can change what the pill renders (per-monitor
@@ -130,6 +132,12 @@ ShellRoot {
         function mixer(mon: string): void { root.toggleSurface(mon, "mixer"); }
         function calendar(mon: string): void { root.toggleSurface(mon, "calendar"); }
         function clock(mon: string): void { root.toggleSurface(mon, "clock"); }
+        function sound(mon: string): void { root.toggleSurface(mon, "sound"); }
+        function eq(): void { Sound.setEq(!Sound.eq); }
+        function eqMode(name: string): void { Sound.pick(name); }
+        function micFilter(): void { Sound.setDenoise(!Sound.denoise); }
+        /** Start a timer of `minutes` on the clock page's timer; 0 cancels it. */
+        function timer(minutes: string): void { Clocks.tmStartMinutes(Number(minutes) || 0); }
         function launcher(mon: string): void { root.toggleSurface(mon, "launcher"); }
         function emoji(mon: string): void { root.toggleSurface(mon, "emoji"); }
         function power(mon: string): void { root.toggleSurface(mon, "power"); }
