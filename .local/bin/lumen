@@ -13,6 +13,7 @@
 #   lumen log                     Follow the Quickshell log
 #   lumen update                  Check, show changelog, apply, restart
 #   lumen status                  What's running and the installed version
+#   lumen sync                    Copy the live configs into the dotfiles repo
 
 SCRIPTS="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 ENGINE="$SCRIPTS/lumen-update.py"
@@ -83,6 +84,7 @@ usage() {
     urow log     "" "Follow the Quickshell log" ""
     urow update  "" "Check, then apply an update" ""
     urow status  "" "What's running and the version" ""
+    urow sync    "" "Copy configs into the dotfiles" ""
     gap
 }
 
@@ -287,6 +289,78 @@ cmd_status() {
     gap
 }
 
+# Mirror the live configs into the dotfiles repo, laid out like $HOME
+# (.config/, .local/bin/) plus the root-owned bits under etc/. Backups
+# (*.bak*) are never copied and are cleared from the repo copy. Zen's files go
+# under a generic "<profile>" folder, since the real profile name is per machine.
+# LUMEN_DOTFILES overrides the repo path.
+DOTFILES="${LUMEN_DOTFILES:-$HOME/lumen-dotfiles}"
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+cmd_sync() {
+    [ -d "$DOTFILES/.git" ] || die "Dotfiles repo not found ($DOTFILES)"
+    command -v rsync >/dev/null 2>&1 || die "Rsync not found"
+
+    sec "Sync · $DOTFILES"
+    gap
+
+    for dir in fastfetch fish fontconfig hypr kitty quickshell spicetify; do
+        [ -d "$CFG/$dir" ] || { row "${faint}skip  .config/$dir (missing)${rst}"; continue; }
+        mkdir -p "$DOTFILES/.config/$dir"
+        rsync -a --delete --exclude='*.bak*' --delete-excluded \
+            "$CFG/$dir/" "$DOTFILES/.config/$dir/" || die "Copy failed: .config/$dir"
+        row "${flame}·${rst} ${cream}.config/$dir${rst}"
+    done
+
+    mkdir -p "$DOTFILES/.local/bin"
+    rsync -a --delete --exclude='*.bak*' --delete-excluded \
+        "$HOME/.local/bin/" "$DOTFILES/.local/bin/" || die "Copy failed: .local/bin"
+    row "${flame}·${rst} ${cream}.local/bin${rst}"
+
+    for f in mimeapps.list starship.toml; do
+        [ -f "$CFG/$f" ] && cp "$CFG/$f" "$DOTFILES/.config/$f"
+    done
+    row "${flame}·${rst} ${cream}mimeapps.list, starship.toml${rst}"
+
+    # GTK glass theme overrides and settings (theme, cursor, font)
+    mkdir -p "$DOTFILES/.config/gtk-3.0" "$DOTFILES/.config/gtk-4.0"
+    for f in gtk.css settings.ini; do
+        [ -f "$CFG/gtk-3.0/$f" ] && cp "$CFG/gtk-3.0/$f" "$DOTFILES/.config/gtk-3.0/"
+    done
+    for f in gtk.css glass.css settings.ini; do
+        [ -f "$CFG/gtk-4.0/$f" ] && cp "$CFG/gtk-4.0/$f" "$DOTFILES/.config/gtk-4.0/"
+    done
+    row "${flame}·${rst} ${cream}gtk-3.0, gtk-4.0${rst}"
+
+    # Zen glass styling from the profile Zen actually launches (the Install
+    # section's Default=<path>, not a profile's Default=1 flag).
+    prof=$(sed -n 's/^Default=//p' "$CFG/zen/profiles.ini" 2>/dev/null | grep -vx 1 | head -n 1)
+    if [ -n "$prof" ] && [ -d "$CFG/zen/$prof" ]; then
+        zdst="$DOTFILES/.config/zen/<profile>"
+        mkdir -p "$zdst/chrome"
+        for f in userChrome.css userContent.css spotlight-blur.svg; do
+            [ -f "$CFG/zen/$prof/chrome/$f" ] && cp "$CFG/zen/$prof/chrome/$f" "$zdst/chrome/"
+        done
+        [ -f "$CFG/zen/$prof/user.js" ] && cp "$CFG/zen/$prof/user.js" "$zdst/"
+        row "${flame}·${rst} ${cream}zen${rst} ${dim}($prof)${rst}"
+    else
+        row "${faint}skip  zen (no default profile)${rst}"
+    fi
+
+    # Zen autoconfig (glass tooltips) and the pacman hook that restores it
+    mkdir -p "$DOTFILES/etc/zen-autoconfig" "$DOTFILES/etc/pacman.d/hooks"
+    for f in autoconfig.js mozilla.cfg; do
+        [ -f "/etc/zen-autoconfig/$f" ] && cp "/etc/zen-autoconfig/$f" "$DOTFILES/etc/zen-autoconfig/"
+    done
+    [ -f /etc/pacman.d/hooks/zen-autoconfig.hook ] &&
+        cp /etc/pacman.d/hooks/zen-autoconfig.hook "$DOTFILES/etc/pacman.d/hooks/"
+    row "${flame}·${rst} ${cream}etc/zen-autoconfig, etc/pacman.d/hooks${rst}"
+
+    gap
+    changed=$(git -C "$DOTFILES" status --porcelain 2>/dev/null | wc -l)
+    act "Synced" "$changed change(s) in the repo"
+}
+
 cmd="$1"
 [ $# -gt 0 ] && shift
 
@@ -297,6 +371,7 @@ case "$cmd" in
     log) cmd_log "$@" ;;
     update) cmd_update ;;
     status) cmd_status ;;
+    sync) cmd_sync ;;
     "" | -h | --help | help) usage ;;
     *) die "Unknown command '$cmd' (try: lumen help)" ;;
 esac

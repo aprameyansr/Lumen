@@ -57,36 +57,8 @@ I use `matugen` to generate colors from wallpapers.
 The generated palette is used throughout the desktop, including the shell,
 terminal and other parts of the configuration.
 
-<<<<<<< HEAD
 The Quickshell interface also has its own manually tuned visual styling,
 built around warm vermilion and muted cream tones.
-=======
-`install.sh` is a thin bootstrap: it detects your distro (Arch, Debian, Fedora,
-openSUSE or Gentoo), makes sure git and python3 are there, clones the rice into
-`~/.local/share/ricelin`, then hands off to the guided Python installer. That part
-walks you through a short wizard, picks the right package names for your distro,
-pulls the deps and copies the configs into `~/.config`, backing up anything it
-replaces. The monitor layout and GPU env are swapped for portable defaults so it
-boots on any hardware; my own layout is kept next to it as `monitors.lua.example`.
-Then start `Hyprland` from a TTY.
-
-Skip the wizard with flags, passed straight through the pipe:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/Gakuseei/Ricelin/main/install.sh | bash -s -- --quickstart
-```
-
-```
---quickstart  core defaults, no questions
---full        also install the daily apps (dolphin, keepassxc, zathura, imv, rnote)
---sddm        also install the torii SDDM login theme
---no-deps     skip the package step, just deploy the configs
---dry-run     walk the whole flow and change nothing
-```
-
-Ricelin is a Hyprland shell. On Niri, Sway or anything else only rishot (the
-screenshot tool) makes sense; grab it from [rishot](https://github.com/Gakuseei/rishot)'s own installer.
->>>>>>> upstream/main
 
 ## Keybinds
 
@@ -145,19 +117,30 @@ screenshot tool) makes sense; grab it from [rishot](https://github.com/Gakuseei/
 
 ## Repository Structure
 
+The repo mirrors where each file lives on the system: `.config/` and
+`.local/` map to the same folders in `$HOME`, and `etc/` to `/etc`.
+
 ```text
-bin/            Personal command-line scripts
-fastfetch/      Fastfetch configuration
-fish/           Fish shell configuration
-fontconfig/     Font configuration
-hypr/           Hyprland configuration and scripts
-kitty/          Kitty terminal configuration
-matugen/        Matugen configuration
-mimeapps.list   Default application associations
-nvim/           Neovim configuration
-nvim-qt/        Neovim-Qt configuration
-quickshell/     Quickshell shell and surfaces
+.config/
+  fastfetch/          Fastfetch configuration
+  fish/               Fish shell configuration
+  fontconfig/         Font configuration
+  gtk-3.0/ gtk-4.0/   GTK glass styling and settings (theme, cursor, font)
+  hypr/               Hyprland configuration and scripts
+  kitty/              Kitty terminal configuration
+  quickshell/         Quickshell shell and surfaces
+  spicetify/          Spotify theming
+  zen/<profile>/      Zen Browser styling (copy into your own profile folder)
+  mimeapps.list       Default application associations
+  starship.toml       Prompt
+.local/bin/           Personal command-line scripts, including `lumen`
+etc/
+  zen-autoconfig/     Zen autoconfig for glass tooltips (root)
+  pacman.d/hooks/     Pacman hook that restores it after Zen updates (root)
 ```
+
+`lumen sync` copies the live configs back into this repo in the same layout,
+skipping editor and `*.bak*` backups.
 
 ## Notes
 
@@ -183,9 +166,9 @@ Translucent backgrounds that Hyprland blurs behind. Blur itself comes from
 **GTK** (needs the `adw-gtk-theme` package, with `adw-gtk3-dark` selected):
 
 ```sh
-cp gtk-3.0/gtk.css ~/.config/gtk-3.0/
+cp .config/gtk-3.0/gtk.css ~/.config/gtk-3.0/
 rm -f ~/.config/gtk-4.0/gtk.css   # nwg-look makes this a symlink
-cp gtk-4.0/gtk.css gtk-4.0/glass.css ~/.config/gtk-4.0/
+cp .config/gtk-4.0/gtk.css .config/gtk-4.0/glass.css ~/.config/gtk-4.0/
 ```
 
 GTK 4.24+ only gets blurred because `glass.css` sets `backdrop-filter` on
@@ -196,19 +179,19 @@ so copy it back afterwards.
 then fully restart Zen:
 
 ```sh
-cp zen/user.js <profile>/
-mkdir -p <profile>/chrome && cp zen/chrome/*.css zen/chrome/*.svg <profile>/chrome/
+cp ".config/zen/<profile>/user.js" <profile>/
+mkdir -p <profile>/chrome && cp ".config/zen/<profile>/chrome/"* <profile>/chrome/
 ```
 
 **Zen glass tooltips (optional, needs root):** Zen's space/Library button
 tooltips use Firefox's built-in tooltip, which userChrome.css can't reach.
-`zen/autoconfig/mozilla.cfg` gives them a stylable tooltip. It's loaded via
+`etc/zen-autoconfig/mozilla.cfg` gives them a stylable tooltip. It's loaded via
 Firefox autoconfig from the install folder, and a pacman hook puts it back
 after every `zen-browser-bin` update:
 
 ```sh
-sudo install -Dm644 zen/autoconfig/autoconfig.js zen/autoconfig/mozilla.cfg -t /etc/zen-autoconfig/
-sudo install -Dm644 zen/autoconfig/zen-autoconfig.hook /etc/pacman.d/hooks/zen-autoconfig.hook
+sudo install -Dm644 etc/zen-autoconfig/autoconfig.js etc/zen-autoconfig/mozilla.cfg -t /etc/zen-autoconfig/
+sudo install -Dm644 etc/pacman.d/hooks/zen-autoconfig.hook /etc/pacman.d/hooks/zen-autoconfig.hook
 sudo install -Dm644 /etc/zen-autoconfig/autoconfig.js /opt/zen-browser-bin/defaults/pref/autoconfig.js
 sudo install -Dm644 /etc/zen-autoconfig/mozilla.cfg /opt/zen-browser-bin/mozilla.cfg
 ```
