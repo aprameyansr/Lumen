@@ -112,14 +112,14 @@ PillSurface {
         signal activated()
 
         anchors.verticalCenter: parent.verticalCenter
-        implicitWidth: Flags.showGlyphs ? kanjiLabel.implicitWidth : 15 * root.s
-        implicitHeight: Flags.showGlyphs ? kanjiLabel.implicitHeight : 15 * root.s
+        implicitWidth: 15 * root.s
+        implicitHeight: 15 * root.s
         opacity: skip.can ? 1 : 0.4
         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
 
         Text {
             id: kanjiLabel
-            visible: Flags.showGlyphs
+            visible: false
             anchors.centerIn: parent
             text: skip.kanjiText
             font.family: Theme.fontJp
@@ -129,7 +129,7 @@ PillSurface {
         }
 
         GlyphIcon {
-            visible: !Flags.showGlyphs
+            visible: true
             anchors.centerIn: parent
             width: 15 * root.s
             height: 15 * root.s
@@ -509,7 +509,7 @@ PillSurface {
             }
 
             Text {
-                visible: Flags.showGlyphs
+                visible: false
                 anchors.centerIn: parent
                 text: root.playing ? "奏" : "休"
                 color: Theme.bright
@@ -519,7 +519,7 @@ PillSurface {
             }
 
             GlyphIcon {
-                visible: !Flags.showGlyphs
+                visible: true
                 anchors.centerIn: parent
                 width: 15 * root.s
                 height: 15 * root.s

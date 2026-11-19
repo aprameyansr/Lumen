@@ -33,6 +33,8 @@ PillSurface {
 
     readonly property var loc: Qt.locale("en_US")
 
+    signal requestSurface(string name)
+
     readonly property date today: sysClock.date
     property int viewYear: today.getFullYear()
     property int viewMonth: today.getMonth()
@@ -168,6 +170,49 @@ PillSurface {
         var mm = m < 10 ? "0" + m : "" + m;
         var dd = day < 10 ? "0" + day : "" + day;
         return viewYear + "-" + mm + "-" + dd;
+    }
+
+    /**
+     * Jump the grid to a typed month and/or year. Forgiving: "march 2027",
+     * "mar 27", "3/2027", "2027-03", "dec" (keeps the shown year), "2030" or
+     * "30" (keep the shown month). A lone 1-12 is a month; 13-999 counts from 2000 (101 is 2101).
+     * Returns false when nothing parses.
+     */
+    function jumpTo(text) {
+        var toks = String(text).toLowerCase().trim().split(/[\s\/\-.,]+/).filter(function (t) { return t.length; });
+        var month = -1, year = -1, nums = [];
+        for (var i = 0; i < toks.length; i++) {
+            var t = toks[i];
+            if (/^\d+$/.test(t)) {
+                nums.push(t);
+                continue;
+            }
+            for (var m = 0; m < 12 && month < 0; m++) {
+                var name = root.loc.standaloneMonthName(m, Locale.LongFormat).toLowerCase();
+                if (t.length >= 3 && name.indexOf(t) === 0)
+                    month = m;
+            }
+            if (month < 0)
+                return false;
+        }
+        for (var j = 0; j < nums.length; j++) {
+            var n = parseInt(nums[j], 10);
+            if (nums[j].length === 4 && year < 0)
+                year = n;
+            else if (month < 0 && n >= 1 && n <= 12)
+                month = n - 1;
+            else if (nums[j].length <= 3 && year < 0)
+                year = 2000 + n;
+            else
+                return false;
+        }
+        if (month < 0 && year < 0)
+            return false;
+        if (month >= 0)
+            root.viewMonth = month;
+        if (year >= 0)
+            root.viewYear = year;
+        return true;
     }
 
     function shiftMonth(delta) {
@@ -488,17 +533,75 @@ PillSurface {
                     font.weight: Font.Medium
                     font.pixelSize: 16 * root.s
                 }
-                Text {
-                    id: monthLabel
+                /**
+                 * Month and year: click to type where to go ("march 2027",
+                 * "3/27", "dec", "2030"); Enter jumps, Esc cancels. An entry that
+                 * doesn't parse stays open in the warm tone so it can be fixed.
+                 */
+                Item {
+                    id: monthBox
+                    property bool editing: false
+                    property bool bad: false
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.loc.standaloneMonthName(root.viewMonth, Locale.LongFormat)
-                        + " " + root.viewYear
-                    color: Theme.subtle
-                    font.family: Theme.font
-                    font.pixelSize: 11 * root.s
-                    font.weight: Font.DemiBold
-                    font.capitalization: Font.AllUppercase
-                    font.letterSpacing: 1.0 * root.s
+                    width: editing ? 140 * root.s : monthLabel.implicitWidth
+                    height: monthLabel.implicitHeight
+
+                    Text {
+                        id: monthLabel
+                        visible: !monthBox.editing
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.loc.standaloneMonthName(root.viewMonth, Locale.LongFormat)
+                            + " " + root.viewYear
+                        color: monthArea.containsMouse ? Theme.cream : Theme.subtle
+                        font.family: Theme.font
+                        font.pixelSize: 11 * root.s
+                        font.weight: Font.DemiBold
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: 1.0 * root.s
+                    }
+                    MouseArea {
+                        id: monthArea
+                        visible: !monthBox.editing
+                        anchors.fill: parent
+                        anchors.margins: -4 * root.s
+                        hoverEnabled: true
+                        cursorShape: Qt.IBeamCursor
+                        onClicked: {
+                            monthField.text = "";
+                            monthBox.bad = false;
+                            monthBox.editing = true;
+                            monthField.forceActiveFocus();
+                        }
+                    }
+                    TextField {
+                        id: monthField
+                        visible: monthBox.editing
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        background: null
+                        padding: 0
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: monthBox.bad ? Theme.vermLit : Theme.cream
+                        font.family: Theme.font
+                        font.pixelSize: 11 * root.s
+                        font.weight: Font.DemiBold
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: 1.0 * root.s
+                        placeholderText: "month year"
+                        placeholderTextColor: Theme.faint
+                        selectByMouse: true
+                        selectionColor: Theme.verm
+                        onTextEdited: monthBox.bad = false
+                        onAccepted: {
+                            if (root.jumpTo(text))
+                                monthBox.editing = false;
+                            else
+                                monthBox.bad = true;
+                        }
+                        Keys.onEscapePressed: monthBox.editing = false
+                        onActiveFocusChanged: if (!activeFocus) monthBox.editing = false
+                    }
                 }
             }
 
@@ -506,6 +609,33 @@ PillSurface {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2 * root.s
+
+                /** Link to the clock page (stopwatch, timer, world clock). */
+                Rectangle {
+                    width: 22 * root.s
+                    height: 22 * root.s
+                    radius: Motion.rSmall * root.s
+                    color: clockLinkArea.containsMouse ? Theme.frameBg : "transparent"
+                    border.width: clockLinkArea.containsMouse ? 1 : 0
+                    border.color: Theme.frameBorder
+
+                    GlyphIcon {
+                        anchors.centerIn: parent
+                        width: 15 * root.s
+                        height: 15 * root.s
+                        name: "clock"
+                        color: clockLinkArea.containsMouse ? Theme.cream : Theme.iconDim
+                        stroke: 1.7
+                    }
+
+                    MouseArea {
+                        id: clockLinkArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.requestSurface("clock")
+                    }
+                }
 
                 Repeater {
                     model: [-1, 1]

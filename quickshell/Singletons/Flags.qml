@@ -15,6 +15,22 @@ Singleton {
 
     property alias dnd: adapter.dnd
     property alias keepAwake: adapter.keepAwake
+    property alias awakeLid: adapter.awakeLid
+    property alias awakeMins: adapter.awakeMins
+    property alias awakeCustom: adapter.awakeCustom
+    property alias awakeEnd: adapter.awakeEnd
+    property alias awakeFrom: adapter.awakeFrom
+    property alias awakeUntil: adapter.awakeUntil
+    property alias awakePresets: adapter.awakePresets
+    property alias clockTab: adapter.clockTab
+    property alias swStart: adapter.swStart
+    property alias swAccum: adapter.swAccum
+    property alias swLaps: adapter.swLaps
+    property alias tmDur: adapter.tmDur
+    property alias tmTotal: adapter.tmTotal
+    property alias tmEnd: adapter.tmEnd
+    property alias tmLeft: adapter.tmLeft
+    property alias worldZones: adapter.worldZones
     property alias time12h: adapter.time12h
     property alias clockSeconds: adapter.clockSeconds
     property alias showGlyphs: adapter.showGlyphs
@@ -50,6 +66,23 @@ Singleton {
     property alias notifSecs: adapter.notifSecs
     property alias notifMuted: adapter.notifMuted
 
+    property bool selfWrite: false
+
+    Timer {
+        id: writeTimer
+        interval: 20
+        onTriggered: {
+            file.writeAdapter();
+            echoTimer.restart();
+        }
+    }
+
+    Timer {
+        id: echoTimer
+        interval: 400
+        onTriggered: root.selfWrite = false
+    }
+
     FileView {
         id: file
         path: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/lumen/flags.json"
@@ -57,8 +90,17 @@ Singleton {
         watchChanges: true
         printErrors: false
 
-        onFileChanged: reload()
-        onAdapterUpdated: writeAdapter()
+        /**
+         * Several fields often change in one go (a keep-awake start sets its span
+         * and the switch together). Writing per field let the watcher reload a
+         * half-written file over the newer values, so changes coalesce into one
+         * write and the watcher's echo of our own write is ignored.
+         */
+        onFileChanged: if (!root.selfWrite) reload()
+        onAdapterUpdated: {
+            root.selfWrite = true;
+            writeTimer.restart();
+        }
         onLoadFailed: function(error) {
             if (error === FileViewError.FileNotFound)
                 writeAdapter();
@@ -68,6 +110,36 @@ Singleton {
             id: adapter
             property bool dnd: false
             property bool keepAwake: false
+            /** Lid while keep-awake is on: "awake" holds the lid switch, "sleep" lets a closed lid suspend as usual. */
+            property string awakeLid: "sleep"
+            /** Session length in minutes for the next start; 0 runs until switched off. */
+            property int awakeMins: 30
+            /** Last custom length picked on the scrub, kept apart so the chips never clobber it. */
+            property int awakeCustom: 90
+            /** What a timed session does at zero: "off" just ends it, "sleep" suspends, "poweroff" shuts down. */
+            property string awakeEnd: "off"
+            /** Epoch ms the running session started and ends at; awakeUntil 0 means untimed. */
+            property real awakeFrom: 0
+            property real awakeUntil: 0
+            /** Clock page tab: "stopwatch", "timer" or "world". */
+            property string clockTab: "stopwatch"
+            /** Stopwatch: epoch ms of the running stretch's start (0 = stopped), time banked before it, and lap marks as total ms. */
+            property real swStart: 0
+            property real swAccum: 0
+            property var swLaps: []
+            /** Timer: the length set for the next run, the length of the current run, its end while running (0 = not running) and what's left while paused. */
+            property real tmDur: 300000
+            property real tmTotal: 0
+            property real tmEnd: 0
+            property real tmLeft: 0
+            /** World clock cities as IANA zone names, in display order. */
+            property var worldZones: ["Europe/London", "America/New_York", "Asia/Tokyo"]
+            /** Saved one-tap sessions: { name, lid, mins, end }. Seeded once; an emptied list stays empty. */
+            property var awakePresets: [
+                { name: "Download", lid: "awake", mins: 120, end: "sleep" },
+                { name: "Reading", lid: "sleep", mins: 60, end: "off" },
+                { name: "Overnight", lid: "awake", mins: 240, end: "poweroff" }
+            ]
             property bool time12h: false
             property bool clockSeconds: false
             property bool showGlyphs: true

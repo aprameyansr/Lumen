@@ -40,7 +40,6 @@ ShellRoot {
 
     Component.onCompleted: {
         refresh();
-        Devices.restore();
     }
         Connections {
         target: Quickshell
@@ -71,17 +70,8 @@ ShellRoot {
         IdleInhibitor { window: inhibitWin; enabled: Flags.keepAwake }
     }
 
-    /**
-     * The Wayland IdleInhibitor above only pauses the compositor's own idle
-     * (DPMS); hypridle runs its own timer and never sees it, so the lock still
-     * fired with keep-awake on. A logind idle inhibitor is the wire hypridle
-     * does respect, so hold one for as long as the flag is set.
-     */
-    Process {
-        running: Flags.keepAwake
-        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=Lumen",
-                  "--why=keep awake", "--mode=block", "sleep", "infinity"]
-    }
+    /** The logind half of keep-awake (lid mode, timer, end action) lives in Singletons/Awake.qml; reading it here instantiates the lazy singleton at startup so a persisted session resumes. */
+    readonly property bool awakeReady: Awake.on
 
     /**
      * Only these raw events can change what the pill renders (per-monitor
@@ -139,6 +129,7 @@ ShellRoot {
         target: "pill"
         function mixer(mon: string): void { root.toggleSurface(mon, "mixer"); }
         function calendar(mon: string): void { root.toggleSurface(mon, "calendar"); }
+        function clock(mon: string): void { root.toggleSurface(mon, "clock"); }
         function launcher(mon: string): void { root.toggleSurface(mon, "launcher"); }
         function emoji(mon: string): void { root.toggleSurface(mon, "emoji"); }
         function power(mon: string): void { root.toggleSurface(mon, "power"); }
@@ -171,6 +162,8 @@ ShellRoot {
             }
         }
         function dnd(mon: string): void { Flags.dnd = !Flags.dnd; }
+        function awake(mon: string): void { root.toggleSurface(mon, "awake"); }
+        function keepAwake(mon: string): void { Awake.toggle(); }
         function sysmon(mon: string): void { root.toggleSurface(mon, "sysmon"); }
         function system(mon: string): void { root.toggleSurface(mon, "sysmon"); }
         function clipboard(mon: string): void { root.toggleSurface(mon, "clipboard"); }
@@ -362,6 +355,8 @@ ShellRoot {
                     onHoveredChanged: pill.hovered = hovered
                 }
                 Keys.onEscapePressed: {
+                    if (pill.criticalToast)
+                        return;
                     if (pill.quickChoosing) {
                         ScreenRec.quickChoosing = false;
                         ScreenRec.quickScreenChoosing = false;
@@ -370,14 +365,20 @@ ShellRoot {
                     }
                 }
                 Keys.onUpPressed: (e) => {
+                    if (pill.criticalToast) { e.accepted = true; return; }
+                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(-1); e.accepted = true; return; }
                     e.accepted = pill.mixerStep(1) || pill.recorderStep(5) || pill.settingsMove(-1);
                 }
                 Keys.onDownPressed: (e) => {
+                    if (pill.criticalToast) { e.accepted = true; return; }
+                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(1); e.accepted = true; return; }
                     e.accepted = pill.mixerStep(-1) || pill.recorderStep(-5) || pill.settingsMove(1);
                 }
                 Keys.onLeftPressed: (e) => {
+                    if (pill.criticalToast) { e.accepted = true; return; }
+                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.mixerOpen) { pill.mixerFocusMove(-1); e.accepted = true; }
                     else if (pill.wallpaperOpen) { pill.wallpaperMove(-1); e.accepted = true; }
                     else if (pill.powerOpen) { pill.powerMove(-1); e.accepted = true; }
@@ -385,6 +386,8 @@ ShellRoot {
                     else if (pill.settingsLike) { pill.settingsAdjust(-1); e.accepted = true; }
                 }
                 Keys.onRightPressed: (e) => {
+                    if (pill.criticalToast) { e.accepted = true; return; }
+                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.mixerOpen) { pill.mixerFocusMove(1); e.accepted = true; }
                     else if (pill.wallpaperOpen) { pill.wallpaperMove(1); e.accepted = true; }
                     else if (pill.powerOpen) { pill.powerMove(1); e.accepted = true; }
@@ -400,9 +403,24 @@ ShellRoot {
                  * is swallowed for everything else so a held key never re-fires.
                  */
                 Keys.onPressed: (e) => {
+                    /** A critical notification covers the open page; keep keys off the hidden page until it clears. */
+                    if (pill.criticalToast) {
+                        e.accepted = true;
+                        return;
+                    }
+                    if (pill.clockOpen) {
+                        if (!e.isAutoRepeat && pill.clockKey(e.key, e.modifiers))
+                            e.accepted = true;
+                        return;
+                    }
                     if (pill.wallpaperOpen && !pill.wallpaperSearching
                         && e.text.length === 1 && e.text > " ") {
                         pill.wallpaperType(e.text);
+                        e.accepted = true;
+                        return;
+                    }
+                    if (e.key === Qt.Key_Delete && pill.awakeOpen) {
+                        pill.awakeDelete();
                         e.accepted = true;
                         return;
                     }

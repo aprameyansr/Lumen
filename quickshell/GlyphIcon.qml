@@ -30,6 +30,7 @@ Item {
         "droplet": { d: "M12 3c3.5 4.2 5.5 7 5.5 9.5a5.5 5.5 0 0 1-11 0C6.5 10 8.5 7.2 12 3z", fill: false },
         "check": { d: "M20 6 9 17l-5-5", fill: false },
         "arrow-up": { d: "M12 19V5 M6 11l6-6 6 6", fill: false },
+        "calendar": { d: "M6 4h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M4 10h16 M8 2v4 M16 2v4", fill: false },
         "stopwatch": { d: "M10 2h4 M12 14V9 M19 7l1.5-1.5 M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", fill: false },
         "type": { d: "M4 7V5h16v2 M12 5v14 M9 19h6", fill: false },
         "language": { d: "M3 5h8 M7 4v2c0 3.5-2 6-4 7 M4 9c0 2 2.5 4 6 4.5 M13 20l4-9 4 9 M14.5 17h5", fill: false },

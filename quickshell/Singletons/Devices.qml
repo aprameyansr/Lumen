@@ -4,10 +4,7 @@ import Quickshell
 import Quickshell.Io
 
 /**
- * Single owner of screen vibrance (nvibrant) and external-monitor brightness
- * (ddcutil) for the mixer. The persisted vibrance percent is the source of
- * truth: loaded and re-applied once at startup so the tint survives a reboot,
- * and every later set both pushes to nvibrant and writes back the state file.
+ * Single owner of external-monitor brightness (ddcutil) for the mixer.
  * DDC monitors come from `ddcutil detect` (one brightness fader each); the
  * setvcp/getvcp wire format lives here so every caller speaks it the same.
  * The internal laptop backlight (eDP, no DDC/CI) is driven separately via
@@ -16,10 +13,6 @@ import Quickshell.Io
  */
 Singleton {
     id: root
-
-    readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ricelin/nvibrant-value"
-
-    property int vibrance: 40
 
     /**
      * DDC-capable monitors from `ddcutil detect`: [{ bus, label }] with label
@@ -32,47 +25,6 @@ Singleton {
 
     /** Current internal-backlight level, 0..100. */
     property int backlightPct: 75
-
-    /**
-     * Loads the persisted vibrance percent and applies it once, so the saved
-     * tint is restored on boot. Singletons init lazily, so a startup caller
-     * must reference this for the restore to fire.
-     */
-    function restore() {
-        var raw = vibState.text();
-        var v = parseInt((raw || "40").trim());
-        root.vibrance = isNaN(v) ? 40 : v;
-        if (raw && raw.trim().length)
-            applyVibrance(root.vibrance);
-    }
-
-    /**
-     * Sets the screen vibrance to `pct` percent: pushes it to nvibrant and
-     * persists it to the state file. `vibrance` mirrors the last set value.
-     */
-    function setVibrance(pct) {
-        root.vibrance = Math.round(pct);
-        applyVibrance(pct);
-        saveVibrance(pct);
-    }
-
-    /**
-     * nvibrant takes one value per connector slot and ignores extras, so the
-     * same value goes to every slot rather than guessing which ones are lit.
-     */
-    function applyVibrance(pct) {
-        var raw = Math.round(Math.max(0, Math.min(100, pct)) * 1023 / 100);
-        var args = ["nvibrant"];
-        for (var i = 0; i < 16; i++)
-            args.push(String(raw));
-        Quickshell.execDetached(args);
-    }
-
-    function saveVibrance(pct) {
-        Quickshell.execDetached(["sh", "-c",
-            'mkdir -p "$(dirname "$1")" && printf "%s\n" "$2" > "$1"',
-            "_", root.stateFile, String(Math.round(pct))]);
-    }
 
     function detect() {
         ddcDetect.running = true;
@@ -91,7 +43,36 @@ Singleton {
      */
     function setBacklight(pct) {
         root.backlightPct = Math.round(Math.max(1, Math.min(100, pct)));
+        root.liveSent = -1;
         Quickshell.execDetached(["brightnessctl", "set", root.backlightPct + "%"]);
+    }
+
+    /**
+     * Live variant for fader drags: one brightnessctl in flight at a time, and
+     * the newest level goes out the moment the previous write lands (~6 ms), so
+     * the panel tracks the fader like volume does without queuing a backlog.
+     */
+    property int liveWant: -1
+    property int liveSent: -1
+
+    function setBacklightLive(pct) {
+        root.backlightPct = Math.round(Math.max(1, Math.min(100, pct)));
+        root.liveWant = root.backlightPct;
+        if (!blLive.running)
+            root.pushLive();
+    }
+
+    function pushLive() {
+        if (root.liveWant < 0 || root.liveWant === root.liveSent)
+            return;
+        root.liveSent = root.liveWant;
+        blLive.command = ["brightnessctl", "-q", "set", root.liveSent + "%"];
+        blLive.running = true;
+    }
+
+    Process {
+        id: blLive
+        onExited: root.pushLive()
     }
 
     /**
@@ -135,12 +116,5 @@ Singleton {
                 }
             }
         }
-    }
-
-    FileView {
-        id: vibState
-        path: root.stateFile
-        blockLoading: true
-        printErrors: false
     }
 }

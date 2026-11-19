@@ -109,9 +109,9 @@ SettingsSurface {
         root.numlockOn = SetInput.getField(inp, "numlock_by_default") === "true";
 
         var env = root.envText;
-        var cs = parseInt(SetInput.getField(env, "XCURSOR_SIZE"), 10);
+        var cs = parseInt(SetInput.getEnv(env, "XCURSOR_SIZE"), 10);
         root.cursorSize = isNaN(cs) ? 24 : cs;
-        var ct = SetInput.getField(env, "XCURSOR_THEME");
+        var ct = SetInput.getEnv(env, "XCURSOR_THEME");
         root.cursorTheme = ct.length > 0 ? ct : "Bibata-Modern-Ice";
 
         root.base = {
@@ -264,6 +264,19 @@ SettingsSurface {
      * moves the soul seam and a click anywhere on the line drives its control via
      * activateRow.
      */
+    /**
+     * The Theme row grows when its dropdown opens, so centring the seam on the
+     * whole row dropped it into the list. Pin it to the picker's top line.
+     */
+    amePoint: {
+        void root.width;
+        void root.height;
+        void themePick.implicitHeight;
+        if (root.focusRowItem === themeRow)
+            return themeRow.mapToItem(root, 4 * root.s, themePick.rowH / 2);
+        return root.rowPoint;
+    }
+
     component FieldRow: Item {
         id: frow
         property string label: ""
@@ -528,8 +541,11 @@ SettingsSurface {
                     onClicked: root.activateRow(themeRow)
                 }
 
+                /** Indented so the "Theme" label clears the soul seam at the row's left edge. */
                 DisplayPicker {
                     id: themePick
+                    x: 16 * root.s
+                    width: themeRow.width - 16 * root.s
                     s: root.s
                     label: "Theme"
                     options: root.cursorThemes.map(function (t) { return { label: t, value: t }; })

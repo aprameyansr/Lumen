@@ -8,6 +8,7 @@ import Quickshell.Io
 import Quickshell.Networking
 import Quickshell.Bluetooth
 import Quickshell.Hyprland
+import Quickshell.Services.Notifications
 import "Singletons"
 
 /**
@@ -39,15 +40,35 @@ Item {
         enabled: !toastLoader.active
         NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
     }
-    onToastActiveChanged: if (!toastActive) { swipeX = 0; swipeY = 0; swipeFade = 1; }
+    /**
+     * When the last toast leaves, a hover that began on the toast (not on the
+     * plain pill) is dropped, so the pill settles back to the resting time
+     * instead of opening the hover row under a pointer that only sat over the
+     * toast. A real move onto the pill expands it again.
+     */
+    onToastActiveChanged: if (!toastActive) {
+        swipeX = 0;
+        swipeY = 0;
+        swipeFade = 1;
+        if (!hoverClean && !held)
+            hoverLatch = false;
+    }
 
     property bool hovered: false
     property bool pinned: false
     property bool forcePinned: false
 
     readonly property bool held: pinned || forcePinned
+    /**
+     * The page actually on screen. A critical notification takes the pill over
+     * an open page: the page stays open (so no close tidy-up runs and every
+     * dropdown, caption, focus and half-typed field survives) but its loader is
+     * hidden and keys are held back, then it reappears exactly as it was.
+     */
+    readonly property string shownSurface: criticalToast ? "" : surface
     readonly property bool mixerOpen: surface === "mixer"
     readonly property bool calendarOpen: surface === "calendar"
+    readonly property bool clockOpen: surface === "clock"
     readonly property bool launcherOpen: surface === "launcher"
     readonly property bool emojiOpen: surface === "emoji"
     readonly property bool clipboardOpen: surface === "clipboard"
@@ -58,6 +79,7 @@ Item {
     readonly property bool wifiOpen: surface === "wifi"
     readonly property bool btOpen: surface === "bt"
     readonly property bool batteryOpen: surface === "battery"
+    readonly property bool awakeOpen: surface === "awake"
     readonly property bool settingsOpen: surface === "settings"
     readonly property bool keybindsOpen: surface === "keybinds"
     readonly property bool workspacesOpen: surface === "workspaces"
@@ -73,7 +95,7 @@ Item {
     readonly property bool notificationsOpen: surface === "notifications"
     readonly property bool fontpickerOpen: surface === "fontpicker"
     readonly property bool settingsLike: settingsOpen || appearanceOpen
-        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || fontpickerOpen
+        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || fontpickerOpen || awakeOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -132,6 +154,16 @@ Item {
         return "";
     }
     readonly property bool toastActive: Notifs.popups.length > 0
+    /** A critical notification is the one thing allowed to take over an open page or the hover row. */
+    /**
+     * Whether the pill is held against interruptions: an open page, pinned, or
+     * a hover that began on the plain pill. A hover that began on a toast or a
+     * flash doesn't count, so moving onto a notification to read or click it
+     * keeps it there.
+     */
+    property bool hoverClean: false
+    readonly property bool holding: surfaceOpen || held || (hoverLatch && hoverClean)
+    readonly property bool criticalToast: Notifs.popups.some(function (p) { return p && p.urgency === NotificationUrgency.Critical; })
     readonly property bool osdActive: osd.flashing
 
     /**
@@ -166,6 +198,8 @@ Item {
     readonly property real batteryW: 316 * s
     readonly property real wifiW: 272 * s
     readonly property real btW: 286 * s
+    readonly property real awakeW: 392 * s
+    readonly property real clockW: 380 * s
     readonly property real settingsW: 392 * s
     readonly property real keybindsW: 460 * s
     readonly property real workspacesW: 392 * s
@@ -226,6 +260,8 @@ Item {
         link:      { size: () => { const it = surfaceItem(ldLink); return Qt.size(it.desiredW, it.implicitHeight + 26 * s); }, ame: () => surfaceItem(ldLink) },
         wifi:      { size: () => Qt.size(wifiW, surfaceItem(ldWifi).implicitHeight + 26 * s), ame: () => surfaceItem(ldWifi) },
         bt:        { size: () => Qt.size(btW, surfaceItem(ldBt).implicitHeight + 26 * s), ame: () => surfaceItem(ldBt) },
+        clock:     { size: () => Qt.size(clockW, surfaceItem(ldClock).implicitHeight + 29 * s), ame: () => surfaceItem(ldClock) },
+        awake:     { size: () => Qt.size(awakeW, surfaceItem(ldAwake).implicitHeight + 29 * s), ame: () => surfaceItem(ldAwake) },
         battery:   { size: () => Qt.size(batteryW, surfaceItem(ldBattery).implicitHeight + 26 * s), ame: () => surfaceItem(ldBattery) },
         settings:  { size: () => Qt.size(settingsW, surfaceItem(ldSettings).implicitHeight + 29 * s), ame: () => surfaceItem(ldSettings) },
         keybinds:  { size: () => Qt.size(keybindsW, surfaceItem(ldKeybinds).implicitHeight + 29 * s), ame: () => surfaceItem(ldKeybinds) },
@@ -243,13 +279,19 @@ Item {
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
     })
 
+    /**
+     * Anything expanded (an open page, pinned, or the hover row) holds the pill:
+     * notifications and volume/brightness flashes wait instead of morphing it
+     * out from under you. Only a critical notification breaks through.
+     */
     readonly property string mode: dragActive ? "dragOver"
+        : (criticalToast ? "toast"
         : (surfaceOpen && surfaces[surface] !== undefined ? surface
         : (quickChoosing ? "quickChoose"
         : (quickCounting ? "quickCount"
-        : (osdActive && !held ? "osd"
-        : (toastActive && !held ? "toast"
-        : (expanded ? "hover" : "rest"))))))
+        : (osdActive && !holding ? "osd"
+        : (toastActive && !holding ? "toast"
+        : (expanded ? "hover" : "rest")))))))
 
     /**
      * AppImage drag-install state, live only while a file hovers the resting pill.
@@ -309,6 +351,8 @@ Item {
             return ldNotifications.item;
         if (pill.fontpickerOpen)
             return ldFontpicker.item;
+        if (pill.awakeOpen)
+            return ldAwake.item;
         return null;
     }
 
@@ -400,6 +444,10 @@ Item {
      * pill. Empty space in the body never triggers this.
      */
     function surfaceBack() {
+        if (pill.awakeOpen && ldAwake.item && ldAwake.item.formOpen) {
+            ldAwake.item.closeForm();
+            return;
+        }
         if (pill.keybindsOpen) {
             if (ldKeybinds.item && ldKeybinds.item.formOpen)
                 ldKeybinds.item.closeForm();
@@ -440,6 +488,17 @@ Item {
      * Pop the open keybinds editor form back to the bind list. Returns true when a
      * form was open and dismissed, false otherwise so Escape closes the surface.
      */
+    /** Route a key to the open clock page; true when it used it. */
+    function clockKey(k, mods) {
+        return (pill.clockOpen && ldClock.item) ? ldClock.item.key(k, mods) : false;
+    }
+
+    /** Delete on the keep-awake surface: remove the keyboard-focused preset. */
+    function awakeDelete() {
+        if (pill.awakeOpen && ldAwake.item && !ldAwake.item.formOpen)
+            ldAwake.item.deleteFocused();
+    }
+
     function keybindsBack() {
         if (pill.keybindsOpen && ldKeybinds.item && ldKeybinds.item.formOpen) {
             ldKeybinds.item.closeForm();
@@ -714,6 +773,13 @@ Item {
         }
     }
 
+    /** Timer outline and stopwatch heartbeat on the resting pill (see PillTrace). */
+    PillTrace {
+        s: pill.s
+        radius: pill.morphRadius
+        rest: pill.mode === "rest"
+    }
+
     /**
      * Rest anchor for Ame: the 時 kanji centre. The idle outline condenses into
      * the bead here before it moves.
@@ -739,6 +805,10 @@ Item {
             return wifiIcon.mapToItem(pill, wifiIcon.width / 2, wifiIcon.height + drop * 0.55);
         if (soulTarget === "bt")
             return btIcon.mapToItem(pill, btIcon.width / 2, btIcon.height + drop * 0.55);
+        if (soulTarget === "weather")
+            return weatherGlance.mapToItem(pill, weatherGlance.width / 2, weatherGlance.height + drop * 0.55);
+        if (soulTarget === "awake")
+            return awakeIcon.mapToItem(pill, awakeIcon.width / 2, awakeIcon.height + drop * 0.55);
         if (soulTarget === "battery")
             return batteryIcon.mapToItem(pill, batteryIcon.width / 2, batteryIcon.height + drop * 0.55);
         if (soulTarget === "inbox")
@@ -768,8 +838,8 @@ Item {
      * descriptor and maps it. Null = nothing open (or a surface with no anchor,
      * e.g. wallpaper), so Ame falls back to the pill's own hover/wake anchor.
      */
-    readonly property var ameSurface: (surfaceOpen && surfaces[surface] !== undefined)
-        ? surfaces[surface].ame() : null
+    readonly property var ameSurface: (shownSurface.length > 0 && surfaces[shownSurface] !== undefined)
+        ? surfaces[shownSurface].ame() : null
 
     Ame {
         id: ame
@@ -798,6 +868,7 @@ Item {
 
     onHoveredChanged: {
         if (hovered) {
+            hoverClean = mode === "rest" || mode === "hover";
             if (bootSettled)
                 hoverLatch = true;
             graceTimer.stop();
@@ -1271,7 +1342,7 @@ Item {
                     height: hoverClock.implicitHeight + 10 * pill.s
                     enabled: hover.live
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: pill.requestSurface("calendar")
+                    onClicked: pill.requestSurface("clock")
                 }
             }
 
@@ -1296,6 +1367,7 @@ Item {
                     HoverHandler {
                         cursorShape: Qt.PointingHandCursor
                         enabled: hover.live
+                        onHoveredChanged: if (hovered) pill.soulTarget = "weather"
                     }
                     TapHandler {
                         enabled: hover.live
@@ -1492,6 +1564,39 @@ Item {
                                 pill.requestSurface("bt");
                             }
                             onContainsMouseChanged: if (containsMouse) pill.soulTarget = "bt"
+                        }
+                    }
+
+                    Item {
+                        id: awakeIcon
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16 * pill.s
+                        height: 16 * pill.s
+
+                        GlyphIcon {
+                            anchors.fill: parent
+                            name: "awake"
+                            color: awakeArea.containsMouse ? Theme.cream
+                                : (Awake.on ? Theme.vermLit : Theme.iconDim)
+                            stroke: 1.7
+                        }
+
+                        MouseArea {
+                            id: awakeArea
+                            anchors.fill: parent
+                            anchors.margins: -6 * pill.s
+                            hoverEnabled: true
+                            enabled: hover.live
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (e) => {
+                                if (e.button === Qt.RightButton) {
+                                    Awake.toggle();
+                                    return;
+                                }
+                                pill.requestSurface("awake");
+                            }
+                            onContainsMouseChanged: if (containsMouse) pill.soulTarget = "awake"
                         }
                     }
 
@@ -1742,6 +1847,7 @@ Item {
     Loader {
         id: ldMixer
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Mixer {
             s: pill.s
@@ -1753,17 +1859,34 @@ Item {
     Loader {
         id: ldCalendar
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Calendar {
             s: pill.s
             open: pill.calendarOpen
             morphCloseness: pill.morphCloseness
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldClock
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: ClockSurface {
+            s: pill.s
+            open: pill.clockOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
         }
     }
 
     Loader {
         id: ldLauncher
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Launcher {
             s: pill.s
@@ -1776,6 +1899,7 @@ Item {
     Loader {
         id: ldEmoji
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: EmojiPicker {
             s: pill.s
@@ -1787,6 +1911,7 @@ Item {
     Loader {
         id: ldClip
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Clipboard {
             s: pill.s
@@ -1799,6 +1924,7 @@ Item {
     Loader {
         id: ldWall
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Wallpaper {
             s: pill.s
@@ -1811,6 +1937,7 @@ Item {
     Loader {
         id: ldPower
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Power {
             s: pill.s
@@ -1823,6 +1950,7 @@ Item {
     Loader {
         id: ldMedia
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Media {
             s: pill.s
@@ -1835,6 +1963,7 @@ Item {
     Loader {
         id: ldLink
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Link {
             s: pill.s
@@ -1847,6 +1976,7 @@ Item {
     Loader {
         id: ldWifi
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: WifiSurface {
             s: pill.s
@@ -1859,6 +1989,7 @@ Item {
     Loader {
         id: ldBt
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: BtSurface {
             s: pill.s
@@ -1869,8 +2000,22 @@ Item {
     }
 
     Loader {
+        id: ldAwake
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: AwakeSurface {
+            s: pill.s
+            open: pill.awakeOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+        }
+    }
+
+    Loader {
         id: ldBattery
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: BatterySurface {
             s: pill.s
@@ -1883,6 +2028,7 @@ Item {
     Loader {
         id: ldSettings
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Settings {
             s: pill.s
@@ -1896,6 +2042,7 @@ Item {
     Loader {
         id: ldKeybinds
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Keybinds {
             s: pill.s
@@ -1908,6 +2055,7 @@ Item {
     Loader {
         id: ldWorkspaces
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: WorkspacesSurface {
             s: pill.s
@@ -1921,6 +2069,7 @@ Item {
     Loader {
         id: ldStash
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Stash {
             s: pill.s
@@ -1933,6 +2082,7 @@ Item {
     Loader {
         id: ldSpaceapps
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: SpaceApps {
             s: pill.s
@@ -1945,6 +2095,7 @@ Item {
     Loader {
         id: ldRecorder
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Recorder {
             s: pill.s
@@ -1958,6 +2109,7 @@ Item {
     Loader {
         id: ldSysmon
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: SysmonSurface {
             s: pill.s
@@ -1970,6 +2122,7 @@ Item {
     Loader {
         id: ldAppearance
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Appearance {
             s: pill.s
@@ -1983,6 +2136,7 @@ Item {
     Loader {
         id: ldDisplay
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Display {
             s: pill.s
@@ -1996,6 +2150,7 @@ Item {
     Loader {
         id: ldInput
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Input {
             s: pill.s
@@ -2009,6 +2164,7 @@ Item {
     Loader {
         id: ldLook
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: Look {
             s: pill.s
@@ -2022,6 +2178,7 @@ Item {
     Loader {
         id: ldAnimation
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: AnimationSurface {
             s: pill.s
@@ -2035,6 +2192,7 @@ Item {
     Loader {
         id: ldNotifications
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: NotificationsSurface {
             s: pill.s
@@ -2048,6 +2206,7 @@ Item {
     Loader {
         id: ldFontpicker
         active: false
+        visible: !pill.criticalToast
         anchors.fill: parent
         sourceComponent: FontPicker {
             s: pill.s
@@ -2066,7 +2225,7 @@ Item {
         anchors.bottomMargin: 12 * pill.s
         s: pill.s
         screenName: pill.screenName
-        suppressed: pill.surfaceOpen || pill.held
+        suppressed: pill.holding
         expanded: pill.expanded
         enabled: pill.mode === "osd"
         opacity: pill.mode === "osd" ? 1 : 0

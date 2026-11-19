@@ -28,6 +28,7 @@ SettingsSurface {
      */
     rows: {
         var r = [];
+        r.push(root.headEntry(winGrp));
         if (winGrp.open) {
             r.push({ item: gapsInRow, kind: "scrub", bump: function (d) { gapsInScrub.bump(d); } });
             r.push({ item: gapsOutRow, kind: "scrub", bump: function (d) { gapsOutScrub.bump(d); } });
@@ -37,6 +38,7 @@ SettingsSurface {
             r.push({ item: resizeRow, kind: "toggle", get: function () { return root.resizeOnBorder; }, set: function (v) { root.resizeOnBorder = v; root.writeDeco("resize_on_border", v ? "true" : "false"); } });
             r.push({ item: layoutRow, kind: "seg", vals: ["dwindle", "master"], get: function () { return root.layout; }, set: function (v) { root.layout = v; root.writeDeco("layout", "\"" + v + "\""); } });
         }
+        r.push(root.headEntry(nightGrp));
         if (nightGrp.open) {
             r.push({ item: nlModeRow, kind: "seg", vals: ["off", "on", "scheduled"], get: function () { return Flags.nightLightMode; }, set: function (v) { NightLight.setMode(v); } });
             if (Flags.nightLightMode !== "off")
@@ -46,6 +48,7 @@ SettingsSurface {
                 r.push({ item: nlOffRow, kind: "scrub", bump: function (d) { nlOffScrub.bump(d); } });
             }
         }
+        r.push(root.headEntry(shadowGrp));
         if (shadowGrp.open) {
             r.push({ item: shEnRow, kind: "toggle", get: function () { return root.shadowOn; }, set: function (v) { root.shadowOn = v; root.writeShadow("enabled", v ? "true" : "false"); } });
             if (root.shadowOn) {
@@ -53,6 +56,7 @@ SettingsSurface {
                 r.push({ item: shPowRow, kind: "scrub", bump: function (d) { shPowScrub.bump(d); } });
             }
         }
+        r.push(root.headEntry(blurGrp));
         if (blurGrp.open) {
             r.push({ item: blEnRow, kind: "toggle", get: function () { return root.blurOn; }, set: function (v) { root.blurOn = v; root.writeBlur("enabled", v ? "true" : "false"); } });
             if (root.blurOn) {
@@ -62,10 +66,12 @@ SettingsSurface {
                 r.push({ item: blNoiseRow, kind: "scrub", bump: function (d) { blNoiseScrub.bump(d); } });
             }
         }
+        r.push(root.headEntry(opGrp));
         if (opGrp.open) {
             r.push({ item: opActRow, kind: "scrub", bump: function (d) { opActScrub.bump(d); } });
             r.push({ item: opInactRow, kind: "scrub", bump: function (d) { opInactScrub.bump(d); } });
         }
+        r.push(root.headEntry(pillGrp));
         if (pillGrp.open) {
             r.push({ item: pillGapRow, kind: "scrub", bump: function (d) { pillGapScrub.bump(d); } });
             r.push({ item: appGapRow, kind: "scrub", bump: function (d) { appGapScrub.bump(d); } });
@@ -321,7 +327,30 @@ SettingsSurface {
         command: []
     }
 
+    /**
+     * Seam placement for this page: a fixed gap left of the focused line's name
+     * text (it used to sit on the text). A row centres it on its highlight box;
+     * a heading, which has no box, on its text. Rows and headings expose
+     * `seamTarget`; text starts at `textInset` to leave room.
+     */
+    readonly property real textInset: 16 * root.s
+    amePoint: {
+        void root.width;
+        void root.height;
+        var it = root.focusRowItem;
+        if (!it || !it.seamTarget)
+            return root.rowPoint;
+        void it.height;
+        var t = it.seamTarget;
+        var x = t.mapToItem(root, (t.leftPadding || 0) - 7 * root.s, 0).x;
+        var y = it.seamOnText
+            ? t.mapToItem(root, 0, (t.topPadding || 0) + t.contentHeight / 2).y
+            : it.mapToItem(root, 0, it.height / 2).y;
+        return Qt.point(x, y);
+    }
+
     component GroupLabel: Text {
+        leftPadding: root.textInset
         topPadding: 16 * root.s
         bottomPadding: 6 * root.s
         color: Theme.faint
@@ -338,18 +367,41 @@ SettingsSurface {
      * height, so a long tab shows only the group headers until one is opened.
      * `open` is the initial state; tapping the header toggles it.
      */
+    /**
+     * One group open at a time, so the page never grows past the screen (several
+     * open groups used to push the pill off the bottom with no way to scroll).
+     */
+    property string openGroup: "Window"
+
+    /** Keyboard entry for a group heading: Enter folds it open or shut. */
+    function headEntry(g) {
+        return { item: g.header, kind: "action", run: function () { g.toggle(); } };
+    }
+
     component Group: Column {
         id: grp
         property string title: ""
-        property bool open: false
+        readonly property bool open: root.openGroup === grp.title
+        readonly property alias header: hdr
         default property alias rows: body.data
+
+        function toggle() {
+            root.openGroup = grp.open ? "" : grp.title;
+        }
 
         width: parent ? parent.width : 0
         spacing: 0
 
         Item {
+            id: hdr
+            readonly property Item seamTarget: gl
+            readonly property bool seamOnText: true
             width: parent.width
             height: gl.implicitHeight
+
+            HoverHandler {
+                onHoveredChanged: root.reportRowHover(hdr, hovered)
+            }
 
             GroupLabel { id: gl; text: grp.title }
 
@@ -359,7 +411,7 @@ SettingsSurface {
                 width: 15 * root.s
                 height: 15 * root.s
                 name: "chevron-down"
-                color: Theme.faint
+                color: root.focusRowItem === hdr ? Theme.cream : Theme.faint
                 stroke: 2.0
                 rotation: grp.open ? 0 : -90
                 Behavior on rotation { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
@@ -368,7 +420,7 @@ SettingsSurface {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: grp.open = !grp.open
+                onClicked: grp.toggle()
             }
         }
 
@@ -401,6 +453,7 @@ SettingsSurface {
         default property alias control: ctrl.data
 
         readonly property bool focused: root.focusRowItem === frow
+        readonly property Item seamTarget: lbl
         readonly property bool expanded: !frow.collapsed && (fhover.hovered || frow.focused)
         readonly property real rowH: 30 * root.s
         readonly property real capH: 14 * root.s
@@ -432,11 +485,12 @@ SettingsSurface {
 
         Column {
             anchors.left: parent.left
-            anchors.leftMargin: 9 * root.s
+            anchors.leftMargin: root.textInset
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2 * root.s
 
             Text {
+                id: lbl
                 text: frow.label
                 color: Theme.cream
                 font.family: Theme.font
@@ -488,7 +542,7 @@ SettingsSurface {
             anchors.rightMargin: 12 * root.s
             spacing: 0
 
-            Group { id: winGrp; title: "Window"; open: true
+            Group { id: winGrp; title: "Window"
 
             FieldRow {
                 id: gapsInRow

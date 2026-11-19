@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Widgets
 import Quickshell.Hyprland
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "Singletons"
 
@@ -206,6 +207,39 @@ Item {
             root.recordStarted = ScreenRec.recording;
             root.flash("record");
         }
+    }
+
+    /**
+     * Volume and brightness key presses, read straight from libinput (the user
+     * is in the input group). The OSD otherwise flashes only on a value change,
+     * so a press at 0% or 100% showed nothing; this flashes it at the limit too.
+     * Only the focused monitor's OSD runs the reader, so there is one at a time.
+     * Every other line is dropped on read, never kept. Run without a shell
+     * wrapper so stopping it really stops libinput. Restarts if it dies.
+     */
+    Process {
+        id: keyReader
+        running: root.onFocusedMonitor
+        command: ["libinput", "debug-events", "--show-keycodes"]
+        stdout: SplitParser {
+            onRead: (line) => {
+                /** Super silences a timer alarm and clears its notification; the key still does its usual job. */
+                if ((Clocks.ringing || Clocks.timerPopupUp) && /KEY_(LEFT|RIGHT)META .* pressed/.test(line)) {
+                    Clocks.dismissAlarm();
+                    return;
+                }
+                var m = /KEY_(VOLUME|BRIGHTNESS)(UP|DOWN) .* pressed/.exec(line);
+                if (m)
+                    root.flash(m[1] === "BRIGHTNESS" ? "brightness" : "volume");
+            }
+        }
+        onExited: if (root.onFocusedMonitor) keyRestart.restart()
+    }
+
+    Timer {
+        id: keyRestart
+        interval: 3000
+        onTriggered: keyReader.running = root.onFocusedMonitor
     }
 
     Connections {

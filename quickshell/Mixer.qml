@@ -5,9 +5,9 @@ import Quickshell.Services.Pipewire
 import "Singletons"
 
 /**
- * Mixer surface: header with DND / Keep-Awake chips and a row of four vertical
- * ink-faders wired to real hardware (brightness via ddcutil, vibrance via
- * nvibrant, volume and mic via Pipewire). Fills the lower body of the pill.
+ * Mixer surface: header with DND / night-light chips and a row of four vertical
+ * ink-faders wired to real hardware (brightness via ddcutil or the backlight,
+ * volume and mic via Pipewire). Fills the lower body of the pill.
  */
 PillSurface {
     id: root
@@ -78,7 +78,7 @@ PillSurface {
         }
         if (blLoader.item)
             out.push(blLoader.item);
-        out.push(vibFader, volFader, micFader);
+        out.push(volFader, micFader);
         return out;
     }
     readonly property bool surfaceHovered: hoverTracker.hovered
@@ -106,8 +106,10 @@ PillSurface {
      * Pointer-driven fader targeting. MouseArea hover is flaky on this
      * layer-shell surface, so a non-blocking HoverHandler is the only hover
      * source. Its pointer x maps to a fader column and drives keyboard focus.
+     * Off while a device dropdown is open: the pointer is over the list, not
+     * the faders underneath it.
      */
-    readonly property int hoverIndex: surfaceHovered && width > 0 && faders.length > 0
+    readonly property int hoverIndex: surfaceHovered && root.openPicker === "" && width > 0 && faders.length > 0
         && hoverTracker.point.position.y >= faderRow.y
         ? Math.max(0, Math.min(faders.length - 1, Math.floor(hoverTracker.point.position.x / (width / faders.length))))
         : -1
@@ -157,17 +159,7 @@ PillSurface {
 
     Component.onCompleted: Devices.detect()
 
-    property real pendingVibrance: -1
     property int pendingBacklight: -1
-
-    Timer {
-        id: vibDebounce
-        interval: 160
-        onTriggered: if (root.pendingVibrance >= 0) {
-            Devices.setVibrance(root.pendingVibrance);
-            root.pendingVibrance = -1;
-        }
-    }
 
     Timer {
         id: blDebounce
@@ -219,7 +211,7 @@ PillSurface {
             placement: "below"
             title: chip.tipTitle
             desc: chip.tipDesc
-            show: chipHover.hovered
+            show: chipHover.hovered && root.openPicker === ""
         }
     }
 
@@ -265,7 +257,7 @@ PillSurface {
             s: root.s
             placement: "below"
             title: dchip.tip
-            show: dchipHover.hovered && !dchip.open
+            show: dchipHover.hovered && root.openPicker === ""
         }
     }
 
@@ -324,13 +316,6 @@ PillSurface {
                 tipTitle: "Do not disturb"
                 tipDesc: "Silence notifications"
                 onToggled: Flags.dnd = !Flags.dnd
-            }
-            IconChip {
-                glyph: "awake"
-                on: Flags.keepAwake
-                tipTitle: "Keep awake"
-                tipDesc: "Block sleep & screen-off"
-                onToggled: Flags.keepAwake = !Flags.keepAwake
             }
             IconChip {
                 glyph: "sun"
@@ -547,24 +532,11 @@ PillSurface {
                 focused: root.focusIndex === brRep.count
                 value: Devices.backlightPct / 100
                 valueLabel: Devices.backlightPct + "%"
-                onMoved: (v) => Devices.backlightPct = Math.max(1, Math.min(100, Math.round(v * 100)))
+                onMoved: (v) => Devices.setBacklightLive(v * 100)
                 onCommitted: (v) => { root.pendingBacklight = Math.max(1, Math.min(100, Math.round(v * 100))); blDebounce.restart(); }
             }
         }
 
-        VFader {
-            id: vibFader
-            width: faderRow.colW
-            s: root.s
-            icon: "monitor"
-            subLabel: "Vibrance"
-            subPersistent: false
-            focused: root.focusIndex === root.faderCount - 3
-            value: Devices.vibrance / 100
-            valueLabel: Devices.vibrance + "%"
-            onMoved: (v) => Devices.vibrance = Math.round(v * 100)
-            onCommitted: (v) => { root.pendingVibrance = v * 100; vibDebounce.restart(); }
-        }
         VFader {
             id: volFader
             width: faderRow.colW

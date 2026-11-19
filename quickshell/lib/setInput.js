@@ -42,6 +42,16 @@ function setEnv(text, key, valueRaw) {
 }
 
 /**
+ * Reads the value of an `hl.env("KEY", "value")` line, the read side of setEnv.
+ * Returns "" when the key is absent.
+ */
+function getEnv(text, key) {
+    var re = new RegExp("hl\\.env\\(\\s*\"" + escapeRe(key) + "\"\\s*,\\s*\"([^\"]*)\"");
+    var m = re.exec(text);
+    return m ? m[1] : "";
+}
+
+/**
  * Replaces the theme name and size in a `hyprctl setcursor <theme> <size>` call.
  * Returns `{ text, ok }`; ok is false when the call is absent.
  */
