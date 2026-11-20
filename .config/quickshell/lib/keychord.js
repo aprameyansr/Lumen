@@ -72,3 +72,20 @@ function chord(key, modifiers) {
     parts.push(k);
     return parts.join(" + ");
 }
+
+/**
+ * A modifier pressed and let go on its own, as a bind's whole combo (a
+ * hold-to-talk key, say). Qt reports Alt for both Alt keys, so the side comes
+ * from the XKB scan code. Returns the keysym name ("Alt_R") or null.
+ */
+var LONE_SCANS = {
+    64: "Alt_L", 108: "Alt_R",
+    37: "Control_L", 105: "Control_R",
+    50: "Shift_L", 62: "Shift_R",
+    133: "Super_L", 134: "Super_R"
+};
+
+function loneModifier(key, scanCode) {
+    if (!MODIFIER_KEYS[key]) return null;
+    return LONE_SCANS[scanCode] || null;
+}

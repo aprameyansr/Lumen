@@ -318,7 +318,8 @@ def render_fastfetch(pill):
         )
 
     repl = {
-        "__LANTERN__": str(ff / "lantern.txt"),
+        # Fastfetch expands "~", so the config stays portable (no username in it).
+        "__LANTERN__": "~/.config/fastfetch/lantern.txt",
         "__KEYS__": seq(pill["primary"]),
         "__SEP__": seq(pill["dim"]),
         "__LOGO1__": seq(pill["primary"]),

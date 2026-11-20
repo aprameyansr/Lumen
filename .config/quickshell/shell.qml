@@ -127,6 +127,15 @@ ShellRoot {
         root.peekMon = root.peekMon === mon ? "" : mon;
     }
 
+    /** Dictation key, driveable without the bind: `qs ipc call dictate press` / `release` / `cancel`. */
+    IpcHandler {
+        target: "dictate"
+        function press(): void { Dictate.press(); }
+        function release(): void { Dictate.release(); }
+        function cancel(): void { Dictate.cancel(); }
+        function settings(mon: string): void { root.toggleSurface(mon, "dictation"); }
+    }
+
     IpcHandler {
         target: "pill"
         function mixer(mon: string): void { root.toggleSurface(mon, "mixer"); }
@@ -368,7 +377,7 @@ ShellRoot {
                     if (pill.quickChoosing) {
                         ScreenRec.quickChoosing = false;
                         ScreenRec.quickScreenChoosing = false;
-                    } else if (!pill.keybindsBack()) {
+                    } else if (!pill.keybindsBack() && !pill.vocabBack()) {
                         root.close();
                     }
                 }
@@ -437,6 +446,22 @@ ShellRoot {
                         e.accepted = true;
                         return;
                     }
+                    if (pill.vocabOpen && e.text.length === 1 && e.text > " "
+                        && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+                        && pill.vocabType(e.text)) {
+                        e.accepted = true;
+                        return;
+                    }
+                    if (e.key === Qt.Key_Delete && pill.dictationOpen) {
+                        pill.dictationDelete();
+                        e.accepted = true;
+                        return;
+                    }
+                    if (e.key === Qt.Key_Delete && pill.vocabOpen) {
+                        pill.vocabDelete();
+                        e.accepted = true;
+                        return;
+                    }
                     if (e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter && e.key !== Qt.Key_Space)
                         return;
                     if (pill.wallpaperOpen) {
@@ -444,6 +469,8 @@ ShellRoot {
                         e.accepted = true;
                     } else if (pill.powerOpen) {
                         if (!e.isAutoRepeat) pill.powerPress();
+                        e.accepted = true;
+                    } else if (pill.vocabOpen && pill.vocabEnter()) {
                         e.accepted = true;
                     } else if (pill.settingsLike) {
                         if (!e.isAutoRepeat) pill.settingsActivate();
@@ -561,6 +588,10 @@ ShellRoot {
                 }
                 function onWallpaperSearchingChanged() {
                     if (!pill.wallpaperSearching && overlay.surfaceOpen)
+                        focusScope.forceActiveFocus();
+                }
+                function onVocabTypingChanged() {
+                    if (!pill.vocabTyping && overlay.surfaceOpen)
                         focusScope.forceActiveFocus();
                 }
                 function onKeybindsListeningChanged() {

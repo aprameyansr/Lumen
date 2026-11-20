@@ -20,6 +20,7 @@ SettingsSurface {
         { item: lookRow, kind: "nav", surface: "look" },
         { item: displayRow, kind: "nav", surface: "display" },
         { item: inputRow, kind: "nav", surface: "input" },
+        { item: dictationRow, kind: "nav", surface: "dictation" },
         { item: animationRow, kind: "nav", surface: "animation" },
         { item: keybindsRow, kind: "nav", surface: "keybinds" },
         { item: workspacesRow, kind: "nav", surface: "workspaces" }
@@ -136,6 +137,23 @@ SettingsSurface {
                 height: 16 * root.s
                 name: "chevron-right"
                 color: root.focusRowItem === inputRow ? Theme.cream : Theme.iconDim
+                stroke: 2.2
+            }
+        }
+
+        SettingsRow {
+            id: dictationRow
+            surface: root
+            captionOnFocus: true
+            icon: "mic"
+            name: "Dictation"
+            sub: "Hold-to-talk, vocabulary, history"
+
+            GlyphIcon {
+                width: 16 * root.s
+                height: 16 * root.s
+                name: "chevron-right"
+                color: root.focusRowItem === dictationRow ? Theme.cream : Theme.iconDim
                 stroke: 2.2
             }
         }

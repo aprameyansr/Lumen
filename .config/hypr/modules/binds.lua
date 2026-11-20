@@ -25,6 +25,7 @@ hl.bind(mod .. " + C", hl.dsp.exec_cmd('qs ipc call pill wallpaper ""')) -- Wall
 hl.bind(mod .. " + B", hl.dsp.exec_cmd('~/.config/hypr/scripts/wallpaper.sh ""')) -- Shuffle wallpaper and retheme
 hl.bind(mod .. " + H", hl.dsp.exec_cmd('qs ipc call pill dnd ""')) -- Toggle DnD
 hl.bind(mod .. " + Super_L", hl.dsp.global("quickshell:superRelease"), { release = true }) -- Silence a ringing timer
+hl.bind("Alt_R", hl.dsp.global("quickshell:dictate")) -- Dictation (hold to talk, double-tap to lock)
 
 hl.bind(mod .. " + X", hl.dsp.exec_cmd('qs ipc call pill power ""')) -- Power
 hl.bind(mod .. " + A", hl.dsp.exec_cmd('qs ipc call pill link ""')) -- Network

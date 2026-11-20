@@ -96,8 +96,10 @@ Item {
     readonly property bool notificationsOpen: surface === "notifications"
     readonly property bool timeOpen: surface === "time"
     readonly property bool fontpickerOpen: surface === "fontpicker"
+    readonly property bool vocabOpen: surface === "vocab"
+    readonly property bool dictationOpen: surface === "dictation"
     readonly property bool settingsLike: settingsOpen || appearanceOpen
-        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || timeOpen || fontpickerOpen || awakeOpen
+        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || timeOpen || fontpickerOpen || awakeOpen || vocabOpen || dictationOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
@@ -164,7 +166,14 @@ Item {
      * keeps it there.
      */
     property bool hoverClean: false
-    readonly property bool holding: surfaceOpen || held || (hoverLatch && hoverClean)
+    readonly property bool holding: surfaceOpen || held || (hoverLatch && hoverClean) || dictateHere
+
+    /**
+     * A dictation take on this monitor. The pill stays at rest, its outline
+     * untouched, and the clock row hands its footprint to the mic bars; hover,
+     * flashes and toasts wait until the take is done.
+     */
+    readonly property bool dictateHere: Dictate.active && Dictate.mon === screenName
     readonly property bool criticalToast: Notifs.popups.some(function (p) { return p && p.urgency === NotificationUrgency.Critical; })
     readonly property bool osdActive: osd.flashing
 
@@ -220,6 +229,8 @@ Item {
     readonly property real notificationsW: 392 * s
     readonly property real timeW: 392 * s
     readonly property real fontpickerW: 360 * s
+    readonly property real vocabW: 392 * s
+    readonly property real dictationW: 392 * s
     readonly property real toastW: 342 * s
     readonly property real quickChooseW: 344 * s
     readonly property real quickChooseH: 76 * s
@@ -284,7 +295,9 @@ Item {
         animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
         time: { size: () => Qt.size(timeW, surfaceItem(ldTime).implicitHeight + 29 * s), ame: () => surfaceItem(ldTime) },
         notifications: { size: () => Qt.size(notificationsW, surfaceItem(ldNotifications).implicitHeight + 29 * s), ame: () => surfaceItem(ldNotifications) },
-        fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
+        fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) },
+        vocab: { size: () => Qt.size(vocabW, surfaceItem(ldVocab).implicitHeight + 29 * s), ame: () => surfaceItem(ldVocab) },
+        dictation: { size: () => Qt.size(dictationW, surfaceItem(ldDictation).implicitHeight + 29 * s), ame: () => surfaceItem(ldDictation) }
     })
 
     /**
@@ -295,11 +308,12 @@ Item {
     readonly property string mode: dragActive ? "dragOver"
         : (criticalToast ? "toast"
         : (surfaceOpen && surfaces[surface] !== undefined ? surface
+        : (dictateHere ? "rest"
         : (quickChoosing ? "quickChoose"
         : (quickCounting ? "quickCount"
         : (osdActive && !holding ? "osd"
         : (toastActive && !holding ? "toast"
-        : (expanded ? "hover" : "rest")))))))
+        : (expanded ? "hover" : "rest"))))))))
 
     /**
      * AppImage drag-install state, live only while a file hovers the resting pill.
@@ -372,6 +386,10 @@ Item {
             return ldFontpicker.item;
         if (pill.awakeOpen)
             return ldAwake.item;
+        if (pill.vocabOpen)
+            return ldVocab.item;
+        if (pill.dictationOpen)
+            return ldDictation.item;
         return null;
     }
 
@@ -463,6 +481,15 @@ Item {
      * pill. Empty space in the body never triggers this.
      */
     function surfaceBack() {
+        if (pill.vocabOpen) {
+            if (!(ldVocab.item && ldVocab.item.back()))
+                pill.requestSurface("dictation");
+            return;
+        }
+        if (pill.dictationOpen) {
+            pill.requestSurface("settings");
+            return;
+        }
         if (pill.awakeOpen && ldAwake.item && ldAwake.item.formOpen) {
             ldAwake.item.closeForm();
             return;
@@ -516,6 +543,42 @@ Item {
     function awakeDelete() {
         if (pill.awakeOpen && ldAwake.item && !ldAwake.item.formOpen)
             ldAwake.item.deleteFocused();
+    }
+
+    /** Esc on the vocabulary page folds an add or teach view back to the list; false on the list itself. */
+    function vocabBack() {
+        return (pill.vocabOpen && ldVocab.item) ? ldVocab.item.back() : false;
+    }
+
+    /** Delete on the dictation page: drop the focused history entry. */
+    function dictationDelete() {
+        if (pill.dictationOpen && ldDictation.item)
+            ldDictation.item.deleteFocused();
+    }
+
+    /** Delete on the vocabulary list: drop the focused word. */
+    function vocabDelete() {
+        if (pill.vocabOpen && ldVocab.item)
+            ldVocab.item.deleteFocused();
+    }
+
+    /** Enter while teaching saves what has been heard so far; true when it did. */
+    function vocabEnter() {
+        if (pill.vocabOpen && ldVocab.item && ldVocab.item.view === "teach") {
+            ldVocab.item.saveTeach();
+            return true;
+        }
+        return false;
+    }
+
+    readonly property bool vocabTyping: pill.vocabOpen && ldVocab.item !== null && ldVocab.item.typing
+
+    /** A printable key on the vocabulary list starts a search with it; true when it did. */
+    function vocabType(ch) {
+        if (!pill.vocabOpen || !ldVocab.item || ldVocab.item.view !== "list" || ldVocab.item.typing)
+            return false;
+        ldVocab.item.startSearch(ch);
+        return true;
     }
 
     function keybindsBack() {
@@ -611,7 +674,7 @@ Item {
             const cold = [ldSound, ldCalendar, ldClock, ldLauncher, ldEmoji, ldClip, ldWall, ldPower, ldWifi, ldBt,
                           ldAwake, ldBattery, ldSettings, ldKeybinds, ldWorkspaces, ldStash, ldSpaceapps,
                           ldRecorder, ldSysmon, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
-                          ldTime, ldNotifications, ldFontpicker];
+                          ldTime, ldNotifications, ldFontpicker, ldVocab, ldDictation];
             for (const ld of cold)
                 if (ld.active && !(ld.item && ld.item.busy === true))
                     ld.active = false;
@@ -1278,14 +1341,28 @@ Item {
     Item {
         id: rest
         anchors.fill: parent
-        opacity: (pill.expanded || pill.dragActive || pill.mode === "toast" || pill.mode === "osd" || pill.mode === "quickChoose" || pill.mode === "quickCount") ? 0 : Math.pow(pill.morphCloseness, 1.5)
+        opacity: ((pill.expanded && !(pill.dictateHere && pill.mode === "rest")) || pill.dragActive || pill.mode === "toast" || pill.mode === "osd" || pill.mode === "quickChoose" || pill.mode === "quickCount") ? 0 : Math.pow(pill.morphCloseness, 1.5)
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: pill.mode === "rest" ? Motion.fast : Math.round(260 * Motion.mult) } }
+
+        DictateBars {
+            anchors.centerIn: restRow
+            width: restRow.width
+            height: pill.height
+            s: pill.s
+            visible: pill.dictateHere || opacity > 0.01
+            opacity: pill.dictateHere ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        }
 
         Row {
             id: restRow
             anchors.centerIn: parent
             spacing: 9 * pill.s
+            opacity: pill.dictateHere ? 0 : 1
+            scale: pill.dictateHere ? 0.92 : 1
+            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
             Item {
                 id: restKanji
                 visible: pill.specialView === ""
@@ -2346,6 +2423,34 @@ Item {
         sourceComponent: NotificationsSurface {
             s: pill.s
             open: pill.notificationsOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldDictation
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: Dictation {
+            s: pill.s
+            open: pill.dictationOpen
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.requestClose()
+            onRequestSurface: (name) => pill.requestSurface(name)
+        }
+    }
+
+    Loader {
+        id: ldVocab
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: Vocab {
+            s: pill.s
+            open: pill.vocabOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
             onRequestSurface: (name) => pill.requestSurface(name)

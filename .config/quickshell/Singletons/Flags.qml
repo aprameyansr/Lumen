@@ -38,6 +38,7 @@ Singleton {
     property alias weekStart: adapter.weekStart
     property alias weatherUnit: adapter.weatherUnit
     property alias showGlyphs: adapter.showGlyphs
+    property alias dictateEnabled: adapter.dictateEnabled
     property alias paletteMode: adapter.paletteMode
     property alias paletteVibrancy: adapter.paletteVibrancy
     property alias appTheme: adapter.appTheme
@@ -154,6 +155,8 @@ Singleton {
             /** Temperature unit: "c" or "f". */
             property string weatherUnit: "c"
             property bool showGlyphs: true
+            /** Hold-to-talk dictation on the `dictate` global bind. */
+            property bool dictateEnabled: true
             property string paletteMode: "static"
             /** Dynamic palette strength: 0 muted, 0.5 natural, 1 vivid. */
             property real paletteVibrancy: 0.5

@@ -35,7 +35,7 @@ pipewire
 pipewire-alsa
 pipewire-pulse
 pavucontrol
-pipewire-audio              # pw-play (timer alarm sound)
+pipewire-audio              # pw-play (timer alarm), pw-record (dictation)
 wireplumber                 # session manager, wpctl (volume keys)
 
 # ── hardware & system services ──────────────────────────────────────────
@@ -55,15 +55,17 @@ mpv                         # player behind mpvpaper
 imagemagick                 # wallpaper colours, thumbnails
 ffmpeg                      # recording, video-wallpaper and clip thumbnails
 gpu-screen-recorder         # screen recorder page
-python                      # wallcolors.py: the palette engine
+python                      # wallcolors.py: the palette engine; the dictation service
 jq                          # scripts read the pill's settings
-curl                        # weather and AutoEQ headphone list
+curl                        # weather, AutoEQ headphone list, dictation model download
 cliphist                    # clipboard history
 wl-clipboard                # wl-copy / wl-paste
-wtype                       # the emoji picker types the emoji
+wtype                       # the emoji picker and dictation type text
 libnotify                   # notify-send
 libarchive                  # bsdtar: the app installer unpacks archives
-cava                        # music visualiser in the resting pill
+cava                        # music visualiser and dictation mic bars in the resting pill
+libpulse                    # pactl: dictation finds the default mic
+zenity                      # file picker: recorder folder, vocabulary import/export
 xorg-xrandr                 # XWayland primary monitor after a display swap
 hyprshot                    # Print: region screenshot
 hyprpicker                  # Super+Shift+C: colour picker

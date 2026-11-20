@@ -21,3 +21,4 @@ singleton Peripherals Peripherals.qml
 singleton Awake Awake.qml
 singleton Clocks Clocks.qml
 singleton Sound Sound.qml
+singleton Dictate Dictate.qml

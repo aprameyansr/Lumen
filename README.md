@@ -20,6 +20,7 @@ pages, fixes and styling on top.
 - **Pages:** launcher, clipboard, emoji, mixer, sound (EQ, AutoEQ, per-app volume), media, calendar with weather, clock (stopwatch, timer, world clock), keep awake, recorder, system monitor, Wi-Fi, Bluetooth, battery, power, wallpaper picker, settings
 - **Colours from your wallpaper** for the pill, Hyprland, lock screen, kitty, fish, starship, Spotify and (optionally) GTK apps
 - **Frosted glass** GTK and Zen Browser styling
+- **Dictation:** hold Right Alt, talk, let go, and your words are typed into whatever app has focus. Runs fully offline on the CPU, learns how you say names, and keeps a history and word count
 - **Keyboard first:** every page works with the arrow keys, Enter and Esc
 
 **Stack:** Hyprland (Lua) · Quickshell · kitty + fish + starship · PipeWire · awww + mpvpaper · hyprlock + hypridle
@@ -50,6 +51,7 @@ paru -S --needed $(grep -vE '^\s*(#|$)' packages.txt | awk '{print $1}')
 ```sh
 cp -a .config/. ~/.config/
 mkdir -p ~/.local/bin && cp -a .local/bin/. ~/.local/bin/
+mkdir -p ~/.local/share && cp -a .local/share/. ~/.local/share/
 chmod +x ~/.local/bin/* ~/.config/hypr/scripts/*.sh
 xdg-user-dirs-update
 ```
@@ -102,6 +104,15 @@ wallpaper.
 
 ## Optional
 
+**Dictation** (needs ~750 MB of disk and ~1 GB of RAM while it's switched on):
+
+```sh
+sh ~/.local/share/lumen-dictate/setup.sh
+```
+
+That downloads the speech model and its Python runtime into
+`~/.local/share/lumen-dictate`. Then see [Dictation](#dictation) below.
+
 **GTK glass**
 
 ```sh
@@ -138,6 +149,47 @@ Set `prefs_path` in `~/.config/spicetify/config-xpui.ini` to your own home folde
 
 **Weather:** click the town name in the calendar to set your location.
 
+## Dictation
+
+Hold **Right Alt** and talk. The clock in the pill turns into live mic bars,
+then a small spinner when you let go, and the text is typed into the focused
+app and copied to the clipboard. **Tap Right Alt twice** to lock it on so you
+can let go, and tap once more to finish.
+
+Everything runs on your machine with
+[NVIDIA Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2)
+(English) through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Nothing
+is sent anywhere. A 7-second sentence takes about half a second on a laptop CPU.
+
+**Voice commands**
+
+| Say | Get |
+|---|---|
+| "List: milk, eggs and bread" | a bullet list |
+| "Numbered list: …" | 1. 2. 3. |
+| "… end list" | ends the list, carries on below it |
+| "open quote … close quote" | "…" |
+| "new line" / "new paragraph" | line breaks |
+
+Line breaks are typed as Shift+Enter, so a list dictated into a chat box
+doesn't send the message early.
+
+**Settings → Dictation** has the on/off switch, your word count (today, all
+time, and roughly how much typing it saved) and a history of everything you've
+dictated: Enter copies an entry, Delete removes it.
+
+**Vocabulary** (inside that page) teaches it names and terms it gets wrong:
+add the word, say it three times, and from then on the ways it mishears it are
+swapped for your spelling. Mishearings that are everyday English (say, "April"
+for a name) are flagged and skipped so normal sentences stay as spoken; you can
+remove any of them, or use one anyway. Import and Export carry your list to
+another machine as a JSON file.
+
+Your vocabulary and history stay in `~/.local/share/lumen-dictate` and are
+never copied into the dotfiles by `lumen sync`. The dictation key can be changed
+in **Settings → Keybinds**. To remove dictation completely:
+`rm -rf ~/.local/share/lumen-dictate`.
+
 ## Keybinds
 
 | Keys | Action | Keys | Action |
@@ -157,6 +209,7 @@ Set `prefs_path` in `~/.config/spicetify/config-xpui.ini` to your own home folde
 | `Super + E` | Files | `Super + N` | Obsidian |
 | `Super + M` | Spotify | `Ctrl + Shift + Esc` | Task manager |
 | `Print` | Screenshot | `Super + Shift + C` | Colour picker |
+| `Right Alt` (hold) | Dictate | `Right Alt` × 2 | Lock dictation on |
 
 Change them in `~/.config/hypr/modules/binds.lua` or **Settings → Keybinds**.
 
@@ -167,7 +220,7 @@ Change them in `~/.config/hypr/modules/binds.lua` or **Settings → Keybinds**.
 | `lumen status`  | Is the pill running                                 |
 | `lumen restart` | Restart the pill                                    |
 | `lumen log`     | Follow the pill's log                               |
-| `lumen sync`    | Copy your live configs back into `~/lumen` |
+| `lumen sync`    | Copy your live configs back into `~/lumen` (dictation: code only, never your vocabulary or history) |
 
 To update: `git pull` in `~/lumen`, copy the configs again (step 4) and
 `lumen restart`.
@@ -180,6 +233,7 @@ To update: `git pull` in `~/lumen`, copy the configs again (step 4) and
 - **Kanji show as boxes:** install `ttf-zen-kakugothic-new` and run `fc-cache -f`.
 - **Chinese/Korean text shows as boxes:** install `noto-fonts-cjk`.
 - **GUI apps never ask for a password:** `systemctl --user enable --now hyprpolkitagent`.
+- **Right Alt does nothing:** run the dictation setup above, check **Settings → Dictation** is on, and `lumen log` for errors.
 
 ## Credits
 

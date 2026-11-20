@@ -165,6 +165,14 @@ PillSurface {
         var combo = Chord.chord(key, modifiers);
         if (combo === null)
             return;
+        root.applyCombo(combo);
+    }
+
+    /** A modifier tapped alone, held here until its release confirms nothing else joined it. */
+    property string loneMod: ""
+
+    function applyCombo(combo) {
+        root.loneMod = "";
         root.formCombo = combo;
         root.conflict = "";
         root.listening = false;
@@ -312,7 +320,21 @@ PillSurface {
             if (!root.listening)
                 return;
             e.accepted = true;
+            if (e.isAutoRepeat)
+                return;
+            root.loneMod = Chord.loneModifier(e.key, e.nativeScanCode) || "";
             root.capture(e.key, e.modifiers);
+        }
+        Keys.onReleased: (e) => {
+            if (!root.listening)
+                return;
+            e.accepted = true;
+            if (e.isAutoRepeat || root.loneMod.length === 0)
+                return;
+            if (Chord.loneModifier(e.key, e.nativeScanCode) === root.loneMod)
+                root.applyCombo(root.loneMod);
+            else
+                root.loneMod = "";
         }
     }
 

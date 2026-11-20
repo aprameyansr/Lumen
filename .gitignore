@@ -66,3 +66,9 @@ docs/
 __pycache__/
 .config/hypr/hyprsunset.conf
 .impeccable/
+
+# Dictation: personal vocabulary and history, and the downloaded engine/model
+# (setup.sh fetches those), never public
+.local/share/lumen-dictate/*
+!.local/share/lumen-dictate/dictated.py
+!.local/share/lumen-dictate/setup.sh
