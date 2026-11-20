@@ -19,7 +19,7 @@ PillSurface {
 
     signal requestSurface(string name)
 
-    property string tab: "eq"
+    property string tab: "apps"
     property bool editing: false
     property var routeStream: null
     property bool aeqOpen: false
@@ -578,7 +578,7 @@ PillSurface {
                 SettingsSeg {
                     anchors.verticalCenter: parent.verticalCenter
                     s: root.s
-                    options: [{ label: "EQ", value: "eq" }, { label: "Apps", value: "apps" }, { label: "Mic", value: "mic" }]
+                    options: [{ label: "Apps", value: "apps" }, { label: "Mic", value: "mic" }, { label: "EQ", value: "eq" }]
                     value: root.tab
                     onPicked: (v) => { root.tab = v; root.editing = false; root.routeStream = null; root.pickerOpen = false; root.boostOpen = false; root.aeqOpen = false; }
                 }
