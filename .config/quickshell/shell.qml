@@ -427,6 +427,11 @@ ShellRoot {
                         e.accepted = true;
                         return;
                     }
+                    if (pill.powerOpen && e.text.length === 1 && "wlsruWLSRU".indexOf(e.text) >= 0) {
+                        if (!e.isAutoRepeat) pill.powerHotkey(e.text);
+                        e.accepted = true;
+                        return;
+                    }
                     if (e.key === Qt.Key_Delete && pill.awakeOpen) {
                         pill.awakeDelete();
                         e.accepted = true;
@@ -451,7 +456,8 @@ ShellRoot {
                 Keys.onReleased: (e) => {
                     if (e.isAutoRepeat)
                         return;
-                    if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space)
+                    if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space
+                        || (e.text.length === 1 && "wlsruWLSRU".indexOf(e.text) >= 0))
                         && pill.powerOpen) {
                         pill.powerRelease();
                         e.accepted = true;

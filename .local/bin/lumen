@@ -94,7 +94,7 @@ start_wd() { setsid sh "$WATCHDOG" >/dev/null 2>&1 & }
 
 # The dotfiles commit the live configs were last synced against.
 installed_version() {
-    dot="${LUMEN_DOTFILES:-$HOME/lumen-dotfiles}"
+    dot="${LUMEN_DOTFILES:-$HOME/lumen}"
     sha=$(git -C "$dot" rev-parse --short HEAD 2>/dev/null)
 
     if [ -n "$sha" ]; then
@@ -162,7 +162,7 @@ cmd_status() {
 # (*.bak*) are never copied and are cleared from the repo copy. Zen's files go
 # under a generic "<profile>" folder, since the real profile name is per machine.
 # LUMEN_DOTFILES overrides the repo path.
-DOTFILES="${LUMEN_DOTFILES:-$HOME/lumen-dotfiles}"
+DOTFILES="${LUMEN_DOTFILES:-$HOME/lumen}"
 CFG="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 cmd_sync() {

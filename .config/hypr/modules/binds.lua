@@ -57,16 +57,16 @@ hl.bind(
 -- ============================================================================
 
 -- Switch workspace
-hl.bind(mod .. " + 1", hl.dsp.focus({ workspace = 1 }))
-hl.bind(mod .. " + 2", hl.dsp.focus({ workspace = 2 }))
-hl.bind(mod .. " + 3", hl.dsp.focus({ workspace = 3 }))
-hl.bind(mod .. " + 4", hl.dsp.focus({ workspace = 4 }))
-hl.bind(mod .. " + 5", hl.dsp.focus({ workspace = 5 }))
-hl.bind(mod .. " + 6", hl.dsp.focus({ workspace = 6 }))
-hl.bind(mod .. " + 7", hl.dsp.focus({ workspace = 7 }))
-hl.bind(mod .. " + 8", hl.dsp.focus({ workspace = 8 }))
-hl.bind(mod .. " + 9", hl.dsp.focus({ workspace = 9 }))
-hl.bind(mod .. " + 0", hl.dsp.focus({ workspace = 10 }))
+hl.bind(mod .. " + 1", hl.dsp.global("quickshell:workspace1"))
+hl.bind(mod .. " + 2", hl.dsp.global("quickshell:workspace2"))
+hl.bind(mod .. " + 3", hl.dsp.global("quickshell:workspace3"))
+hl.bind(mod .. " + 4", hl.dsp.global("quickshell:workspace4"))
+hl.bind(mod .. " + 5", hl.dsp.global("quickshell:workspace5"))
+hl.bind(mod .. " + 6", hl.dsp.global("quickshell:workspace6"))
+hl.bind(mod .. " + 7", hl.dsp.global("quickshell:workspace7"))
+hl.bind(mod .. " + 8", hl.dsp.global("quickshell:workspace8"))
+hl.bind(mod .. " + 9", hl.dsp.global("quickshell:workspace9"))
+hl.bind(mod .. " + 0", hl.dsp.global("quickshell:workspace10"))
 
 -- Move window to workspace
 hl.bind(mod .. " + CTRL + 1", hl.dsp.window.move({ workspace = 1, follow = false }))

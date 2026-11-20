@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import "../lib/binds.js" as Binds
 
 /**
@@ -26,6 +27,20 @@ Singleton {
 
     property var list: []
     property string editing: ""
+
+    /** Super+1…0 come through here so the OSD flashes even on the current workspace. */
+    signal workspaceKey()
+
+    Instantiator {
+        model: 10
+        delegate: GlobalShortcut {
+            required property int index
+            appid: "quickshell"
+            name: "workspace" + (index + 1)
+            description: "Switch to workspace " + (index + 1)
+            onPressed: { Hyprland.dispatch("hl.dsp.focus({ workspace = " + (index + 1) + " })"); root.workspaceKey(); }
+        }
+    }
 
     readonly property string header:
         "-- User-defined special workspaces. The Settings page rewrites this file, so keep\n"

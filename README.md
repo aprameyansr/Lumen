@@ -32,8 +32,8 @@ Keep **bash** as your login shell; kitty runs fish for you.
 **1. Get the files**
 
 ```sh
-git clone https://github.com/aprameyansr/Lumen.git ~/lumen-dotfiles
-cd ~/lumen-dotfiles
+git clone https://github.com/aprameyansr/Lumen.git ~/lumen
+cd ~/lumen
 ```
 
 **2. Back up** anything in `~/.config` you want to keep.
@@ -167,9 +167,9 @@ Change them in `~/.config/hypr/modules/binds.lua` or **Settings → Keybinds**.
 | `lumen status`  | Is the pill running                                 |
 | `lumen restart` | Restart the pill                                    |
 | `lumen log`     | Follow the pill's log                               |
-| `lumen sync`    | Copy your live configs back into `~/lumen-dotfiles` |
+| `lumen sync`    | Copy your live configs back into `~/lumen` |
 
-To update: `git pull` in `~/lumen-dotfiles`, copy the configs again (step 4) and
+To update: `git pull` in `~/lumen`, copy the configs again (step 4) and
 `lumen restart`.
 
 ## Troubleshooting

@@ -219,6 +219,11 @@ Item {
     }
 
     Connections {
+        target: Spaces
+        function onWorkspaceKey() { if (root.onFocusedMonitor) root.flash("workspace"); }
+    }
+
+    Connections {
         target: Backlight
         function onChanged() {
             root.flash("brightness");

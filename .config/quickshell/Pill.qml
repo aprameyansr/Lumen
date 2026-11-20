@@ -579,6 +579,10 @@ Item {
      * Enter released on the open power surface: drains an unfinished destructive
      * hold so a key let go before the fill completes never confirms.
      */
+    function powerHotkey(text) {
+        return (pill.powerOpen && ldPower.item) ? ldPower.item.pressHotkey(text) : false;
+    }
+
     function powerRelease() {
         if (pill.powerOpen && ldPower.item)
             ldPower.item.releaseFocused();

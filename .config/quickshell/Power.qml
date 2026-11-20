@@ -17,7 +17,8 @@ import "Singletons"
  * docks the soul bead exactly like a hovered one. Enter fires a safe tile at
  * once; on a destructive tile a held Enter drives the same heat fill as a
  * pointer hold (release before it completes drains), so the keyboard path can
- * never reboot on a single keystroke either.
+ * never reboot on a single keystroke either. Each tile also has a letter
+ * (w, l, s, r, u) that works the same way.
  */
 PillSurface {
     id: root
@@ -48,11 +49,11 @@ PillSurface {
     amePoint: Qt.point(heatX, heatY)
 
     readonly property var actions: [
-        { key: "lock",     glyph: "lock",     label: "Lock",     confirm: false, dispatch: "",             argv: ["loginctl", "lock-session"] },
-        { key: "logout",   glyph: "logout",   label: "Logout",   confirm: true,  dispatch: "hl.dsp.exit()", argv: [] },
-        { key: "suspend",  glyph: "suspend",  label: "Sleep",    confirm: false, dispatch: "",             argv: ["systemctl", "suspend"] },
-        { key: "reboot",   glyph: "reboot",   label: "Restart",  confirm: true,  dispatch: "",             argv: ["systemctl", "reboot"] },
-        { key: "shutdown", glyph: "shutdown", label: "Shutdown", confirm: true,  dispatch: "",             argv: ["systemctl", "poweroff"] }
+        { key: "lock",     hotkey: "w", glyph: "lock",     label: "Lock",     confirm: false, dispatch: "",             argv: ["loginctl", "lock-session"] },
+        { key: "logout",   hotkey: "l", glyph: "logout",   label: "Logout",   confirm: true,  dispatch: "hl.dsp.exit()", argv: [] },
+        { key: "suspend",  hotkey: "s", glyph: "suspend",  label: "Sleep",    confirm: false, dispatch: "",             argv: ["systemctl", "suspend"] },
+        { key: "reboot",   hotkey: "r", glyph: "reboot",   label: "Restart",  confirm: true,  dispatch: "",             argv: ["systemctl", "reboot"] },
+        { key: "shutdown", hotkey: "u", glyph: "shutdown", label: "Shutdown", confirm: true,  dispatch: "",             argv: ["systemctl", "poweroff"] }
     ]
 
     readonly property int splitAfter: 2
@@ -91,6 +92,21 @@ PillSurface {
         }
         run(actions[focusIndex]);
         return true;
+    }
+
+    /**
+     * Letter shortcut (w lock, l logout, s sleep, r restart, u shutdown): focus
+     * that tile and press it like Enter, so destructive tiles still need a hold.
+     * Returns true when the letter belongs to a tile.
+     */
+    function pressHotkey(text) {
+        for (var i = 0; i < actions.length; i++)
+            if (actions[i].hotkey === text.toLowerCase()) {
+                keyHeld = false;
+                focusIndex = i;
+                return pressFocused();
+            }
+        return false;
     }
 
     /**
