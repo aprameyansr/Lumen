@@ -145,7 +145,7 @@ SettingsSurface {
             id: dictationRow
             surface: root
             captionOnFocus: true
-            icon: "mic"
+            icon: "voice"
             name: "Dictation"
             sub: "Hold-to-talk, vocabulary, history"
 

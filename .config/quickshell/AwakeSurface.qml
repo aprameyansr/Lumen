@@ -260,7 +260,6 @@ SettingsSurface {
         SettingsRow {
             id: extendRow
             visible: Awake.timed
-            height: visible ? implicitHeight : 0
             surface: root
             icon: "clock"
             name: "Add time"
@@ -364,7 +363,6 @@ SettingsSurface {
 
         SettingsRow {
             visible: (Flags.awakePresets || []).length === 0
-            height: visible ? implicitHeight : 0
             surface: root
             name: "No presets yet"
             sub: "Set up a session above, then save it here"
