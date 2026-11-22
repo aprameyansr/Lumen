@@ -135,6 +135,13 @@ Singleton {
     /** The Vocabulary page is listening for a sample instead of dictating. */
     property bool teaching: false
     signal heard(string text)
+    /**
+     * Real sound is arriving from the mic. A Bluetooth mic is silent for about
+     * a second while it switches to headset mode; the bars stay dim until then
+     * so it's clear when to start talking.
+     */
+    property bool micHot: false
+
     /** The engine actually running, and why it isn't the one picked (if so). */
     property string engine: ""
     property string engineNote: ""
@@ -197,6 +204,8 @@ Singleton {
                 } else if (m.event === "heard") {
                     root.heard(m.text);
                     root.settle();
+                } else if (m.event === "hot") {
+                    root.micHot = true;
                 } else if (m.event === "empty") {
                     root.settle();
                 } else if (m.event === "error") {
@@ -349,7 +358,8 @@ Singleton {
             root.finish();
             return;
         }
-        root.send({ cmd: "start" });
+        root.micHot = false;
+        root.send({ cmd: "start", mic: Flags.dictateMic });
         if (Date.now() - root.lastTapEnd < root.tapGapMs) {
             root.consumed = true;
             root.lastTapEnd = 0;
@@ -437,9 +447,10 @@ Singleton {
     Process {
         id: cavaProc
         command: ["sh", "-c",
-            "src=$(pactl get-default-source 2>/dev/null); [ -n \"$src\" ] || src=auto; "
+            "if [ \"$2\" = builtin ]; then src=$(pactl list sources short 2>/dev/null | awk '$2 ~ /^alsa_input\\./ && $2 !~ /monitor/ {print $2; exit}'); fi; "
+            + "[ -n \"$src\" ] || src=$(pactl get-default-source 2>/dev/null); [ -n \"$src\" ] || src=auto; "
             + "printf '%s' \"$1\" | sed \"s|^source = SRC$|source = $src|\" | exec cava -p /dev/stdin",
-            "_", root.config]
+            "_", root.config, Flags.dictateMic]
         stdout: SplitParser {
             onRead: (line) => {
                 if (!line || !root.live)

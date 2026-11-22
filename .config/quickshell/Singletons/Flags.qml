@@ -40,6 +40,7 @@ Singleton {
     property alias showGlyphs: adapter.showGlyphs
     property alias dictateEnabled: adapter.dictateEnabled
     property alias dictateEngine: adapter.dictateEngine
+    property alias dictateMic: adapter.dictateMic
     property alias paletteMode: adapter.paletteMode
     property alias paletteVibrancy: adapter.paletteVibrancy
     property alias appTheme: adapter.appTheme
@@ -160,6 +161,8 @@ Singleton {
             property bool dictateEnabled: true
             /** "whisper" (most accurate, GPU) or "parakeet" (fastest, CPU). */
             property string dictateEngine: "whisper"
+            /** "builtin" (laptop mic, instant) or "default" (system mic, e.g. Bluetooth). */
+            property string dictateMic: "builtin"
             property string paletteMode: "static"
             /** Dynamic palette strength: 0 muted, 0.5 natural, 1 vivid. */
             property real paletteVibrancy: 0.5

@@ -30,7 +30,7 @@ PillSurface {
         var all = Pipewire.nodes.values;
         for (var i = 0; i < all.length; i++) {
             var n = all[i];
-            if (n && n.isSink && !n.isStream && n.audio && n.name !== "lumen_eq")
+            if (n && n.isSink && !n.isStream && n.audio && n.name !== "lumen_eq" && !Sound.unplugged(n))
                 out.push(n);
         }
         out.sort((a, b) => root.deviceLabel(a).localeCompare(root.deviceLabel(b)));
@@ -48,7 +48,7 @@ PillSurface {
         var all = Pipewire.nodes.values;
         for (var i = 0; i < all.length; i++) {
             var n = all[i];
-            if (n && !n.isSink && !n.isStream && n.audio && !/monitor/i.test(n.name || "") && n.name !== "lumen_mic")
+            if (n && !n.isSink && !n.isStream && n.audio && !/monitor/i.test(n.name || "") && n.name !== "lumen_mic" && !Sound.unplugged(n))
                 out.push(n);
         }
         out.sort((a, b) => root.deviceLabel(a).localeCompare(root.deviceLabel(b)));

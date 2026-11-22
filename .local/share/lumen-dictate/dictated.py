@@ -3,13 +3,18 @@
 Lumen dictation service. Spawned by Quickshell (Singletons/Dictate.qml) while
 dictation is enabled; talks over stdin/stdout, one JSON object per line.
 
-  in   {"cmd": "start"}                 begin recording from the default mic
+  in   {"cmd": "start", "mic": "builtin"|"default"}
+                                        begin recording (laptop mic, or the
+                                        system default, e.g. Bluetooth earbuds)
        {"cmd": "stop", "mode": "type"}  finish: transcribe, apply vocabulary,
                                         type into the focused app + copy
        {"cmd": "stop", "mode": "teach"} finish: transcribe raw, report only
        {"cmd": "cancel"}                drop the take
   out  {"event": "engine", "name": "whisper"|"parakeet", "note": "..."}
        {"event": "ready"}
+       {"event": "hot"}                 real sound is arriving (a Bluetooth
+                                        mic is silent for ~1 s while it
+                                        switches to headset mode)
        {"event": "done", "text": "...", "raw": "..."}
        {"event": "heard", "text": "..."}
        {"event": "empty"}               nothing intelligible was said
@@ -386,12 +391,34 @@ def type_text(text):
 
 # ── recording ──
 
+def resolve_mic(choice):
+    """
+    "builtin": the laptop's own mic (the first ALSA capture source), which
+    starts instantly; Bluetooth earbuds lose the first second of every take
+    while they switch to headset mode. "default": whatever the system uses.
+    Returns a PipeWire target, or None for the default.
+    """
+    if choice != "builtin":
+        return None
+    try:
+        out = subprocess.run(["pactl", "list", "sources", "short"], capture_output=True, text=True, timeout=2).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) > 1 and parts[1].startswith("alsa_input.") and ".monitor" not in parts[1]:
+            return parts[1]
+    return None
+
+
 class Take:
-    def __init__(self):
+    def __init__(self, target=None):
         self.chunks = []
-        self.proc = subprocess.Popen(
-            ["pw-record", "--raw", "--rate", str(RATE), "--channels", "1", "--format", "s16", "-"],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        self.hot = False
+        cmd = ["pw-record", "--raw", "--rate", str(RATE), "--channels", "1", "--format", "s16"]
+        if target:
+            cmd += ["--target", target]
+        self.proc = subprocess.Popen(cmd + ["-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self.reader = threading.Thread(target=self._read, daemon=True)
         self.reader.start()
 
@@ -401,6 +428,9 @@ class Take:
             if not b:
                 break
             self.chunks.append(b)
+            if not self.hot and len(b) >= 2 and np.abs(np.frombuffer(b[: len(b) // 2 * 2], dtype=np.int16)).max() > 3:
+                self.hot = True
+                emit(event="hot")
 
     def finish(self):
         self.proc.terminate()
@@ -622,7 +652,7 @@ def main():
             if take:
                 take.finish()
             try:
-                take = Take()
+                take = Take(resolve_mic(msg.get("mic", "default")))
             except OSError as err:
                 take = None
                 emit(event="error", msg="mic unavailable: %s" % err)

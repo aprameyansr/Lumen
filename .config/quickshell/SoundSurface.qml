@@ -45,7 +45,7 @@ PillSurface {
         const all = Pipewire.nodes.values;
         for (let i = 0; i < all.length; i++) {
             const n = all[i];
-            if (n && n.isSink && !n.isStream && n.audio && n.name !== "lumen_eq")
+            if (n && n.isSink && !n.isStream && n.audio && n.name !== "lumen_eq" && !Sound.unplugged(n))
                 out.push(n);
         }
         out.sort((a, b) => devMenu.label(a).localeCompare(devMenu.label(b)));
@@ -57,7 +57,7 @@ PillSurface {
         const all = Pipewire.nodes.values;
         for (let i = 0; i < all.length; i++) {
             const n = all[i];
-            if (n && !n.isSink && !n.isStream && n.audio && !/monitor/i.test(n.name || "") && n.name !== "lumen_mic")
+            if (n && !n.isSink && !n.isStream && n.audio && !/monitor/i.test(n.name || "") && n.name !== "lumen_mic" && !Sound.unplugged(n))
                 out.push(n);
         }
         out.sort((a, b) => devMenu.label(a).localeCompare(devMenu.label(b)));

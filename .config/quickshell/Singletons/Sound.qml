@@ -9,6 +9,75 @@ import Quickshell.Services.Pipewire
 Singleton {
     id: root
 
+    // ── what's plugged in ──
+
+    /**
+     * Per output/input node name: whether its port is plugged in ("no" for an
+     * empty headphone jack or a monitor output with no screen), its port type
+     * and port name. Read from pactl, which knows the sound card's ports, and
+     * refreshed whenever a card, output or input changes (plugging in).
+     */
+    property var ports: ({})
+
+    function portInfo(node) {
+        return node ? (root.ports[node.name] || null) : null;
+    }
+
+    /** Nothing is plugged into it right now. The output in use is never hidden. */
+    function unplugged(node) {
+        const p = root.portInfo(node);
+        return p !== null && p.avail === "no" && node !== root.sink && node !== root.source;
+    }
+
+    Process {
+        id: portsProc
+        command: ["sh", "-c", "pactl -f json list sinks 2>/dev/null; echo; pactl -f json list sources 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = {};
+                for (const chunk of this.text.split("\n")) {
+                    if (!chunk.trim())
+                        continue;
+                    let list;
+                    try { list = JSON.parse(chunk); } catch (e) { continue; }
+                    for (const n of list) {
+                        const ap = n.active_port;
+                        const port = (n.ports || []).find(p => p.name === ap);
+                        const a = port ? (port.availability || "") : "";
+                        out[n.name] = {
+                            avail: a === "not available" ? "no" : (a === "available" ? "yes" : "unknown"),
+                            type: port ? (port.type || "") : "",
+                            port: ap || ""
+                        };
+                    }
+                }
+                root.ports = out;
+            }
+        }
+    }
+
+    Process {
+        running: true
+        command: ["pactl", "subscribe"]
+        stdout: SplitParser {
+            onRead: (line) => {
+                if (/ on (card|sink|source) /.test(line))
+                    portsDebounce.restart();
+            }
+        }
+        onExited: portsRelaunch.restart()
+    }
+    Timer {
+        id: portsRelaunch
+        interval: 2000
+        onTriggered: { portsProc.running = true; }
+    }
+    Timer {
+        id: portsDebounce
+        interval: 400
+        onTriggered: portsProc.running = true
+    }
+
     readonly property var freqs: [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
     readonly property real range: 12
     readonly property var builtins: [
@@ -510,6 +579,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        portsProc.running = true;
         try {
             const s = JSON.parse(file.text());
             root.eq = s.eq === true;

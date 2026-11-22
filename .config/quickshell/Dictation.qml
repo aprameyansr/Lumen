@@ -33,6 +33,7 @@ SettingsSurface {
         const r = [
             { item: enableRow, kind: "toggle", get: function () { return Flags.dictateEnabled; }, set: function (v) { Flags.dictateEnabled = v; } },
             { item: engineRow, kind: "seg", vals: ["whisper", "parakeet"], get: function () { return Flags.dictateEngine; }, set: function (v) { Flags.dictateEngine = v; } },
+            { item: micRow, kind: "seg", vals: ["builtin", "default"], get: function () { return Flags.dictateMic; }, set: function (v) { Flags.dictateMic = v; } },
             { item: vocabRow, kind: "nav", surface: "vocab" }
         ];
         for (let i = 0; i < histRep.count; i++) {
@@ -229,6 +230,22 @@ SettingsSurface {
                 options: [{ label: "Whisper", value: "whisper" }, { label: "Parakeet", value: "parakeet" }]
                 value: Flags.dictateEngine
                 onPicked: (v) => Flags.dictateEngine = v
+            }
+        }
+
+        SettingsRow {
+            id: micRow
+            surface: root
+            captionOnFocus: true
+            icon: "mic"
+            name: "Microphone"
+            sub: Flags.dictateMic === "builtin" ? "Laptop mic, starts instantly" : "System mic; Bluetooth adds about a second"
+
+            SettingsSeg {
+                s: root.s
+                options: [{ label: "Laptop", value: "builtin" }, { label: "System", value: "default" }]
+                value: Flags.dictateMic
+                onPicked: (v) => Flags.dictateMic = v
             }
         }
 

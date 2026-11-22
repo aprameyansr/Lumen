@@ -31,7 +31,8 @@ Item {
         Behavior on anchors.horizontalCenterOffset { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
         height: root.span * root.s
         spacing: 2 * root.s
-        opacity: root.live ? 1 : (root.idle && !root.working ? 0.3 : 0)
+        /** Dim, gently breathing, until the mic actually delivers sound. */
+        opacity: root.live ? (Dictate.micHot ? 1 : waitPulse.value) : (root.idle && !root.working ? 0.3 : 0)
         scale: root.live || (root.idle && !root.working) ? 1 : 0.6
         Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
         Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
@@ -58,6 +59,18 @@ Item {
                 }
             }
         }
+    }
+
+    QtObject {
+        id: waitPulse
+        property real value: 0.35
+    }
+    SequentialAnimation {
+        running: root.live && !Dictate.micHot
+        loops: Animation.Infinite
+        onStopped: waitPulse.value = 0.35
+        NumberAnimation { target: waitPulse; property: "value"; from: 0.25; to: 0.55; duration: 420; easing.type: Easing.InOutSine }
+        NumberAnimation { target: waitPulse; property: "value"; from: 0.55; to: 0.25; duration: 420; easing.type: Easing.InOutSine }
     }
 
     GlyphIcon {
