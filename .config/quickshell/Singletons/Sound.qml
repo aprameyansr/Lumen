@@ -125,7 +125,7 @@ Singleton {
         const all = Pipewire.nodes.values;
         for (let i = 0; i < all.length; i++) {
             const n = all[i];
-            if (n && n.isStream && n.isSink && n.audio && n.name !== "lumen_eq.out" && !/^output\.pw-loopback/.test(n.name || ""))
+            if (n && n.isStream && n.isSink && n.audio && n.name !== "lumen_eq.out" && !/^output\.(pw-loopback|lumen_combine_)/.test(n.name || ""))
                 out.push(n);
         }
         return out;

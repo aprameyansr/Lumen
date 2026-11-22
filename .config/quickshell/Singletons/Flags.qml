@@ -161,8 +161,8 @@ Singleton {
             property bool dictateEnabled: true
             /** "whisper" (most accurate, GPU) or "parakeet" (fastest, CPU). */
             property string dictateEngine: "whisper"
-            /** "builtin" (laptop mic, instant) or "default" (system mic, e.g. Bluetooth). */
-            property string dictateMic: "builtin"
+            /** "default" (the system's input) or a source's node name. */
+            property string dictateMic: "default"
             property string paletteMode: "static"
             /** Dynamic palette strength: 0 muted, 0.5 natural, 1 vivid. */
             property real paletteVibrancy: 0.5

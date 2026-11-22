@@ -447,7 +447,8 @@ Singleton {
     Process {
         id: cavaProc
         command: ["sh", "-c",
-            "if [ \"$2\" = builtin ]; then src=$(pactl list sources short 2>/dev/null | awk '$2 ~ /^alsa_input\\./ && $2 !~ /monitor/ {print $2; exit}'); fi; "
+            "if [ \"$2\" != builtin ] && [ \"$2\" != default ] && pactl list sources short 2>/dev/null | awk '{print $2}' | grep -qxF -- \"$2\"; then src=$2; "
+            + "elif [ \"$2\" != default ]; then src=$(pactl list sources short 2>/dev/null | awk '$2 ~ /^alsa_input\\./ && $2 !~ /monitor/ {print $2; exit}'); fi; "
             + "[ -n \"$src\" ] || src=$(pactl get-default-source 2>/dev/null); [ -n \"$src\" ] || src=auto; "
             + "printf '%s' \"$1\" | sed \"s|^source = SRC$|source = $src|\" | exec cava -p /dev/stdin",
             "_", root.config, Flags.dictateMic]

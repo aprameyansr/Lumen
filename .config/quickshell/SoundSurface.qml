@@ -2,11 +2,12 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "Singletons"
 
-/** 音 SOUND surface with three tabs: EQ (boost, spectrum, modes, ten bands, shelves, AutoEQ, night), Apps (per-app volume, mute, output) and Mic (input, gain, noise filter). */
+/** 音 SOUND surface with four tabs: EQ (boost, spectrum, modes, ten bands, shelves, AutoEQ, night), Apps (per-app volume, mute, output), Mic (input, gain, noise filter) and Combine (combine outputs into one, e.g. everyone's headphones; see SoundCombine). */
 PillSurface {
     id: root
 
@@ -33,6 +34,25 @@ PillSurface {
     property string aeqQuery: ""
     property real routeY: 0
     property bool pickerOpen: false
+
+    /** Share tab: outputs ticked to combine (node name -> true). */
+    property var sharePick: ({})
+    readonly property var shareCandidates: root.outputSinks.filter(n => !SoundCombine.isCombined(n))
+    readonly property int sharePicked: root.shareCandidates.filter(n => root.sharePick[n.name] === true).length
+    /** The ticked set already exists as a combined output. */
+    readonly property var shareDup: { void SoundCombine.combos; return root.sharePicked >= 2 ? SoundCombine.existing(root.shareCandidates.filter(n => root.sharePick[n.name] === true)) : null; }
+    readonly property bool shareDupOn: { void Pipewire.defaultAudioSink; return SoundCombine.isDefault(root.shareDup); }
+
+    function combinePicked() {
+        if (root.sharePicked < 2)
+            return;
+        SoundCombine.combine(root.shareCandidates.filter(n => root.sharePick[n.name] === true));
+        root.sharePick = {};
+    }
+
+    function closeShareForm() {
+        root.sharePick = {};
+    }
     property bool boostOpen: false
     property string renaming: ""
     property int focusBand: -1
@@ -578,9 +598,9 @@ PillSurface {
                 SettingsSeg {
                     anchors.verticalCenter: parent.verticalCenter
                     s: root.s
-                    options: [{ label: "Apps", value: "apps" }, { label: "Mic", value: "mic" }, { label: "EQ", value: "eq" }]
+                    options: [{ label: "Apps", value: "apps" }, { label: "Mic", value: "mic" }, { label: "EQ", value: "eq" }, { label: "Combine", value: "share" }]
                     value: root.tab
-                    onPicked: (v) => { root.tab = v; root.editing = false; root.routeStream = null; root.pickerOpen = false; root.boostOpen = false; root.aeqOpen = false; }
+                    onPicked: (v) => { root.tab = v; root.editing = false; root.routeStream = null; root.pickerOpen = false; root.boostOpen = false; root.aeqOpen = false; root.closeShareForm(); }
                 }
             }
 
@@ -1154,6 +1174,228 @@ PillSurface {
                 model: Sound.apps
                 delegate: AppRow {}
             }
+        }
+
+        // ── Share: combine outputs into one ──
+
+        Column {
+            id: shareTab
+            visible: root.tab === "share"
+            width: parent.width
+            spacing: 0
+
+            Repeater {
+                model: SoundCombine.combos
+
+                delegate: Item {
+                    id: crow
+                    required property var modelData
+                    readonly property int here: { void SoundCombine.nodes; return SoundCombine.presentCount(crow.modelData); }
+
+                    width: shareTab.width
+                    height: 46 * root.s
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.topMargin: 2 * root.s
+                        anchors.bottomMargin: 2 * root.s
+                        radius: 9 * root.s
+                        color: Qt.alpha(Theme.vermLit, 0.08)
+                        border.width: 1
+                        border.color: Qt.alpha(Theme.vermLit, 0.35)
+                    }
+
+                    Column {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12 * root.s
+                        anchors.right: cctl.left
+                        anchors.rightMargin: 8 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 3 * root.s
+
+                        Text {
+                            width: parent.width
+                            text: crow.modelData.name
+                            color: Theme.cream
+                            font.family: Theme.font
+                            font.pixelSize: 12.5 * root.s
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: parent.width
+                            text: { void SoundCombine.nodes; return crow.modelData.members.map(m => SoundCombine.memberPresent(m) ? m.label : m.label + " (not connected)").join(" · "); }
+                            color: Theme.faint
+                            font.family: Theme.font
+                            font.pixelSize: 9.5 * root.s
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    Rectangle {
+                        id: cctl
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 24 * root.s
+                        height: 24 * root.s
+                        radius: 7 * root.s
+                        color: crmArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                        GlyphIcon {
+                            anchors.centerIn: parent
+                            width: 12 * root.s
+                            height: 12 * root.s
+                            name: "close"
+                            color: crmArea.containsMouse ? Theme.vermLit : Theme.iconDim
+                            stroke: 2
+                        }
+
+                        MouseArea {
+                            id: crmArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: SoundCombine.remove(crow.modelData.id)
+                        }
+                    }
+                }
+            }
+
+            Item { width: 1; height: SoundCombine.combos.length ? 8 * root.s : 0 }
+
+            Caps { text: "Play to several at once" }
+
+            Item { width: 1; height: 4 * root.s }
+
+            Repeater {
+                model: root.shareCandidates
+
+                delegate: Item {
+                    id: prow
+                    required property var modelData
+                    readonly property bool picked: root.sharePick[prow.modelData.name] === true
+
+                    width: shareTab.width
+                    height: 30 * root.s
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 8 * root.s
+                        color: phover.hovered ? Theme.frameBg : "transparent"
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+                    HoverHandler { id: phover }
+
+                    Rectangle {
+                        id: tick
+                        anchors.left: parent.left
+                        anchors.leftMargin: 9 * root.s
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 14 * root.s
+                        height: 14 * root.s
+                        radius: 4 * root.s
+                        color: prow.picked ? Theme.vermLit : "transparent"
+                        border.width: prow.picked ? 0 : 1
+                        border.color: Theme.hair
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                        /** Drawn in the box's own coordinates so it sits dead centre. */
+                        Shape {
+                            anchors.fill: parent
+                            visible: prow.picked
+                            preferredRendererType: Shape.CurveRenderer
+                            ShapePath {
+                                strokeColor: Theme.cardBot
+                                strokeWidth: 1.9 * root.s
+                                fillColor: "transparent"
+                                capStyle: ShapePath.RoundCap
+                                joinStyle: ShapePath.RoundJoin
+                                startX: tick.width * 0.26; startY: tick.height * 0.52
+                                PathLine { x: tick.width * 0.43; y: tick.height * 0.69 }
+                                PathLine { x: tick.width * 0.75; y: tick.height * 0.33 }
+                            }
+                        }
+                    }
+
+                    Text {
+                        anchors.left: tick.right
+                        anchors.leftMargin: 10 * root.s
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: devMenu.label(prow.modelData)
+                        color: Theme.cream
+                        font.family: Theme.font
+                        font.pixelSize: 12 * root.s
+                        elide: Text.ElideRight
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            const p = Object.assign({}, root.sharePick);
+                            p[prow.modelData.name] = !prow.picked;
+                            root.sharePick = p;
+                        }
+                    }
+                }
+            }
+
+            Item { width: 1; height: 6 * root.s }
+
+            Item {
+                width: parent.width
+                height: 30 * root.s
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4 * root.s
+                    anchors.right: combineBtn.left
+                    anchors.rightMargin: 8 * root.s
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.sharePicked < 2 ? "Tick two or more"
+                        : (root.shareDup ? "Already combined above" : "Shows up as one output in every app")
+                    color: Theme.faint
+                    font.family: Theme.font
+                    font.pixelSize: 9.5 * root.s
+                    elide: Text.ElideRight
+                }
+
+                Rectangle {
+                    id: combineBtn
+                    readonly property bool ready: root.sharePicked >= 2 && !root.shareDupOn
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: combineText.implicitWidth + 24 * root.s
+                    height: 26 * root.s
+                    radius: 8 * root.s
+                    opacity: ready ? 1 : 0.4
+                    color: combineArea.containsMouse && ready ? Theme.vermLit : Qt.alpha(Theme.vermLit, 0.85)
+                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+
+                    Text {
+                        id: combineText
+                        anchors.centerIn: parent
+                        text: root.shareDup ? (root.shareDupOn ? "Already on" : "Switch to it") : "Combine"
+                        color: Theme.cardBot
+                        font.family: Theme.font
+                        font.pixelSize: 11 * root.s
+                        font.weight: Font.DemiBold
+                    }
+
+                    MouseArea {
+                        id: combineArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: parent.ready ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: root.combinePicked()
+                    }
+                }
+            }
+
+            Item { width: 1; height: 4 * root.s }
         }
     }
 

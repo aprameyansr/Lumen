@@ -3,9 +3,9 @@
 Lumen dictation service. Spawned by Quickshell (Singletons/Dictate.qml) while
 dictation is enabled; talks over stdin/stdout, one JSON object per line.
 
-  in   {"cmd": "start", "mic": "builtin"|"default"}
-                                        begin recording (laptop mic, or the
-                                        system default, e.g. Bluetooth earbuds)
+  in   {"cmd": "start", "mic": "<source node name>"}
+                                        begin recording from that mic (falls
+                                        back to the laptop mic if it's gone)
        {"cmd": "stop", "mode": "type"}  finish: transcribe, apply vocabulary,
                                         type into the focused app + copy
        {"cmd": "stop", "mode": "teach"} finish: transcribe raw, report only
@@ -393,21 +393,24 @@ def type_text(text):
 
 def resolve_mic(choice):
     """
-    "builtin": the laptop's own mic (the first ALSA capture source), which
-    starts instantly; Bluetooth earbuds lose the first second of every take
-    while they switch to headset mode. "default": whatever the system uses.
-    Returns a PipeWire target, or None for the default.
+    The PipeWire source to record from. `choice` is a source's node name picked
+    in Settings → Dictation; if that mic isn't there (earbuds off), fall back to
+    the laptop's own mic, then the system default. "builtin" means the laptop
+    mic and "default" the system default, as older settings stored them.
+    Returns a target, or None for the system default.
     """
-    if choice != "builtin":
-        return None
     try:
         out = subprocess.run(["pactl", "list", "sources", "short"], capture_output=True, text=True, timeout=2).stdout
     except (OSError, subprocess.TimeoutExpired):
         return None
-    for line in out.splitlines():
-        parts = line.split()
-        if len(parts) > 1 and parts[1].startswith("alsa_input.") and ".monitor" not in parts[1]:
-            return parts[1]
+    names = [l.split()[1] for l in out.splitlines() if len(l.split()) > 1 and ".monitor" not in l.split()[1]]
+    if choice and choice not in ("builtin", "default") and choice in names:
+        return choice
+    if choice == "default":
+        return None
+    for n in names:
+        if n.startswith("alsa_input."):
+            return n
     return None
 
 

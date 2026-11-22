@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Services.Pipewire
 import "Singletons"
 
 /**
@@ -33,7 +34,7 @@ SettingsSurface {
         const r = [
             { item: enableRow, kind: "toggle", get: function () { return Flags.dictateEnabled; }, set: function (v) { Flags.dictateEnabled = v; } },
             { item: engineRow, kind: "seg", vals: ["whisper", "parakeet"], get: function () { return Flags.dictateEngine; }, set: function (v) { Flags.dictateEngine = v; } },
-            { item: micRow, kind: "seg", vals: ["builtin", "default"], get: function () { return Flags.dictateMic; }, set: function (v) { Flags.dictateMic = v; } },
+            { item: micRow, kind: "seg", vals: root.micChoices.map(n => n.name), get: function () { return root.micNode ? root.micNode.name : "default"; }, set: function (v) { Flags.dictateMic = v; } },
             { item: vocabRow, kind: "nav", surface: "vocab" }
         ];
         for (let i = 0; i < histRep.count; i++) {
@@ -42,6 +43,60 @@ SettingsSurface {
                 r.push({ item: it, kind: "action", run: (function (row) { return function () { row.copy(); }; })(it) });
         }
         return r;
+    }
+
+    // ── microphone ──
+
+    /** Every input source, the same list the sound page shows. */
+    readonly property var micSources: {
+        const out = [];
+        for (const n of Pipewire.nodes.values)
+            if (n && !n.isSink && !n.isStream && n.audio && !/monitor/i.test(n.name || "") && n.name !== "lumen_mic" && !Sound.unplugged(n))
+                out.push(n);
+        return out;
+    }
+
+    /** "System default" first, then every mic. */
+    readonly property var systemDefault: ({ name: "default", description: "System default" })
+    readonly property var micChoices: [root.systemDefault].concat(root.micSources)
+
+    /**
+     * What's picked: "System default", or a mic by name. A picked mic that
+     * isn't there (earbuds off) records from the laptop's own mic instead,
+     * same as the dictation service.
+     */
+    readonly property var micNode: {
+        const want = Flags.dictateMic;
+        if (!want || want === "default")
+            return root.systemDefault;
+        const picked = root.micSources.find(n => n.name === want);
+        if (picked)
+            return picked;
+        return root.micSources.find(n => /^alsa_input\./.test(n.name || "")) || root.systemDefault;
+    }
+
+    property bool micMenuOpen: false
+    Connections {
+        target: root
+        function onActiveChanged() {
+            if (!root.active)
+                root.micMenuOpen = false;
+        }
+    }
+
+    DeviceMenu {
+        s: root.s
+        open: root.micMenuOpen
+        y: { void root.height; void root.micMenuOpen; return micRow.mapToItem(root, 0, micRow.height).y + 2 * root.s; }
+        anchors.right: parent.right
+        anchors.rightMargin: root.mRight * root.s
+        width: 220 * root.s
+        model: root.micChoices
+        current: root.micNode
+        onPick: (node) => {
+            Flags.dictateMic = node.name;
+            root.micMenuOpen = false;
+        }
     }
 
     /** Delete key: drop the focused history entry. */
@@ -239,13 +294,49 @@ SettingsSurface {
             captionOnFocus: true
             icon: "mic"
             name: "Microphone"
-            sub: Flags.dictateMic === "builtin" ? "Laptop mic, starts instantly" : "System mic; Bluetooth adds about a second"
+            sub: root.micNode === root.systemDefault ? "Whatever the system uses; Bluetooth misses about a second at the start" : "Bluetooth mics miss about a second at the start"
 
-            SettingsSeg {
-                s: root.s
-                options: [{ label: "Laptop", value: "builtin" }, { label: "System", value: "default" }]
-                value: Flags.dictateMic
-                onPicked: (v) => Flags.dictateMic = v
+            Rectangle {
+                width: Math.min(160 * root.s, micChipText.implicitWidth + 34 * root.s)
+                height: 24 * root.s
+                radius: 7 * root.s
+                color: micChipArea.containsMouse || root.micMenuOpen ? Theme.frameBg : "transparent"
+                border.width: 1
+                border.color: root.micMenuOpen ? Qt.alpha(Theme.vermLit, 0.45) : Theme.hairSoft
+                Behavior on color { ColorAnimation { duration: Motion.fast } }
+
+                Text {
+                    id: micChipText
+                    anchors.left: parent.left
+                    anchors.leftMargin: 9 * root.s
+                    anchors.right: micChev.left
+                    anchors.rightMargin: 4 * root.s
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.micNode.description || root.micNode.nickname || root.micNode.name
+                    color: Theme.cream
+                    font.family: Theme.font
+                    font.pixelSize: 11 * root.s
+                    font.weight: Font.Medium
+                    elide: Text.ElideRight
+                }
+                GlyphIcon {
+                    id: micChev
+                    anchors.right: parent.right
+                    anchors.rightMargin: 7 * root.s
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 12 * root.s
+                    height: 12 * root.s
+                    name: "chevron-down"
+                    color: Theme.iconDim
+                    stroke: 2
+                }
+                MouseArea {
+                    id: micChipArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.micMenuOpen = !root.micMenuOpen
+                }
             }
         }
 

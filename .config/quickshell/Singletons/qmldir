@@ -22,3 +22,4 @@ singleton Awake Awake.qml
 singleton Clocks Clocks.qml
 singleton Sound Sound.qml
 singleton Dictate Dictate.qml
+singleton SoundCombine SoundCombine.qml
