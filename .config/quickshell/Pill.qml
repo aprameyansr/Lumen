@@ -306,7 +306,7 @@ Item {
      * out from under you. Only a critical notification breaks through.
      */
     readonly property string mode: dragActive ? "dragOver"
-        : (criticalToast ? "toast"
+        : (criticalToast && !(osdActive && !holding) ? "toast"
         : (surfaceOpen && surfaces[surface] !== undefined ? surface
         : (dictateHere ? "rest"
         : (quickChoosing ? "quickChoose"

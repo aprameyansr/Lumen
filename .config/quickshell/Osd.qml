@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Widgets
 import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
+import Quickshell.Services.Notifications
 import "Singletons"
 
 Item {
@@ -162,6 +163,16 @@ Item {
             holdExtends = 0;
         kind = which;
         flashing = true;
+        /**
+         * Adjusting volume or brightness clears the notifications on screen
+         * (they stay in the inbox). Critical ones stay and show once the OSD
+         * closes.
+         */
+        if (which === "volume" || which === "brightness") {
+            for (const p of Notifs.popups.slice())
+                if (p && p.urgency !== NotificationUrgency.Critical)
+                    Notifs.removePopup(p);
+        }
         hideTimer.interval = Math.max(0.25, Flags.osdTime || 1) * ((which === "battery" || which === "record") ? 2000 : 1800);
         hideTimer.restart();
         return true;

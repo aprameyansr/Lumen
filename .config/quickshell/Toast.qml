@@ -34,6 +34,15 @@ Item {
      * notification replaces the map.
      */
     property double deadline: 0
+    /**
+     * Shown after waiting behind the OSD: the countdown kept running while it
+     * was hidden, so give it its full time from the moment it's actually seen.
+     */
+    onLiveChanged: if (live && notif) {
+        const ms = Math.max(1, Flags.notifSecs || 6) * 1000 * (notif.urgency === NotificationUrgency.Low ? 2 / 3 : 1);
+        deadline = Math.max(deadline, Date.now() + ms);
+    }
+
     function armDeadline() { deadline = notif ? (Notifs.expireAt[notif.id] || (Date.now() + Math.max(1, Flags.notifSecs || 6) * 1000)) : 0; }
     Component.onCompleted: armDeadline()
 

@@ -104,17 +104,41 @@ wallpaper.
 
 ## Optional
 
-**Dictation** (needs ~2 GB of disk; ~1 GB of RAM while it's switched on):
+**Dictation** (offline speech-to-text; ~2 GB of disk, ~1 GB of RAM while
+it's on). How to use it is under [Dictation](#dictation) below.
 
-```sh
-sh ~/.local/share/lumen-dictate/setup.sh
-```
+1. **Packages.** `packages.txt` already lists what it needs (`python`,
+   `pipewire-audio`, `wtype`, `wl-clipboard`, `libpulse`, `cava`, `zenity`,
+   `shaderc`, `vulkan-icd-loader`). It also lists `vulkan-intel`, the Vulkan
+   driver for **Intel** GPUs. On **AMD** use `vulkan-radeon` instead, on
+   **NVIDIA** `nvidia-utils`. With no GPU driver, dictation still works, just
+   on the CPU engine only.
+2. **Files.** Step 4 above already copied the service to
+   `~/.local/share/lumen-dictate` (`dictated.py` and `setup.sh`).
+3. **Run the setup** (no root needed):
 
-That sets up both speech engines in `~/.local/share/lumen-dictate`: it
-downloads the models and a Python runtime, and builds Whisper for your GPU
-(a few minutes; it needs `shaderc`, `vulkan-icd-loader` and your GPU's Vulkan
-driver from [`packages.txt`](packages.txt)). Without a GPU driver it skips
-Whisper and dictation uses Parakeet. Then see [Dictation](#dictation) below.
+   ```sh
+   sh ~/.local/share/lumen-dictate/setup.sh
+   ```
+
+   It downloads both speech models (~1.5 GB) and a Python runtime, and builds
+   Whisper for your GPU. The build takes a few minutes and runs fewer jobs when
+   you're low on free memory, so it won't freeze the machine. It's safe to run
+   again: finished steps are skipped, and your vocabulary and history are
+   never touched. If your GPU driver is missing it skips Whisper, says so, and
+   you can re-run it after installing the driver.
+4. **Turn it on** in **Settings → Dictation**, leave **Engine** on
+   **Whisper**, then hold **Right Alt** and talk. The first take after logging
+   in takes a few seconds longer while the model loads onto the GPU.
+
+**Moving to a new machine:** in **Settings → Dictation → Vocabulary**, use
+**Export** first and **Import** on the new one. Your vocabulary and history
+are never copied into the dotfiles.
+
+**Rebuild Whisper** (after a GPU or driver change):
+`rm -rf ~/.local/share/lumen-dictate/whisper && sh ~/.local/share/lumen-dictate/setup.sh`
+
+**Remove dictation completely:** `rm -rf ~/.local/share/lumen-dictate`
 
 **GTK glass**
 
@@ -244,6 +268,8 @@ To update: `git pull` in `~/lumen`, copy the configs again (step 4) and
 - **Chinese/Korean text shows as boxes:** install `noto-fonts-cjk`.
 - **GUI apps never ask for a password:** `systemctl --user enable --now hyprpolkitagent`.
 - **Right Alt does nothing:** run the dictation setup above, check **Settings → Dictation** is on, and `lumen log` for errors.
+- **"Whisper couldn't start" notification:** dictation switched to Parakeet. "isn't installed" means re-run the dictation setup; "the GPU driver may be missing" means install your GPU's Vulkan driver (see dictation step 1), then rebuild Whisper. If the build itself failed, the reason is in `~/.local/share/lumen-dictate/.build/build.log`.
+- **Dictation types the wrong words:** try the other engine in **Settings → Dictation → Engine**, and teach names under **Vocabulary**. Whisper copes much better with fast or accented speech.
 
 ## Credits
 
