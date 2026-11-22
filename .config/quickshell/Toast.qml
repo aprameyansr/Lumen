@@ -24,7 +24,7 @@ Item {
     required property Item host
 
     readonly property bool critical: notif.urgency === NotificationUrgency.Critical
-    readonly property var acts: notif.actions.filter(function(a) { return a.text.length > 0; })
+    readonly property var acts: notif.actions.filter(function(a) { return a.text.length > 0 && a.identifier !== "default"; })
 
     implicitHeight: Math.max(iconTile.height, col.implicitHeight)
 

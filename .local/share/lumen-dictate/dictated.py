@@ -8,30 +8,51 @@ dictation is enabled; talks over stdin/stdout, one JSON object per line.
                                         type into the focused app + copy
        {"cmd": "stop", "mode": "teach"} finish: transcribe raw, report only
        {"cmd": "cancel"}                drop the take
-  out  {"event": "ready"}
+  out  {"event": "engine", "name": "whisper"|"parakeet", "note": "..."}
+       {"event": "ready"}
        {"event": "done", "text": "...", "raw": "..."}
        {"event": "heard", "text": "..."}
        {"event": "empty"}               nothing intelligible was said
        {"event": "error", "msg": "..."}
 
-Model: NVIDIA Parakeet TDT 0.6B v2 (int8) through sherpa-onnx, on the CPU.
+Two engines, picked with --engine (Settings → Dictation → Engine):
+  whisper   Whisper large-v3-turbo on the GPU (whisper.cpp + Vulkan), the most
+            accurate, ~1 s a take. Runs as a private whisper-server child on a
+            unix socket (no network port) that dies with this process. Your
+            Vocabulary words are passed to it as hints.
+  parakeet  NVIDIA Parakeet TDT 0.6B v2 (int8) through sherpa-onnx on the CPU,
+            the fastest, ~0.5 s a take.
+If Whisper can't start (not built, no GPU driver) the service falls back to
+Parakeet and reports it with an "engine" event.
+
 The vocabulary (vocab.json next to this file) maps how the model mishears a
 word back to its real spelling; see apply_vocab.
 """
 
+import atexit
+import ctypes
 import difflib
+import http.client
+import io
 import json
 import os
 import re
+import signal
+import socket
 import subprocess
 import sys
 import threading
+import time
+import uuid
+import wave
 
 import numpy as np
 import sherpa_onnx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL = os.path.join(HERE, "models", "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8")
+WHISPER_SERVER = os.path.join(HERE, "whisper", "whisper-server")
+WHISPER_MODEL = os.path.join(HERE, "models", "ggml-large-v3-turbo-q8_0.bin")
 VOCAB = os.path.join(HERE, "vocab.json")
 COMMON = os.path.join(HERE, "common-words.txt")
 RATE = 16000
@@ -184,11 +205,14 @@ _SENT_END = re.compile(r"[.!?]\s+")
 
 def _clean_item(s):
     s = s.strip().strip(".,;:!?").strip()
+    s = re.sub(r"^(?:\d+[.)]|[-•*])\s*", "", s)
     s = re.sub(r"^(and|then|also)\s+", "", s, flags=re.I)
     return s[:1].upper() + s[1:] if s else s
 
 
 def _split_items(body):
+    # Whisper sometimes writes the numbers itself ("1. Banana, 2. Apple").
+    body = re.sub(r"(^|[\s,;])\d+[.)]\s+", r"\1, ", body)
     parts = [p for p in re.split(r"\s*[,;]\s*|\.\s+|\.$|\s+next item\s+", body, flags=re.I) if p and p.strip(" .")]
     if not parts:
         return []
@@ -204,7 +228,9 @@ def _split_items(body):
 
 
 _LIST_RE = re.compile(r"(?:^|(?<=[.!?]\s))(?P<kind>numbered list|bullet(?:ed)? list|list)\b[:,.]?\s*", re.I)
-_END_LIST_RE = re.compile(r"[,.]?\s*\bend (?:of )?list\b[,.:]?\s*", re.I)
+# Only searched for after a list has started, so the looser forms Whisper
+# tends to write for "end list" ("and list", "endless") are safe here.
+_END_LIST_RE = re.compile(r"[,.]?\s*\b(?:end (?:of (?:the )?)?list|end the list|and list|endless|stop (?:the )?list)\b[,.:!]?\s*", re.I)
 
 
 def apply_lists(text):
@@ -237,28 +263,91 @@ def apply_lists(text):
     return out
 
 
+# "court" too: Whisper often hears "quote" that way in Indian English.
+_QUOTE_OPEN = re.compile(r"\bopen (?:quote|quotation|court)s?(?: marks?)?\b[,.:]?\s*", re.I)
+_QUOTE_CLOSE = re.compile(r"[,.]?\s*\b(?:(?:close|end) (?:quote|quotation|court)s?(?: marks?)?|unquote|uncourt)\b", re.I)
+_SPEECH = (r"said|says|say|asked|asks|ask|told (?:me|him|her|them|us|you)|tells (?:me|him|her|them|us|you)|"
+           r"wrote|writes|replied|replies|answered|added|goes|went|was like|is like|shouted|yelled|"
+           r"whispered|texted|messaged|tweeted|posted|repeat|repeated|quoting")
+# "quote" on its own starts a quote only after a speech word or at a sentence
+# start, so "get a quote from the plumber" stays prose.
+_QUOTE_BARE = re.compile(r"(?P<pre>^|[.!?]\s+)(?:quote\b|court(?=\s*[,.:]))(?!\s*,?\s*unquote)[,.:]?\s*"
+                         r"|(?P<pre2>\b(?:" + _SPEECH + r")\s*,?\s+)(?:quote|court)\b(?!\s*,?\s*unquote)[,.:]?\s*", re.I)
+
+
+# "quote," with a pause after it starts a quote anywhere, unless it's a noun:
+# "a quote, …", "the quote, …", "your quote, …" stay prose.
+_QUOTE_PAUSE = re.compile(r"\b(?:quote|court)\s*[,:]\s*(?=\w)", re.I)
+_DETERMINERS = {"a", "an", "the", "this", "that", "these", "those", "my", "your", "his", "her", "its",
+                "our", "their", "another", "any", "each", "every", "which", "what", "no", "one", "first", "best"}
+
+
+def _find_bare_quote(text):
+    """The earliest bare-quote command: (start, body_start, text kept before the quote mark)."""
+    found = []
+    q = _QUOTE_BARE.search(text)
+    if q:
+        found.append((q.start(), q.end(), q.group("pre") or q.group("pre2") or ""))
+    for m in _QUOTE_PAUSE.finditer(text):
+        prev = re.search(r"(\w+)\W*$", text[:m.start()])
+        if prev and prev.group(1).lower() in _DETERMINERS:
+            continue
+        found.append((m.start(), m.end(), ""))
+        break
+    return min(found) if found else None
+
+
+def _cap(s):
+    return s[:1].upper() + s[1:]
+
+
 def apply_quotes(text):
     """
-    open quote ... close quote / end quote / unquote -> "..." hugging the words.
-    A close only counts after an open, so the idiom "quote unquote" and a
-    stray "unquote" stay as spoken.
+    Two ways to quote:
+      open quote ... close quote / end quote / unquote   -> "..."
+      he said quote I am him                              -> he said "I am him"
+    The second runs to "unquote"/"end quote" if one is said, otherwise to the
+    next pause, i.e. the next comma or full stop the model wrote. The idiom
+    "quote unquote" and a stray "unquote" stay as spoken.
     """
-    opener = re.compile(r"\bopen (?:quote|quotation)s?(?: marks?)?\b[,.:]?\s*", re.I)
-    closer = re.compile(r"[,.]?\s*\b(?:(?:close|end) (?:quote|quotation)s?(?: marks?)?|unquote)\b", re.I)
     out = ""
     while True:
-        o = opener.search(text)
+        o = _QUOTE_OPEN.search(text)
         if not o:
             break
-        c = closer.search(text, o.end())
+        c = _QUOTE_CLOSE.search(text, o.end())
         if not c:
             break
         out += text[: o.start()] + '"' + text[o.end(): c.start()] + '"'
         text = text[c.end():]
+    text = out + text
+
+    out = ""
+    while True:
+        q = _find_bare_quote(text)
+        if not q:
+            break
+        q_start, start, keep = q
+        c = _QUOTE_CLOSE.search(text, start)
+        p = re.search(r"\w[^,.;:!?]*?(?=[,.;:!?]|$)", text[start:])
+        stop = start + p.end() if p else len(text)
+        if c and c.start() <= stop:
+            body, rest = text[start:c.start()], text[c.end():]
+        else:
+            body, rest = text[start:stop], text[stop:]
+        body = body.strip()
+        if not body:
+            out += text[:start]
+            text = text[start:]
+            continue
+        out += text[:q_start] + keep + '"' + _cap(body) + '"'
+        text = rest
     out += text
+
     # A stop the model put after the closing quote stays outside it, and a
     # quote that opens a sentence starts with a capital.
-    out = re.sub(r'"\s+([.,!?])', r'"\1', out)
+    out = re.sub(r'"\s+([.,!?;:])', r'"\1', out)
+    out = re.sub(r'\s{2,}', " ", out)
     return re.sub(r'(^|[.!?]\s+)"([a-z])', lambda m: m.group(1) + '"' + m.group(2).upper(), out)
 
 
@@ -325,11 +414,13 @@ class Take:
         return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-# ── main ──
+# ── engines ──
 
-def main():
-    try:
-        rec = sherpa_onnx.OfflineRecognizer.from_transducer(
+class Parakeet:
+    name = "parakeet"
+
+    def __init__(self):
+        self.rec = sherpa_onnx.OfflineRecognizer.from_transducer(
             encoder=os.path.join(MODEL, "encoder.int8.onnx"),
             decoder=os.path.join(MODEL, "decoder.int8.onnx"),
             joiner=os.path.join(MODEL, "joiner.int8.onnx"),
@@ -337,14 +428,187 @@ def main():
             model_type="nemo_transducer",
             num_threads=min(8, os.cpu_count() or 4),
         )
+        self.transcribe(np.zeros(RATE // 2, dtype=np.float32))
+
+    def transcribe(self, audio):
+        # A short tail of silence helps the decoder close the last word.
+        audio = np.concatenate([audio, np.zeros(RATE // 4, dtype=np.float32)])
+        st = self.rec.create_stream()
+        st.accept_waveform(RATE, audio)
+        self.rec.decode_stream(st)
+        return st.result.text.strip()
+
+
+class _UnixHTTP(http.client.HTTPConnection):
+    def __init__(self, path):
+        super().__init__("localhost", timeout=120)
+        self.unix_path = path
+
+    def connect(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(120)
+        s.connect(self.unix_path)
+        self.sock = s
+
+
+def _die_with_parent():
+    ctypes.CDLL("libc.so.6").prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG
+
+
+# Whisper's habit on near-silence: polite phrases nobody said.
+_HALLUCINATIONS = {"thank you.", "thank you", "thanks for watching!", "thanks for watching.", "you", "bye.", "."}
+
+
+def collapse_repeats(text):
+    """Safety net: a phrase of 1-8 words said 3+ times back to back is kept once."""
+    words = text.split()
+    changed = True
+    while changed:
+        changed = False
+        for n in range(1, 9):
+            i = 0
+            while i + 3 * n <= len(words):
+                chunk = words[i:i + n]
+                k = 1
+                while words[i + k * n:i + (k + 1) * n] == chunk:
+                    k += 1
+                if k >= 3:
+                    words = words[:i + n] + words[i + k * n:]
+                    changed = True
+                i += 1
+    return " ".join(words)
+
+
+class Whisper:
+    name = "whisper"
+
+    def __init__(self):
+        for f in (WHISPER_SERVER, WHISPER_MODEL):
+            if not os.path.exists(f):
+                raise RuntimeError("it isn't installed, run setup.sh")
+        run = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+        # Sockets left by a service that was killed outright (no cleanup).
+        for f in os.listdir(run):
+            m = re.fullmatch(r"lumen-whisper-(\d+)\.sock", f)
+            if m and not os.path.exists("/proc/" + m.group(1)):
+                try:
+                    os.unlink(os.path.join(run, f))
+                except OSError:
+                    pass
+        self.sock = os.path.join(run, "lumen-whisper-%d.sock" % os.getpid())
+        self.proc = subprocess.Popen(
+            [WHISPER_SERVER, "-m", WHISPER_MODEL, "--host", self.sock, "-l", "en", "-nt", "-t", "4"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=_die_with_parent)
+        atexit.register(self.stop)
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+        for _ in range(600):
+            if self.proc.poll() is not None:
+                raise RuntimeError("the GPU driver may be missing")
+            if os.path.exists(self.sock):
+                try:
+                    c = _UnixHTTP(self.sock)
+                    c.connect()
+                    c.close()
+                    break
+                except OSError:
+                    pass
+            time.sleep(0.1)
+        else:
+            raise RuntimeError("it didn't start in time")
+        self.transcribe(np.zeros(RATE // 2, dtype=np.float32))
+
+    @staticmethod
+    def prompt(words):
+        """
+        Punctuated so Whisper punctuates, plus your Vocabulary so it spells them
+        right. The quote line makes it expect the word "quote", which it
+        otherwise hears as "coat" or "court" in Indian English.
+        """
+        base = "Hello, how are you? I'm doing well. He said, quote, I'll be there."
+        return base + (" Names: " + ", ".join(words) + "." if words else "")
+
+    def stop(self):
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+        try:
+            os.unlink(self.sock)
+        except OSError:
+            pass
+
+    def transcribe(self, audio):
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(RATE)
+            w.writeframes((np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes())
+        words = [e["word"] for e in load_vocab()]
+        fields = {
+            "language": "en",
+            "prompt": self.prompt(words),
+            "response_format": "json",
+            "no_timestamps": "true",
+            "temperature": "0",
+            # Retries rescue unclear speech, so they stay on, but in big steps
+            # (0 → 0.4 → 0.8): at most 3 passes instead of 6, which is what made
+            # long lists crawl.
+            "temperature_inc": "0.4",
+            # Size the encoder window to the take instead of a fixed 30 s, but
+            # never below 768: a tight window on a short take makes Whisper loop
+            # ("hello hello hello…") and take seconds doing it.
+            "audio_ctx": str(max(768, min(1500, int(len(audio) / RATE * 50) + 128))),
+        }
+        b = uuid.uuid4().hex
+        body = io.BytesIO()
+        for k, v in fields.items():
+            body.write(("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n" % (b, k, v)).encode())
+        body.write(("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"take.wav\"\r\n"
+                    "Content-Type: audio/wav\r\n\r\n" % b).encode())
+        body.write(buf.getvalue())
+        body.write(("\r\n--%s--\r\n" % b).encode())
+        c = _UnixHTTP(self.sock)
+        c.request("POST", "/inference", body.getvalue(), {"Content-Type": "multipart/form-data; boundary=" + b})
+        r = c.getresponse()
+        data = r.read()
+        c.close()
+        if r.status != 200:
+            raise RuntimeError("whisper-server %d" % r.status)
+        text = collapse_repeats(" ".join(json.loads(data).get("text", "").split()).strip())
+        return "" if text.lower() in _HALLUCINATIONS else text
+
+
+def pick_engine():
+    want = "whisper"
+    if "--engine" in sys.argv:
+        i = sys.argv.index("--engine")
+        if i + 1 < len(sys.argv):
+            want = sys.argv[i + 1]
+    if want == "whisper":
+        try:
+            eng = Whisper()
+            emit(event="engine", name="whisper", note="")
+            return eng
+        except Exception as err:  # noqa: BLE001
+            note = "Whisper couldn't start: %s. Using Parakeet instead." % err
+    else:
+        note = ""
+    eng = Parakeet()
+    emit(event="engine", name="parakeet", note=note)
+    return eng
+
+
+# ── main ──
+
+def main():
+    try:
+        engine = pick_engine()
     except Exception as err:  # noqa: BLE001
         emit(event="error", msg="model failed to load: %s" % err)
         return 1
-
-    # Warm the graph so the first real take is as fast as the rest.
-    s = rec.create_stream()
-    s.accept_waveform(RATE, np.zeros(RATE // 2, dtype=np.float32))
-    rec.decode_stream(s)
     emit(event="ready")
 
     take = None
@@ -377,12 +641,11 @@ def main():
             if len(audio) < MIN_SAMPLES:
                 emit(event="empty")
                 continue
-            # A short tail of silence helps the decoder close the last word.
-            audio = np.concatenate([audio, np.zeros(RATE // 4, dtype=np.float32)])
-            st = rec.create_stream()
-            st.accept_waveform(RATE, audio)
-            rec.decode_stream(st)
-            raw = st.result.text.strip()
+            try:
+                raw = engine.transcribe(audio)
+            except Exception as err:  # noqa: BLE001
+                emit(event="error", msg="%s: %s" % (engine.name, err))
+                continue
             if not raw:
                 emit(event="empty")
                 continue

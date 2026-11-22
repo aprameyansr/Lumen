@@ -66,6 +66,9 @@ libarchive                  # bsdtar: the app installer unpacks archives
 cava                        # music visualiser and dictation mic bars in the resting pill
 libpulse                    # pactl: dictation finds the default mic
 zenity                      # file picker: recorder folder, vocabulary import/export
+shaderc                     # glslc: builds Whisper dictation for your GPU (setup.sh)
+vulkan-icd-loader           # Vulkan, for Whisper dictation on the GPU
+vulkan-intel                # Intel GPU Vulkan driver; use vulkan-radeon (AMD) or nvidia-utils (NVIDIA) instead
 xorg-xrandr                 # XWayland primary monitor after a display swap
 hyprshot                    # Print: region screenshot
 hyprpicker                  # Super+Shift+C: colour picker

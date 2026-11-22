@@ -104,14 +104,17 @@ wallpaper.
 
 ## Optional
 
-**Dictation** (needs ~750 MB of disk and ~1 GB of RAM while it's switched on):
+**Dictation** (needs ~2 GB of disk; ~1 GB of RAM while it's switched on):
 
 ```sh
 sh ~/.local/share/lumen-dictate/setup.sh
 ```
 
-That downloads the speech model and its Python runtime into
-`~/.local/share/lumen-dictate`. Then see [Dictation](#dictation) below.
+That sets up both speech engines in `~/.local/share/lumen-dictate`: it
+downloads the models and a Python runtime, and builds Whisper for your GPU
+(a few minutes; it needs `shaderc`, `vulkan-icd-loader` and your GPU's Vulkan
+driver from [`packages.txt`](packages.txt)). Without a GPU driver it skips
+Whisper and dictation uses Parakeet. Then see [Dictation](#dictation) below.
 
 **GTK glass**
 
@@ -156,10 +159,16 @@ then a small spinner when you let go, and the text is typed into the focused
 app and copied to the clipboard. **Tap Right Alt twice** to lock it on so you
 can let go, and tap once more to finish.
 
-Everything runs on your machine with
-[NVIDIA Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2)
-(English) through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Nothing
-is sent anywhere. A 7-second sentence takes about half a second on a laptop CPU.
+Everything runs on your machine; nothing is sent anywhere. Pick the engine in
+**Settings → Dictation → Engine**:
+
+| Engine | Speed (7 s sentence) | Best for |
+|---|---|---|
+| **Whisper** large-v3-turbo, on the GPU via [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (default) | ~1 s | everyday, fast or accented speech; spells your Vocabulary names right on its own |
+| **Parakeet** TDT 0.6B v2, on the CPU via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | ~0.5 s | slow, clear speech; machines without a GPU driver |
+
+If Whisper can't start, dictation falls back to Parakeet and sends a
+notification saying why.
 
 **Voice commands**
 
@@ -169,6 +178,7 @@ is sent anywhere. A 7-second sentence takes about half a second on a laptop CPU.
 | "Numbered list: …" | 1. 2. 3. |
 | "… end list" | ends the list, carries on below it |
 | "open quote … close quote" | "…" |
+| "He said quote I am him" | He said "I am him" (to the pause, or "unquote") |
 | "new line" / "new paragraph" | line breaks |
 
 Line breaks are typed as Shift+Enter, so a list dictated into a chat box

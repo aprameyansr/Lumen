@@ -107,8 +107,17 @@ Singleton {
         }
     }
 
+    /**
+     * Right after the shell (re)starts Hyprland.focusedMonitor stays null until
+     * the next focus change, which left a take on "no monitor" and no pill
+     * showed it. Fall back to the monitor flagged focused, then the first one.
+     */
     function focusedMon() {
-        return Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
+        if (Hyprland.focusedMonitor)
+            return Hyprland.focusedMonitor.name;
+        const ms = Hyprland.monitors.values;
+        const f = ms.find(m => m && m.focused) || ms[0];
+        return f ? f.name : "";
     }
 
     function begin(nextState) {
@@ -126,6 +135,29 @@ Singleton {
     /** The Vocabulary page is listening for a sample instead of dictating. */
     property bool teaching: false
     signal heard(string text)
+    /** The engine actually running, and why it isn't the one picked (if so). */
+    property string engine: ""
+    property string engineNote: ""
+
+    /** Picking another engine restarts the service with it. */
+    Connections {
+        target: Flags
+        function onDictateEngineChanged() {
+            if (!svc.running)
+                return;
+            root.cancel();
+            root.ready = false;
+            root.engine = "";
+            svc.running = false;
+            engineRestart.restart();
+        }
+    }
+    Timer {
+        id: engineRestart
+        interval: 400
+        onTriggered: if (Flags.dictateEnabled && root.installed) svc.running = true
+    }
+
     /** Last thing typed, for anything that wants to show it. */
     property string lastText: ""
 
@@ -144,17 +176,23 @@ Singleton {
         id: svc
         running: Flags.dictateEnabled && root.installed
         stdinEnabled: true
-        command: [root.svcDir + "/venv/bin/python", "-u", root.svcDir + "/dictated.py"]
+        command: [root.svcDir + "/venv/bin/python", "-u", root.svcDir + "/dictated.py", "--engine", Flags.dictateEngine]
         onRunningChanged: if (!running) root.ready = false
         stdout: SplitParser {
             onRead: (line) => {
                 let m;
                 try { m = JSON.parse(line); } catch (e) { return; }
-                if (m.event === "ready") {
+                if (m.event === "engine") {
+                    root.engine = m.name;
+                    root.engineNote = m.note || "";
+                    /** The picked model didn't load (Whisper fell back to Parakeet): say so once. */
+                    if (root.engineNote.length > 0)
+                        root.notifyUser(root.engineNote);
+                } else if (m.event === "ready") {
                     root.ready = true;
                 } else if (m.event === "done") {
                     root.lastText = m.text;
-                    root.record(m.text);
+                    root.record(m.text, m.raw || "");
                     root.settle();
                 } else if (m.event === "heard") {
                     root.heard(m.text);
@@ -163,8 +201,7 @@ Singleton {
                     root.settle();
                 } else if (m.event === "error") {
                     root.settle();
-                    notify.command = ["notify-send", "-a", "Dictation", "-i", "audio-input-microphone", "Dictation", m.msg];
-                    notify.running = true;
+                    root.notifyUser(m.msg);
                 }
             }
         }
@@ -179,6 +216,11 @@ Singleton {
     }
 
     Process { id: notify }
+
+    function notifyUser(msg) {
+        notify.command = ["notify-send", "-a", "Dictation", "-i", "audio-input-microphone", "Dictation", msg];
+        notify.running = true;
+    }
 
     // ── history and word count ──
 
@@ -211,7 +253,8 @@ Singleton {
         return text.replace(/^\s*(?:-|\d+\.)\s+/gm, "").split(/\s+/).filter(w => /[\w]/.test(w)).length;
     }
 
-    function record(text) {
+    /** `raw` is what the engine heard before commands and vocabulary, kept for diagnosing. */
+    function record(text, raw) {
         if (!text || !text.trim())
             return;
         const n = root.countWords(text);
@@ -224,7 +267,7 @@ Singleton {
         root.takes += 1;
         if (!root.since)
             root.since = now;
-        root.history = [{ t: now, text: text, words: n }].concat(root.history).slice(0, root.historyCap);
+        root.history = [{ t: now, text: text, raw: raw || "", words: n }].concat(root.history).slice(0, root.historyCap);
         root.saveHistory();
     }
 

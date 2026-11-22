@@ -53,6 +53,50 @@ Item {
     readonly property real desiredH: kind === "track" ? 64 * s : 44 * s
 
     /**
+     * The bar rows are laid out at their final width and clipped by the pill,
+     * so the pill reveals them as it grows instead of squeezing them (a bar
+     * sized off the growing pill started at about half and then jumped).
+     */
+    readonly property real barW: Math.max(0, root.desiredW - 36 * root.s)
+
+    /**
+     * Levels the bars and percentages show. The value glides, not the bar's
+     * width, so a bar can never run past its track. They snap to the real
+     * level while hidden and only animate once the OSD is up, so it always
+     * opens on the true value.
+     */
+    property bool barsLive: false
+    readonly property real volShown: root.volume / Sound.limit
+    readonly property real brightShown: root.brightness
+    readonly property real battShown: Battery.frac
+    property real volAnim: volShown
+    property real brightAnim: brightShown
+    property real battAnim: battShown
+    Behavior on volAnim { enabled: root.barsLive; NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+    Behavior on brightAnim { enabled: root.barsLive; NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+    Behavior on battAnim { enabled: root.barsLive; NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+
+    /**
+     * Bars start animating a beat after the OSD opens. A track announce that
+     * lost to live hardware feedback replays once the bar clears.
+     */
+    onFlashingChanged: {
+        if (flashing) {
+            liveTimer.restart();
+        } else {
+            liveTimer.stop();
+            barsLive = false;
+            if (dirty)
+                tryShow();
+        }
+    }
+    Timer {
+        id: liveTimer
+        interval: 60
+        onTriggered: root.barsLive = true
+    }
+
+    /**
      * Active workspace name on this monitor. Any switch (Super+arrow,
      * Super+wheel, clicking a dot) changes it, so flashing the workspace OSD
      * here briefly morphs the pill open to show where you landed. The arm timer
@@ -132,8 +176,6 @@ Item {
         }
     }
 
-    /** A track announce that lost to live hardware feedback replays once the bar clears. */
-    onFlashingChanged: if (!flashing && dirty) tryShow()
 
     Timer {
         interval: 1500
@@ -236,54 +278,64 @@ Item {
     Item {
         id: volRow
         anchors.fill: parent
+        clip: true
         opacity: root.kind === "volume" ? 1 : 0
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: 150 } }
 
-        GlyphIcon {
-            id: volGlyph
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            width: 17 * root.s
-            height: 17 * root.s
-            name: root.muted ? "speaker-off" : "speaker"
-            color: root.muted ? Theme.dim : Theme.iconDim
-            stroke: 1.7
-        }
+        /** Fixed final-size layout; the clipped row reveals it as the pill opens. */
+        Item {
+            width: root.barW
+            height: parent.height
+            anchors.centerIn: parent
 
-        Text {
-            id: volPct
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: 32 * root.s
-            horizontalAlignment: Text.AlignRight
-            text: Math.round(root.volume * 100) + "%"
-            color: root.muted ? Theme.dim : Theme.cream
-            font.family: Theme.font
-            font.pixelSize: 11 * root.s
-            font.weight: Font.DemiBold
-            font.features: { "tnum": 1 }
-        }
+            GlyphIcon {
+                id: volGlyph
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 17 * root.s
+                height: 17 * root.s
+                name: root.muted ? "speaker-off" : "speaker"
+                color: root.muted ? Theme.dim : Theme.iconDim
+                stroke: 1.7
+            }
 
-        Rectangle {
-            anchors.left: volGlyph.right
-            anchors.leftMargin: 12 * root.s
-            anchors.right: volPct.left
-            anchors.rightMargin: 12 * root.s
-            anchors.verticalCenter: parent.verticalCenter
-            height: 4 * root.s
-            radius: 2 * root.s
-            color: Theme.threadBg
+            Text {
+                id: volPct
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 32 * root.s
+                horizontalAlignment: Text.AlignRight
+                text: Math.round(root.volAnim * Sound.limit * 100) + "%"
+                color: root.muted ? Theme.dim : Theme.cream
+                font.family: Theme.font
+                font.pixelSize: 11 * root.s
+                font.weight: Font.DemiBold
+                font.features: { "tnum": 1 }
+            }
 
             Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * root.volume / Sound.limit
-                radius: parent.radius
-                color: root.muted ? Theme.vermDim : Theme.vermLit
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                anchors.left: volGlyph.right
+                anchors.leftMargin: 12 * root.s
+                anchors.right: volPct.left
+                anchors.rightMargin: 12 * root.s
+                anchors.verticalCenter: parent.verticalCenter
+                height: 4 * root.s
+                radius: 2 * root.s
+                color: Theme.threadBg
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: parent.width * Math.max(0, Math.min(1, root.volAnim))
+                    radius: parent.radius
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: root.muted ? Theme.vermDim : Theme.vermDeep; Behavior on color { ColorAnimation { duration: Motion.fast } } }
+                        GradientStop { position: 1.0; color: root.muted ? Theme.vermDim : Theme.vermLit; Behavior on color { ColorAnimation { duration: Motion.fast } } }
+                    }
+                }
             }
         }
     }
@@ -399,53 +451,64 @@ Item {
     Item {
         id: brightRow
         anchors.fill: parent
+        clip: true
         opacity: root.kind === "brightness" ? 1 : 0
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: 150 } }
 
-        GlyphIcon {
-            id: brightGlyph
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            width: 17 * root.s
-            height: 17 * root.s
-            name: "sun"
-            color: Theme.iconDim
-            stroke: 1.7
-        }
+        /** Fixed final-size layout; the clipped row reveals it as the pill opens. */
+        Item {
+            width: root.barW
+            height: parent.height
+            anchors.centerIn: parent
 
-        Text {
-            id: brightPct
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: 32 * root.s
-            horizontalAlignment: Text.AlignRight
-            text: Math.round(root.brightness * 100) + "%"
-            color: Theme.cream
-            font.family: Theme.font
-            font.pixelSize: 11 * root.s
-            font.weight: Font.DemiBold
-            font.features: { "tnum": 1 }
-        }
+            GlyphIcon {
+                id: brightGlyph
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 17 * root.s
+                height: 17 * root.s
+                name: "sun"
+                color: Theme.iconDim
+                stroke: 1.7
+            }
 
-        Rectangle {
-            anchors.left: brightGlyph.right
-            anchors.leftMargin: 12 * root.s
-            anchors.right: brightPct.left
-            anchors.rightMargin: 12 * root.s
-            anchors.verticalCenter: parent.verticalCenter
-            height: 4 * root.s
-            radius: 2 * root.s
-            color: Theme.threadBg
+            Text {
+                id: brightPct
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 32 * root.s
+                horizontalAlignment: Text.AlignRight
+                text: Math.round(root.brightAnim * 100) + "%"
+                color: Theme.cream
+                font.family: Theme.font
+                font.pixelSize: 11 * root.s
+                font.weight: Font.DemiBold
+                font.features: { "tnum": 1 }
+            }
 
             Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * root.brightness
-                radius: parent.radius
-                color: Theme.vermLit
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
+                anchors.left: brightGlyph.right
+                anchors.leftMargin: 12 * root.s
+                anchors.right: brightPct.left
+                anchors.rightMargin: 12 * root.s
+                anchors.verticalCenter: parent.verticalCenter
+                height: 4 * root.s
+                radius: 2 * root.s
+                color: Theme.threadBg
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: parent.width * Math.max(0, Math.min(1, root.brightAnim))
+                    radius: parent.radius
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: Theme.vermDeep }
+                        GradientStop { position: 1.0; color: Theme.vermLit }
+                    }
+                }
             }
         }
     }
@@ -453,78 +516,85 @@ Item {
     Item {
         id: batteryRow
         anchors.fill: parent
+        clip: true
         opacity: root.kind === "battery" ? 1 : 0
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: 150 } }
 
-        GlyphIcon {
-            id: battGlyph
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            width: 17 * root.s
-            height: 17 * root.s
-            name: "bolt"
-            color: Theme.flameGlow
-            stroke: 1.7
-        }
+        /** Fixed final-size layout; the clipped row reveals it as the pill opens. */
+        Item {
+            width: root.barW
+            height: parent.height
+            anchors.centerIn: parent
 
-        Text {
-            id: battPct
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: 40 * root.s
-            horizontalAlignment: Text.AlignRight
-            text: Battery.pct + "%"
-            color: Theme.cream
-            font.family: Theme.font
-            font.pixelSize: 11 * root.s
-            font.weight: Font.DemiBold
-            font.features: { "tnum": 1 }
-        }
+            GlyphIcon {
+                id: battGlyph
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 17 * root.s
+                height: 17 * root.s
+                name: "bolt"
+                color: Theme.flameGlow
+                stroke: 1.7
+            }
 
-        Rectangle {
-            anchors.left: battGlyph.right
-            anchors.leftMargin: 12 * root.s
-            anchors.right: battPct.left
-            anchors.rightMargin: 12 * root.s
-            anchors.verticalCenter: parent.verticalCenter
-            height: 4 * root.s
-            radius: 2 * root.s
-            color: Theme.threadBg
-            clip: true
+            Text {
+                id: battPct
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 40 * root.s
+                horizontalAlignment: Text.AlignRight
+                text: Battery.pct + "%"
+                color: Theme.cream
+                font.family: Theme.font
+                font.pixelSize: 11 * root.s
+                font.weight: Font.DemiBold
+                font.features: { "tnum": 1 }
+            }
 
             Rectangle {
-                id: battFill
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * Battery.frac
-                radius: parent.radius
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Theme.vermDeep }
-                    GradientStop { position: 1.0; color: Theme.flameGlow }
-                }
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
+                anchors.left: battGlyph.right
+                anchors.leftMargin: 12 * root.s
+                anchors.right: battPct.left
+                anchors.rightMargin: 12 * root.s
+                anchors.verticalCenter: parent.verticalCenter
+                height: 4 * root.s
+                radius: 2 * root.s
+                color: Theme.threadBg
+                clip: true
 
                 Rectangle {
+                    id: battFill
+                    anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: 34 * root.s
-                    color: "transparent"
+                    width: parent.width * Math.max(0, Math.min(1, root.battAnim))
+                    radius: parent.radius
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: "#00ffffff" }
-                        GradientStop { position: 0.5; color: "#55ffe6d6" }
-                        GradientStop { position: 1.0; color: "#00ffffff" }
+                        GradientStop { position: 0.0; color: Theme.vermDeep }
+                        GradientStop { position: 1.0; color: Theme.flameGlow }
                     }
 
-                    NumberAnimation on x {
-                        from: -34 * root.s
-                        to: battFill.width
-                        duration: 1200
-                        loops: Animation.Infinite
-                        running: root.flashing && root.kind === "battery" && Battery.charging
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: 34 * root.s
+                        color: "transparent"
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: "#00ffffff" }
+                            GradientStop { position: 0.5; color: "#55ffe6d6" }
+                            GradientStop { position: 1.0; color: "#00ffffff" }
+                        }
+
+                        NumberAnimation on x {
+                            from: -34 * root.s
+                            to: battFill.width
+                            duration: 1200
+                            loops: Animation.Infinite
+                            running: root.flashing && root.kind === "battery" && Battery.charging
+                        }
                     }
                 }
             }

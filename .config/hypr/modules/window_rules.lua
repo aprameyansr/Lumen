@@ -29,6 +29,16 @@ hl.window_rule({
     float = true,
 })
 
+-- File pickers (zenity, browsers, etc.) open through the GTK portal; keep them a
+-- compact centered float instead of filling the screen.
+hl.window_rule({
+    name   = "portal-picker-size",
+    match  = { class = "^(xdg-desktop-portal-gtk)$" },
+    float  = true,
+    size   = "monitor_w*0.62 monitor_h*0.56",
+    center = true,
+})
+
 hl.window_rule({
 
     name  = "spotify-transparency",

@@ -3,33 +3,33 @@
     "type": "file",
     "source": "~/.config/fastfetch/lantern.txt",
     "color": {
-      "1": "38;2;214;167;111",
-      "2": "38;2;234;211;187",
-      "3": "38;2;25;36;56",
-      "4": "38;2;29;40;60",
-      "5": "38;2;169;178;193",
-      "6": "38;2;95;109;133",
-      "7": "38;2;240;245;255"
+      "1": "38;2;233;197;127",
+      "2": "38;2;230;213;184",
+      "3": "38;2;21;36;49",
+      "4": "38;2;26;40;54",
+      "5": "38;2;167;179;190",
+      "6": "38;2;92;109;125",
+      "7": "38;2;238;246;255"
     },
     "padding": { "top": 1, "left": 2, "right": 6 }
   },
   "display": {
     "separator": "  ",
     "color": {
-      "keys": "38;2;214;167;111"
+      "keys": "38;2;233;197;127"
     },
     "key": { "width": 12 }
   },
   "modules": [
     "break",
-    { "type": "custom", "format": "\u001b[38;2;126;135;149m── system ──────────────" },
+    { "type": "custom", "format": "\u001b[38;2;125;136;146m── system ──────────────" },
     { "type": "os", "key": "  os", "format": "{pretty-name}" },
     { "type": "kernel", "key": "  kernel", "format": "{release}" },
     { "type": "uptime", "key": "  up" },
     { "type": "disk", "key": "  storage", "format": "{size-used} / {size-total} [{size-percentage}]" },
     { "type": "packages", "key": " 󰏖 pkgs", "format": "{all}" },
     "break",
-    { "type": "custom", "format": "\u001b[38;2;126;135;149m── rice ─────l───────────" },
+    { "type": "custom", "format": "\u001b[38;2;125;136;146m── rice ─────l───────────" },
     { "type": "wm", "key": "  wm", "format": "{pretty-name}" },
     { "type": "shell", "key": "  shell", "format": "{exe-name}" },
     { "type": "terminal", "key": "  term", "format": "{pretty-name}" },

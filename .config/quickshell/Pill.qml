@@ -2482,10 +2482,15 @@ Item {
         suppressed: pill.holding
         expanded: pill.expanded
         enabled: pill.mode === "osd"
-        opacity: pill.mode === "osd" ? 1 : 0
+        /**
+         * Fades in with the pill's own opening, like the other morph modes. On
+         * the way out it dissolves over the first part of the shrink (the
+         * clipped rows narrow away with the pill) instead of vanishing at once.
+         */
+        opacity: pill.mode === "osd" ? Math.pow(pill.morphCloseness, 1.3) : 0
         visible: opacity > 0.01
         Behavior on opacity {
-            NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+            NumberAnimation { duration: pill.mode === "osd" ? 60 : 240; easing.type: Easing.OutCubic }
         }
     }
 

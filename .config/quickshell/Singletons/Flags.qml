@@ -39,6 +39,7 @@ Singleton {
     property alias weatherUnit: adapter.weatherUnit
     property alias showGlyphs: adapter.showGlyphs
     property alias dictateEnabled: adapter.dictateEnabled
+    property alias dictateEngine: adapter.dictateEngine
     property alias paletteMode: adapter.paletteMode
     property alias paletteVibrancy: adapter.paletteVibrancy
     property alias appTheme: adapter.appTheme
@@ -157,6 +158,8 @@ Singleton {
             property bool showGlyphs: true
             /** Hold-to-talk dictation on the `dictate` global bind. */
             property bool dictateEnabled: true
+            /** "whisper" (most accurate, GPU) or "parakeet" (fastest, CPU). */
+            property string dictateEngine: "whisper"
             property string paletteMode: "static"
             /** Dynamic palette strength: 0 muted, 0.5 natural, 1 vivid. */
             property real paletteVibrancy: 0.5

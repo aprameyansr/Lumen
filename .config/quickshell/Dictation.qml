@@ -32,6 +32,7 @@ SettingsSurface {
         void root.items;
         const r = [
             { item: enableRow, kind: "toggle", get: function () { return Flags.dictateEnabled; }, set: function (v) { Flags.dictateEnabled = v; } },
+            { item: engineRow, kind: "seg", vals: ["whisper", "parakeet"], get: function () { return Flags.dictateEngine; }, set: function (v) { Flags.dictateEngine = v; } },
             { item: vocabRow, kind: "nav", surface: "vocab" }
         ];
         for (let i = 0; i < histRep.count; i++) {
@@ -212,6 +213,22 @@ SettingsSurface {
                 s: root.s
                 on: Flags.dictateEnabled
                 onToggled: Flags.dictateEnabled = !Flags.dictateEnabled
+            }
+        }
+
+        SettingsRow {
+            id: engineRow
+            surface: root
+            captionOnFocus: true
+            icon: "sparkles"
+            name: "Engine"
+            sub: Flags.dictateEngine === "whisper" ? "Most accurate, uses the GPU" : "Fastest, runs on the CPU"
+
+            SettingsSeg {
+                s: root.s
+                options: [{ label: "Whisper", value: "whisper" }, { label: "Parakeet", value: "parakeet" }]
+                value: Flags.dictateEngine
+                onPicked: (v) => Flags.dictateEngine = v
             }
         }
 
