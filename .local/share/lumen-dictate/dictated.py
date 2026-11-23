@@ -513,12 +513,26 @@ def collapse_repeats(text):
 
 
 class Whisper:
+    """
+    Loaded only when needed: the first Right Alt press starts whisper-server
+    while you speak (~0.7 s, well under a sentence), and it is shut down again
+    after IDLE seconds unused, which gives back ~1.1 GB of RAM.
+    """
     name = "whisper"
+    IDLE = 600
 
-    def __init__(self):
+    def __init__(self, sock=None):
         for f in (WHISPER_SERVER, WHISPER_MODEL):
             if not os.path.exists(f):
                 raise RuntimeError("it isn't installed, run setup.sh")
+        self.proc = None
+        self.lock = threading.Lock()
+        self.busy = False          # a take is being recorded
+        self.last = time.time()
+        if sock:                   # borrow a server someone else runs (voice test)
+            self.sock, self.external = sock, True
+            return
+        self.external = False
         run = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
         # Sockets left by a service that was killed outright (no cleanup).
         for f in os.listdir(run):
@@ -529,11 +543,23 @@ class Whisper:
                 except OSError:
                     pass
         self.sock = os.path.join(run, "lumen-whisper-%d.sock" % os.getpid())
+        atexit.register(self.stop)
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+        self.want = threading.Event()   # someone needs the server loaded
+        self.tried = threading.Event()  # a load attempt finished
+        self.err = None
+        # One long-lived thread starts and stops the server: whisper-server is
+        # tied to the thread that spawned it (PR_SET_PDEATHSIG), so a short-lived
+        # loader thread would take it down with it when it ended.
+        threading.Thread(target=self._keeper, daemon=True).start()
+
+    def _ensure(self):
+        """Start the server if it isn't running. Call with self.lock held."""
+        if self.external or (self.proc and self.proc.poll() is None):
+            return
         self.proc = subprocess.Popen(
             [WHISPER_SERVER, "-m", WHISPER_MODEL, "--host", self.sock, "-l", "en", "-nt", "-t", "4"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=_die_with_parent)
-        atexit.register(self.stop)
-        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
         for _ in range(600):
             if self.proc.poll() is not None:
                 raise RuntimeError("the GPU driver may be missing")
@@ -545,10 +571,64 @@ class Whisper:
                     break
                 except OSError:
                     pass
-            time.sleep(0.1)
+            time.sleep(0.05)
         else:
+            self._kill()
             raise RuntimeError("it didn't start in time")
-        self.transcribe(np.zeros(RATE // 2, dtype=np.float32))
+        self._request(np.zeros(RATE // 2, dtype=np.float32))
+
+    def _running(self):
+        return self.external or (self.proc is not None and self.proc.poll() is None)
+
+    def _load(self):
+        """Ask the keeper to load and wait for it. Raises if loading failed."""
+        if self._running():
+            return
+        self.tried.clear()
+        self.want.set()
+        self.tried.wait()
+        if self.err:
+            raise self.err
+
+    def _keeper(self):
+        while True:
+            if self.want.wait(timeout=30):
+                self.want.clear()
+                with self.lock:
+                    try:
+                        self._ensure()
+                        self.err = None
+                    except Exception as err:  # noqa: BLE001
+                        self.err = err
+                self.tried.set()
+            elif self.proc and not self.busy and time.time() - self.last > self.IDLE:
+                with self.lock:
+                    if not self.busy and time.time() - self.last > self.IDLE:
+                        self._kill()
+
+    def prepare(self):
+        """Right Alt went down: load in the background while you talk."""
+        self.busy = True
+        self.last = time.time()
+        if not self._running():
+            self.want.set()
+
+    def done(self):
+        self.busy = False
+        self.last = time.time()
+
+    def _kill(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+        self.proc = None
+        try:
+            os.unlink(self.sock)
+        except OSError:
+            pass
 
     @staticmethod
     def prompt(words):
@@ -561,18 +641,18 @@ class Whisper:
         return base + (" Names: " + ", ".join(words) + "." if words else "")
 
     def stop(self):
-        if self.proc.poll() is None:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                self.proc.kill()
-        try:
-            os.unlink(self.sock)
-        except OSError:
-            pass
+        if not self.external:
+            self._kill()
 
     def transcribe(self, audio):
+        self._load()
+        with self.lock:
+            try:
+                return self._request(audio)
+            finally:
+                self.last = time.time()
+
+    def _request(self, audio):
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(1)
@@ -654,6 +734,8 @@ def main():
         if cmd == "start":
             if take:
                 take.finish()
+            if hasattr(engine, "prepare"):
+                engine.prepare()
             try:
                 take = Take(resolve_mic(msg.get("mic", "default")))
             except OSError as err:
@@ -665,12 +747,16 @@ def main():
             if take:
                 take.finish()
                 take = None
+            if hasattr(engine, "done"):
+                engine.done()
         elif cmd == "stop":
             if not take:
                 emit(event="empty")
                 continue
             audio = take.finish()
             take = None
+            if hasattr(engine, "done"):
+                engine.done()
             if len(audio) < MIN_SAMPLES:
                 emit(event="empty")
                 continue

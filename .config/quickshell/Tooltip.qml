@@ -21,6 +21,7 @@ Item {
     property string desc: ""
     property bool show: false
     property string placement: "above"
+    property real pointerOffset: 0
 
     readonly property bool below: placement === "below"
     readonly property real pointerH: 5 * s
@@ -109,6 +110,7 @@ Item {
         width: 11 * root.s
         height: root.pointerH
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: root.pointerOffset
         anchors.top: root.below ? parent.top : undefined
         anchors.bottom: root.below ? undefined : parent.bottom
         onPaint: {

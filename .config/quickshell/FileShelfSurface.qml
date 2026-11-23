@@ -93,7 +93,29 @@ PillSurface {
                 color: root.selectedId === row.modelData.id || root.hoveredId === row.modelData.id
                     ? Theme.frameBg : "transparent"
             }
-            Rectangle { width: parent.width; height: 1; color: Theme.hairSoft }
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.hairSoft
+
+                Rectangle {
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                    width: parent.width * removeHeat.hold
+                    visible: removeHeat.holding
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+                        GradientStop { position: 1.0; color: Theme.vermLit }
+                    }
+                }
+            }
+
+            HeatHold {
+                id: removeHeat
+                onConfirmed: if (remove.enabled) FileShelf.remove(row.modelData.id)
+            }
 
             Item {
                 anchors.left: parent.left
@@ -178,18 +200,53 @@ PillSurface {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 Accessible.role: Accessible.Button
-                Accessible.name: "Remove " + row.modelData.name + " from shelf"
-                Accessible.onPressAction: FileShelf.remove(row.modelData.id)
-                onClicked: FileShelf.remove(row.modelData.id)
+                Accessible.name: "Hold to remove " + row.modelData.name + " from shelf"
+                onPressed: removeHeat.press()
+                onReleased: removeHeat.release()
+                onCanceled: removeHeat.cancel()
+                onEnabledChanged: if (!enabled) removeHeat.cancel()
                 onEntered: root.hoveredId = row.modelData.id
-                onExited: if (root.hoveredId === row.modelData.id) root.hoveredId = ""
+                onExited: {
+                    removeHeat.cancel();
+                    if (root.hoveredId === row.modelData.id)
+                        root.hoveredId = "";
+                }
+
+                Tooltip {
+                    id: removeHint
+                    parent: root
+                    s: root.s
+                    title: "Hold to remove"
+                    show: (remove.containsMouse || removeHeat.holding)
+                        && controlPoint.y >= files.y && controlPoint.y <= files.y + files.height
+
+                    readonly property point controlPoint: {
+                        void root.width;
+                        void root.height;
+                        void files.contentY;
+                        void row.y;
+                        return remove.mapToItem(root, remove.width / 2, remove.height / 2);
+                    }
+
+                    anchors.horizontalCenter: undefined
+                    anchors.top: undefined
+                    anchors.bottom: undefined
+                    x: Math.max(0, Math.min(root.width - width, controlPoint.x - width / 2))
+                    placement: controlPoint.y - remove.height / 2 >= height + gap ? "above" : "below"
+                    y: Math.max(0, Math.min(root.height - height,
+                        below ? controlPoint.y + remove.height / 2 + gap
+                        : controlPoint.y - remove.height / 2 - height - gap))
+                    pointerOffset: Math.max(14 * s, Math.min(width - 14 * s, controlPoint.x - x)) - width / 2
+                }
 
                 GlyphIcon {
                     anchors.centerIn: parent
                     width: 13 * root.s
                     height: width
                     name: "close"
-                    color: remove.containsMouse ? Theme.cream : Theme.faint
+                    color: removeHeat.holding ? Theme.vermLit
+                        : remove.containsMouse ? Theme.cream : Theme.faint
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
                 }
             }
         }
