@@ -159,6 +159,7 @@ ShellRoot {
         /** Start a timer of `minutes` on the clock page's timer; 0 cancels it. */
         function timer(minutes: string): void { Clocks.tmStartMinutes(Number(minutes) || 0); }
         function launcher(mon: string): void { root.toggleSurface(mon, "launcher"); }
+        function fileShelf(mon: string): void { root.toggleSurface(mon, "file-shelf"); }
         function emoji(mon: string): void { root.toggleSurface(mon, "emoji"); }
         function power(mon: string): void { root.toggleSurface(mon, "power"); }
         function link(mon: string): void { root.toggleSurface(mon, "link"); }
@@ -336,7 +337,7 @@ ShellRoot {
 
             anchors { top: true; left: true; right: true; bottom: true }
 
-            mask: modal ? fullRegion : (pillHidden ? hiddenRegion : pillRegion)
+            mask: modal && !pill.shelfDragging ? fullRegion : (pillHidden ? hiddenRegion : pillRegion)
             Region { id: hiddenRegion }
             Region {
                 id: pillRegion
@@ -396,13 +397,13 @@ ShellRoot {
                     if (pill.criticalToast) { e.accepted = true; return; }
                     if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(-1); e.accepted = true; return; }
-                    e.accepted = pill.sysmonMove(0, -1) || pill.mixerStep(1) || pill.recorderStep(5) || pill.settingsMove(-1);
+                    e.accepted = pill.fileShelfMove(-1) || pill.sysmonMove(0, -1) || pill.mixerStep(1) || pill.recorderStep(5) || pill.settingsMove(-1);
                 }
                 Keys.onDownPressed: (e) => {
                     if (pill.criticalToast) { e.accepted = true; return; }
                     if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(1); e.accepted = true; return; }
-                    e.accepted = pill.sysmonMove(0, 1) || pill.mixerStep(-1) || pill.recorderStep(-5) || pill.settingsMove(1);
+                    e.accepted = pill.fileShelfMove(1) || pill.sysmonMove(0, 1) || pill.mixerStep(-1) || pill.recorderStep(-5) || pill.settingsMove(1);
                 }
                 Keys.onLeftPressed: (e) => {
                     if (pill.criticalToast) { e.accepted = true; return; }

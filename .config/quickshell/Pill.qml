@@ -88,6 +88,8 @@ Item {
     readonly property bool spaceappsOpen: surface === "spaceapps"
     readonly property bool recorderOpen: surface === "recorder"
     readonly property bool sysmonOpen: surface === "sysmon"
+    readonly property bool fileShelfOpen: surface === "file-shelf"
+    readonly property bool shelfDragging: fileShelfOpen && !!ldFileShelf.item?.dragging
     readonly property var sysmonPages: ["cpu", "gpu", "mem", "net", "disk", "swap"]
     readonly property bool sysmonDetailOpen: surface.startsWith("sysmon-")
         && (sysmonPages.includes(surface.slice("sysmon-".length)) || surface === "sysmon-apps")
@@ -290,6 +292,7 @@ Item {
         stash:     { size: () => Qt.size(stashW, surfaceItem(ldStash).implicitHeight + 29 * s), ame: () => surfaceItem(ldStash) },
         spaceapps: { size: () => Qt.size(spaceappsW, surfaceItem(ldSpaceapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldSpaceapps) },
         recorder:  { size: () => Qt.size(recorderW, surfaceItem(ldRecorder).implicitHeight + 33 * s), ame: () => surfaceItem(ldRecorder) },
+        "file-shelf": { size: () => Qt.size(352 * s, surfaceItem(ldFileShelf).implicitHeight + 30 * s), ame: () => surfaceItem(ldFileShelf) },
         sysmon:    { size: () => Qt.size(sysmonW, surfaceItem(ldSysmon).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmon) },
         "sysmon-apps": { size: () => Qt.size(536 * s, surfaceItem(ldSysmonApps).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmonApps) },
         appearance: { size: () => Qt.size(appearanceW, surfaceItem(ldAppearance).implicitHeight + 29 * s), ame: () => surfaceItem(ldAppearance) },
@@ -331,13 +334,21 @@ Item {
         : (toastActive && !holding ? "toast"
         : (expanded ? "hover" : "rest"))))))))
 
-    /**
-     * AppImage drag-install state, live only while a file hovers the resting pill.
-     * `dragStage` walks hover -> installing -> done, or bad for a non-AppImage drop.
-     */
+    /** Incoming file drop surface and the current transfer status. */
     property bool dragActive: false
     property string dragName: ""
     property string dragStage: ""
+    property string shelfDropAction: ""
+    property bool installDropAvailable: false
+    property string installDropLabel: ""
+    readonly property bool appImageDrop: installDropAvailable && installDropLabel.startsWith("Install AppImage")
+    property int shelfStoredCount: 0
+    property int shelfFailedCount: 0
+    property string shelfStoredSummary: ""
+    property string shelfDropSummary: ""
+    property var shelfDropUrls: []
+    property int shelfDropRequest: 0
+    property bool installDropCandidate: false
 
     signal requestSurface(string name)
 
@@ -567,6 +578,10 @@ Item {
             ldAwake.item.deleteRelease();
     }
 
+    function fileShelfMove(direction) {
+        return fileShelfOpen && ldFileShelf.item ? ldFileShelf.item.move(direction) : false;
+    }
+
     function sysmonMove(dx, dy) {
         if (surface === "sysmon-apps")
             return dy !== 0 && ldSysmonApps.item && ldSysmonApps.item.move(dy);
@@ -735,7 +750,7 @@ Item {
         onTriggered: {
             const cold = [ldSound, ldCalendar, ldClock, ldLauncher, ldEmoji, ldClip, ldWall, ldPower, ldWifi, ldBt,
                           ldAwake, ldBattery, ldSettings, ldKeybinds, ldWorkspaces, ldStash, ldSpaceapps,
-                          ldRecorder, ldSysmon, ldSysmonApps, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
+                          ldRecorder, ldSysmon, ldSysmonApps, ldFileShelf, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
                           ldTime, ldNotifications, ldFontpicker, ldVocab, ldDictation];
             for (let i = 0; i < sysmonDetails.count; i++)
                 cold.push(sysmonDetails.itemAt(i));
@@ -1028,6 +1043,8 @@ Item {
             return settingsIcon.mapToItem(pill, settingsIcon.width / 2, settingsIcon.height + drop * 0.55);
         if (soulTarget === "recorder")
             return recorderIcon.mapToItem(pill, recorderIcon.width / 2, recorderIcon.height + drop * 0.55);
+        if (soulTarget === "file-shelf")
+            return fileShelfIcon.mapToItem(pill, fileShelfIcon.width / 2, fileShelfIcon.height + drop * 0.55);
         if (soulTarget === "sysmon")
             return sysmonIcon.mapToItem(pill, sysmonIcon.width / 2, sysmonIcon.height + drop * 0.55);
         if (soulTarget === "ws" && soulWsIndex >= 0) {
@@ -1056,11 +1073,12 @@ Item {
         wake: pill.wakePoint
         wickDir: pill.powerOpen ? 1 : -1
         form: pill.ameSurface ? pill.ameSurface.ameForm
-            : (pill.mode === "hover" && pill.hoverSoulGate ? "soul" : "off")
+            : ((pill.dragStage === "hover" && pill.appImageDrop) || (pill.mode === "hover" && pill.hoverSoulGate) ? "soul" : "off")
         point: pill.ameSurface
             ? Qt.point(pill.ameSurface.x + pill.ameSurface.amePoint.x,
                        pill.ameSurface.y + pill.ameSurface.amePoint.y)
-            : (pill.mode === "hover" ? pill.soulPoint : pill.wakePoint)
+            : (pill.dragStage === "hover" && pill.appImageDrop ? dragOverView.dropPoint
+            : pill.mode === "hover" ? pill.soulPoint : pill.wakePoint)
     }
 
     /**
@@ -1118,24 +1136,22 @@ Item {
 
     function localPath(url) {
         var s = String(url);
-        if (s.indexOf("file://") === 0)
-            s = s.substring(7);
-        return decodeURIComponent(s);
+        s = s.replace(/^file:\/\/(?:localhost)?(?=\/)/i, "");
+        try {
+            return decodeURIComponent(s);
+        } catch (error) {
+            return s;
+        }
     }
 
     readonly property var dropExt: /\.(appimage|deb|rpm|flatpakref|zip|tgz|txz|tbz2|ttf|otf|png|jpe?g|webp)$|\.(pkg\.)?tar\.(gz|xz|bz2|zst)$/i
 
     function droppablePaths(urls) {
-        var out = [];
-        for (var i = 0; i < urls.length; i++)
-            if (pill.dropExt.test(String(urls[i])))
-                out.push(pill.localPath(urls[i]));
-        return out;
+        return localFileUrls(urls).map(url => pill.localPath(url)).filter(path => pill.dropExt.test(path));
     }
 
-    function dropLabel(urls) {
-        var p = pill.localPath(urls.length ? urls[0] : "");
-        return p.substring(p.lastIndexOf("/") + 1).replace(pill.dropExt, "");
+    function localFileUrls(urls) {
+        return Array.from(urls, String).filter(url => /^file:\/\/(?:localhost)?\//i.test(url));
     }
 
     property bool installedAny: false
@@ -1226,8 +1242,12 @@ Item {
         onTriggered: {
             pill.dragActive = false;
             pill.dragStage = "";
-            if (pill.installedApp)
+            if (pill.shelfStoredCount > 0) {
+                pill.shelfStoredCount = 0;
+                pill.requestSurface("file-shelf");
+            } else if (pill.installedApp) {
                 pill.requestSurface("launcher");
+            }
         }
     }
 
@@ -1240,56 +1260,136 @@ Item {
         }
     }
 
-    /**
-     * File drops land only on the resting pill; an open surface turns the pill
-     * into a fullscreen modal that swallows the drag before it can start.
-     * app-install.sh routes each drop by type (apps install, fonts land in the
-     * font dir, images become the wallpaper), anything else flashes a rejection.
-     */
+    function installDropAt(x, y) {
+        if (!installDropAvailable || pill.morphCloseness < 0.9)
+            return false;
+        const target = appImageDrop ? shelfInstallTarget : classicInstallTarget;
+        return target.contains(target.mapFromItem(dropTarget, x, y));
+    }
+
+    function shelfItemSummary(files, folders) {
+        const parts = [];
+        if (folders > 0)
+            parts.push(folders + (folders === 1 ? " folder" : " folders"));
+        if (files > 0)
+            parts.push(files + (files === 1 ? " file" : " files"));
+        return parts.join(", ");
+    }
+
+    Process {
+        id: shelfInspect
+        property int request: 0
+
+        function inspectLatest() {
+            if (running || request === pill.shelfDropRequest || pill.dragStage !== "hover")
+                return;
+            request = pill.shelfDropRequest;
+            command = ["python3", "-B", Quickshell.shellDir + "/lib/file_shelf.py", "inspect"]
+                .concat(pill.shelfDropUrls);
+            running = true;
+        }
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (shelfInspect.request !== pill.shelfDropRequest || pill.dragStage !== "hover")
+                    return;
+                try {
+                    const info = JSON.parse(text);
+                    pill.shelfDropSummary = pill.shelfItemSummary(info.files, info.folders);
+                    pill.installDropAvailable = pill.installDropCandidate && info.files === pill.shelfDropUrls.length;
+                    if (pill.shelfDropUrls.length > 1 && pill.shelfDropSummary)
+                        pill.dragName = pill.shelfDropSummary;
+                } catch (error) {}
+            }
+        }
+        onExited: Qt.callLater(shelfInspect.inspectLatest)
+    }
+
+    Connections {
+        target: FileShelf
+        function onStored(files, folders, failures) {
+            if (pill.dragStage !== "storing")
+                return;
+            const count = files + folders;
+            pill.shelfStoredCount = count;
+            pill.shelfStoredSummary = pill.shelfItemSummary(files, folders);
+            pill.shelfFailedCount = failures;
+            pill.dragStage = count > 0 ? "stored" : "store-failed";
+            (count > 0 ? dropDoneTimer : dropBadTimer).restart();
+        }
+    }
+
     DropArea {
+        id: dropTarget
         anchors.fill: parent
-        enabled: !pill.surfaceOpen && pill.dragStage !== "installing" && pill.dragStage !== "done"
+        enabled: !pill.surfaceOpen && !["installing", "storing", "done", "stored"].includes(pill.dragStage)
         keys: ["text/uri-list"]
-        onEntered: (drag) => {
-            drag.acceptProposedAction();
+        onEntered: drag => {
+            if (!(drag.supportedActions & Qt.CopyAction) || !pill.localFileUrls(drag.urls).length) {
+                drag.accepted = false;
+                return;
+            }
+            drag.accept(Qt.CopyAction);
+            dropBadTimer.stop();
+            dropDoneTimer.stop();
+            const files = pill.localFileUrls(drag.urls);
+            const paths = pill.droppablePaths(files);
             pill.dragActive = true;
-            pill.dragStage = pill.droppablePaths(drag.urls).length > 0 ? "hover" : "bad";
-            pill.dragName = pill.dropLabel(drag.urls);
+            pill.dragStage = "hover";
+            pill.installDropAvailable = false;
+            pill.installDropCandidate = paths.length === drag.urls.length;
+            pill.shelfDropSummary = "";
+            pill.shelfDropUrls = files;
+            pill.shelfDropRequest++;
+            pill.installDropLabel = paths.every(path => /\.appimage$/i.test(path))
+                ? (paths.length === 1 ? "Install AppImage" : "Install AppImages")
+                : paths.every(path => /\.(png|jpe?g|webp)$/i.test(path)) ? "Set wallpaper"
+                : "Install";
+            pill.shelfDropAction = "store";
+            pill.dragName = files.length === 1 ? pill.localPath(files[0]).replace(/\/+$/, "").split("/").pop()
+                : files.length + " items";
+            shelfInspect.inspectLatest();
+        }
+        onPositionChanged: drag => {
+            if (pill.dragStage === "hover")
+                pill.shelfDropAction = pill.installDropAt(drag.x, drag.y) ? "install" : "store";
         }
         onExited: {
-            if (pill.dragStage === "hover" || pill.dragStage === "bad") {
+            if (pill.dragStage === "hover") {
                 pill.dragActive = false;
                 pill.dragStage = "";
             }
         }
-        onDropped: (drop) => {
-            drop.acceptProposedAction();
-            var files = pill.droppablePaths(drop.urls);
-            if (files.length === 0) {
-                pill.dragActive = true;
-                pill.dragStage = "bad";
-                pill.dragName = pill.dropLabel(drop.urls);
-                dropBadTimer.restart();
+        onDropped: drop => {
+            if (pill.dragStage !== "hover")
+                return;
+            const urls = pill.localFileUrls(drop.urls);
+            const paths = pill.droppablePaths(urls);
+            drop.accept(Qt.CopyAction);
+            pill.installedApp = false;
+            pill.shelfStoredCount = 0;
+            pill.shelfFailedCount = 0;
+            if (!(pill.shelfDropAction === "install" && paths.length === drop.urls.length
+                  && pill.installDropAt(drop.x, drop.y))) {
+                pill.dragStage = "storing";
+                if (!FileShelf.store(urls)) {
+                    pill.dragStage = "store-failed";
+                    dropBadTimer.restart();
+                }
                 return;
             }
-            pill.dragActive = true;
             pill.dragStage = "installing";
             pill.installedAny = false;
-            pill.installedApp = false;
             pill.installFailed = false;
             pill.installKind = "app";
             pill.installAction = "new";
             pill.installSeconds = 0;
-            pill.installQueue = files;
+            pill.installQueue = paths;
             pill.runNextInstall();
         }
     }
 
-    /**
-     * Drop-zone face: corner brackets frame a stage glyph and label that walk
-     * from "drop to install" through the spinner to a checkmark. Shares the morph
-     * fade of the other pill faces, so it grows in as the pill reaches its size.
-     */
+    /** The two drop targets share the pill's existing progress and result states. */
     Item {
         id: dragOverView
         anchors.fill: parent
@@ -1300,7 +1400,7 @@ Item {
 
         Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
 
-        readonly property color accent: (pill.dragStage === "bad" || pill.dragStage === "fail") ? "#e0533f" : Theme.vermLit
+        readonly property color accent: (pill.dragStage === "store-failed" || pill.dragStage === "fail") ? "#e0533f" : Theme.vermLit
         readonly property real brLen: 15 * pill.s
         readonly property real brThick: 2 * pill.s
 
@@ -1339,8 +1439,85 @@ Item {
             }
         }
 
+        Rectangle {
+            id: classicInstallTarget
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 4 * pill.s
+            height: 27 * pill.s
+            radius: 7 * pill.s
+            visible: pill.dragStage === "hover" && !pill.appImageDrop && pill.installDropAvailable
+            color: pill.shelfDropAction === "install" ? Qt.alpha(Theme.onGlow, 0.19) : Theme.frameBg
+
+            Text {
+                anchors.centerIn: parent
+                text: pill.installDropLabel
+                color: pill.shelfDropAction === "install" ? Theme.cream : Theme.subtle
+                font.family: Theme.font
+                font.pixelSize: 11 * pill.s
+                font.weight: Font.DemiBold
+            }
+        }
+
+        readonly property point dropPoint: {
+            void pill.width;
+            void pill.height;
+            const card = pill.shelfDropAction === "install" ? shelfInstallTarget : shelfStoreTarget;
+            return card.mapToItem(pill, card.width / 2, card.height + 5 * pill.s);
+        }
+
+        Column {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            visible: pill.dragStage === "hover" && pill.appImageDrop
+            spacing: 9 * pill.s
+
+            Text {
+                width: parent.width
+                text: pill.dragName
+                textFormat: Text.PlainText
+                elide: Text.ElideMiddle
+                horizontalAlignment: Text.AlignHCenter
+                color: Theme.cream
+                font.family: Theme.font
+                font.pixelSize: 12 * pill.s
+                font.weight: Font.DemiBold
+            }
+
+            Row {
+                width: parent.width
+                height: 55 * pill.s
+                spacing: 7 * pill.s
+
+                FileDropCard {
+                    id: shelfStoreTarget
+                    s: pill.s
+                    width: (parent.width - parent.spacing) / 2
+                    height: parent.height
+                    title: "Store on shelf"
+                    detail: "Temporary copy"
+                    icon: "shelf"
+                    current: pill.shelfDropAction === "store"
+                }
+                FileDropCard {
+                    id: shelfInstallTarget
+                    s: pill.s
+                    width: (parent.width - parent.spacing) / 2
+                    height: parent.height
+                    title: pill.installDropLabel
+                    detail: "Add to launcher"
+                    icon: "download"
+                    current: pill.shelfDropAction === "install"
+                }
+            }
+        }
+
         Column {
             anchors.centerIn: parent
+            anchors.verticalCenterOffset: classicInstallTarget.visible ? -12 * pill.s : 0
+            visible: pill.dragStage !== "hover" || !pill.appImageDrop
             width: parent.width - 44 * pill.s
             spacing: 7 * pill.s
 
@@ -1354,24 +1531,26 @@ Item {
                     anchors.fill: parent
                     stroke: 2
                     color: dragOverView.accent
-                    name: (pill.dragStage === "bad" || pill.dragStage === "fail") ? "close"
-                        : (pill.dragStage === "installing" ? "reboot"
-                        : (pill.dragStage === "done" ? "check" : "download"))
+                    name: (pill.dragStage === "store-failed" || pill.dragStage === "fail") ? "close"
+                        : (pill.dragStage === "installing" || pill.dragStage === "storing" ? "reboot"
+                        : (pill.dragStage === "done" || pill.dragStage === "stored" ? "check" : "shelf"))
 
                     RotationAnimation on rotation {
-                        running: pill.dragStage === "installing"
+                        running: pill.dragStage === "installing" || pill.dragStage === "storing"
                         loops: Animation.Infinite
                         from: 0
                         to: 360
                         duration: 900
                     }
-                    onNameChanged: if (pill.dragStage !== "installing") rotation = 0
+                    onNameChanged: if (name !== "reboot") rotation = 0
                 }
             }
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: pill.dragStage === "bad" ? "Can't install this"
+                text: pill.dragStage === "storing" ? "Storing " + (pill.shelfDropSummary || "items") + "…"
+                    : pill.dragStage === "stored" ? "Stored " + pill.shelfStoredSummary
+                    : pill.dragStage === "store-failed" ? "Couldn’t store files"
                     : (pill.dragStage === "fail" ? "Install failed"
                     : (pill.dragStage === "installing" ? ("Installing"
                         + (pill.installPct.length > 0 ? " " + pill.installPct : "")
@@ -1381,7 +1560,7 @@ Item {
                         : (!pill.installedApp && pill.installKind === "font" ? "Font installed"
                         : (pill.installAction === "updated" ? "Updated"
                         : (pill.installAction === "reinstalled" ? "Reinstalled" : "Installed")))))
-                    : "Drop to install")))
+                    : "Store " + (pill.shelfDropSummary || "items"))))
                 color: Theme.cream
                 font.family: Theme.font
                 font.pixelSize: 13 * pill.s
@@ -1392,7 +1571,11 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: pill.dragStage === "installing" && pill.installLine.length > 0 ? pill.installLine : pill.dragName
+                text: (pill.dragStage === "store-failed" || (pill.dragStage === "stored" && pill.shelfFailedCount > 0))
+                      && FileShelf.error ? FileShelf.error
+                    : pill.dragStage === "stored" && pill.shelfDropUrls.length > 1 ? ""
+                    : pill.dragStage === "installing" && pill.installLine.length > 0 ? pill.installLine : pill.dragName
+                textFormat: Text.PlainText
                 color: Theme.subtle
                 font.family: Theme.font
                 font.pixelSize: 11 * pill.s
@@ -1955,6 +2138,37 @@ Item {
                 }
 
                 Item {
+                    id: fileShelfIcon
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 17 * pill.s
+                    height: width
+
+                    GlyphIcon {
+                        anchors.fill: parent
+                        name: "shelf"
+                        color: shelfArea.containsMouse ? Theme.cream
+                            : FileShelf.entries.length ? Theme.vermLit : Theme.iconDim
+                        stroke: 1.7
+                    }
+                    MouseArea {
+                        id: shelfArea
+                        anchors.fill: parent
+                        anchors.margins: -5 * pill.s
+                        hoverEnabled: true
+                        enabled: hover.live
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: pill.requestSurface("file-shelf")
+                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "file-shelf"
+                    }
+                    Tooltip {
+                        s: pill.s
+                        placement: "below"
+                        title: "File shelf"
+                        show: shelfArea.containsMouse
+                    }
+                }
+
+                Item {
                     id: sysmonIcon
                     anchors.verticalCenter: parent.verticalCenter
                     width: 17 * pill.s
@@ -2393,6 +2607,18 @@ Item {
             morphCloseness: pill.morphCloseness
             onRequestDetail: key => pill.requestSurface("sysmon-" + key)
             onRequestClose: pill.requestClose()
+        }
+    }
+
+    Loader {
+        id: ldFileShelf
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: FileShelfSurface {
+            s: pill.s
+            open: pill.fileShelfOpen
+            morphCloseness: pill.morphCloseness
         }
     }
 

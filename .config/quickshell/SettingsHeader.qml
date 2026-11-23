@@ -15,6 +15,7 @@ Item {
     property string glyph: ""
     property string title: ""
     property bool showBack: false
+    property bool showAction: true
 
     readonly property point soulPoint: glyphText.visible
         ? Qt.point(glyphText.width / 2, glyphText.y + labels.y - 3 * s)
@@ -56,6 +57,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 16 * head.s
         height: 16 * head.s
+        visible: head.showAction
         name: head.showBack ? "chevron-left" : "cog"
         color: Theme.iconDim
         stroke: head.showBack ? 2.2 : 1.7
