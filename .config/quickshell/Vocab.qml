@@ -416,6 +416,22 @@ SettingsSurface {
         }
     }
 
+    /** Clear the whole vocabulary (the list's hold-to-wipe); focus falls back off the list. */
+    function wipeAll() {
+        root.kbIndex = -1;
+        root.focusRowItem = null;
+        root.commit([]);
+    }
+
+    /** Held Shift+Delete on the list: drive the wipe heat like a pointer hold. */
+    function wipePress() {
+        if (root.view === "list" && vocabWipe.visible)
+            vocabWipe.keyPress();
+    }
+    function wipeRelease() {
+        vocabWipe.keyRelease();
+    }
+
     function commit(arr) {
         root.words = arr;
         writer.setText(JSON.stringify({ words: arr }, null, 2) + "\n");
@@ -580,8 +596,10 @@ SettingsSurface {
     onActiveChanged: {
         if (active)
             vocabFile.reload();
-        else
+        else {
             root.toList();
+            vocabWipe.cancel();
+        }
         addField.focus = false;
         searchField.focus = false;
         searchField.text = "";
@@ -693,8 +711,8 @@ SettingsSurface {
                     id: searchField
                     anchors.left: searchGlyph.right
                     anchors.leftMargin: Flags.showGlyphs ? 9 * root.s : 4 * root.s
-                    anchors.right: parent.right
-                    anchors.rightMargin: 4 * root.s
+                    anchors.right: vocabWipe.left
+                    anchors.rightMargin: 8 * root.s
                     anchors.verticalCenter: parent.verticalCenter
                     background: null
                     padding: 0
@@ -737,6 +755,81 @@ SettingsSurface {
                     color: Theme.faint
                     opacity: searchField.activeFocus ? 0.7 : 0.18
                     Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                }
+
+                /** Wipe heat over the search underline, as on the clipboard. */
+                Rectangle {
+                    anchors.right: searchField.right
+                    anchors.top: searchField.bottom
+                    anchors.topMargin: 3 * root.s
+                    height: 1
+                    width: searchField.width * vocabWipe.hold
+                    visible: vocabWipe.holding
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+                        GradientStop { position: 1.0; color: Theme.vermLit }
+                    }
+                }
+
+                /** 掃 hold to wipe the whole vocabulary (or a held Shift+Delete). */
+                Item {
+                    id: vocabWipe
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4 * root.s
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16 * root.s
+                    height: 16 * root.s
+
+                    readonly property real hold: vocabWipeHeat.hold
+                    readonly property bool holding: vocabWipeHeat.holding
+                    readonly property color tone: holding ? Theme.vermLit : (vocabWipeArea.containsMouse ? Theme.cream : Theme.faint)
+
+                    function keyPress() { vocabWipeHeat.press(); }
+                    function keyRelease() { vocabWipeHeat.release(); }
+                    function cancel() { vocabWipeHeat.cancel(); }
+
+                    Tooltip {
+                        s: root.s
+                        title: "hold to wipe"
+                        show: vocabWipeArea.containsMouse || vocabWipe.holding
+                    }
+
+                    Text {
+                        visible: Flags.showGlyphs
+                        anchors.centerIn: parent
+                        text: "掃"
+                        color: vocabWipe.tone
+                        font.family: Theme.fontJp
+                        font.pixelSize: 12 * root.s
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+
+                    GlyphIcon {
+                        visible: !Flags.showGlyphs
+                        anchors.centerIn: parent
+                        width: 12 * root.s
+                        height: 12 * root.s
+                        name: "trash"
+                        color: vocabWipe.tone
+                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    }
+
+                    HeatHold {
+                        id: vocabWipeHeat
+                        onConfirmed: root.wipeAll()
+                    }
+
+                    MouseArea {
+                        id: vocabWipeArea
+                        anchors.fill: parent
+                        anchors.margins: -5 * root.s
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onPressed: vocabWipeHeat.press()
+                        onReleased: vocabWipeHeat.release()
+                        onExited: vocabWipeHeat.cancel()
+                    }
                 }
             }
 

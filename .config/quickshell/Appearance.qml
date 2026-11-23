@@ -186,7 +186,6 @@ SettingsSurface {
         SettingsRow {
             id: vibrancyRow
             visible: Flags.paletteMode === "dynamic"
-            height: visible ? implicitHeight : 0
             surface: root
             name: "Vibrancy"
             sub: "How strongly the wallpaper colours the pill"

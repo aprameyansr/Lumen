@@ -15,6 +15,10 @@ Rectangle {
     property real s: 1
     property var options: []
     property var value
+    property bool keyboardNavigation: false
+    property Item hoveredOption: null
+    property Item focusedOption: null
+    readonly property Item pointedOption: hoveredOption || focusedOption
     signal picked(var value)
 
     /**
@@ -45,12 +49,25 @@ Rectangle {
                 id: opt
                 required property var modelData
                 readonly property bool current: seg.value === modelData.value
-                property bool hovered: false
+                readonly property bool targeted: seg.pointedOption === opt
+
+                activeFocusOnTab: seg.keyboardNavigation
+                onActiveFocusChanged: {
+                    if (activeFocus)
+                        seg.focusedOption = opt;
+                    else if (seg.focusedOption === opt)
+                        seg.focusedOption = null;
+                }
+                Keys.onReturnPressed: if (seg.keyboardNavigation) seg.picked(modelData.value)
+                Keys.onSpacePressed: if (seg.keyboardNavigation) seg.picked(modelData.value)
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData.label
+                Accessible.onPressAction: seg.picked(modelData.value)
 
                 width: optLabel.implicitWidth + 18 * seg.s
                 height: optLabel.implicitHeight + 12 * seg.s
                 radius: 8 * seg.s
-                color: opt.current ? Qt.alpha(Theme.onGlow, 0.16) : (opt.hovered ? Theme.frameBg : "transparent")
+                color: opt.current ? Qt.alpha(Theme.onGlow, 0.16) : (opt.targeted ? Theme.frameBg : "transparent")
                 Behavior on color { ColorAnimation { duration: Motion.fast } }
 
                 Text {
@@ -68,8 +85,8 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onEntered: opt.hovered = true
-                    onExited: opt.hovered = false
+                    onEntered: seg.hoveredOption = opt
+                    onExited: if (seg.hoveredOption === opt) seg.hoveredOption = null
                     onClicked: seg.picked(opt.modelData.value)
                 }
             }

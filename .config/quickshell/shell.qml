@@ -32,6 +32,17 @@ ShellRoot {
     property string openSurface: ""
     property string peekMon: ""
 
+    onOpenSurfaceChanged: {
+        const detail = openSurface.startsWith("sysmon-");
+        if (openSurface === "sysmon" || detail) {
+            Sysmon.page = detail ? openSurface.slice("sysmon-".length) : "";
+            Sysmon.open = true;
+        } else if (Sysmon.open) {
+            Sysmon.open = false;
+            Sysmon.page = "";
+        }
+    }
+
     function refresh() {
         Hyprland.refreshMonitors();
         Hyprland.refreshWorkspaces();
@@ -377,7 +388,7 @@ ShellRoot {
                     if (pill.quickChoosing) {
                         ScreenRec.quickChoosing = false;
                         ScreenRec.quickScreenChoosing = false;
-                    } else if (!pill.keybindsBack() && !pill.vocabBack()) {
+                    } else if (!pill.sysmonEscape() && !pill.keybindsBack() && !pill.vocabBack()) {
                         root.close();
                     }
                 }
@@ -385,13 +396,13 @@ ShellRoot {
                     if (pill.criticalToast) { e.accepted = true; return; }
                     if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(-1); e.accepted = true; return; }
-                    e.accepted = pill.mixerStep(1) || pill.recorderStep(5) || pill.settingsMove(-1);
+                    e.accepted = pill.sysmonMove(0, -1) || pill.mixerStep(1) || pill.recorderStep(5) || pill.settingsMove(-1);
                 }
                 Keys.onDownPressed: (e) => {
                     if (pill.criticalToast) { e.accepted = true; return; }
                     if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
                     if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(1); e.accepted = true; return; }
-                    e.accepted = pill.mixerStep(-1) || pill.recorderStep(-5) || pill.settingsMove(1);
+                    e.accepted = pill.sysmonMove(0, 1) || pill.mixerStep(-1) || pill.recorderStep(-5) || pill.settingsMove(1);
                 }
                 Keys.onLeftPressed: (e) => {
                     if (pill.criticalToast) { e.accepted = true; return; }
@@ -399,6 +410,7 @@ ShellRoot {
                     if (pill.mixerOpen) { pill.mixerFocusMove(-1); e.accepted = true; }
                     else if (pill.wallpaperOpen) { pill.wallpaperMove(-1); e.accepted = true; }
                     else if (pill.powerOpen) { pill.powerMove(-1); e.accepted = true; }
+                    else if (pill.sysmonOpen) { e.accepted = pill.sysmonMove(-1, 0); }
                     else if (pill.recorderOpen) { e.accepted = pill.recorderStep(-5); }
                     else if (pill.settingsLike) { pill.settingsAdjust(-1); e.accepted = true; }
                 }
@@ -408,6 +420,7 @@ ShellRoot {
                     if (pill.mixerOpen) { pill.mixerFocusMove(1); e.accepted = true; }
                     else if (pill.wallpaperOpen) { pill.wallpaperMove(1); e.accepted = true; }
                     else if (pill.powerOpen) { pill.powerMove(1); e.accepted = true; }
+                    else if (pill.sysmonOpen) { e.accepted = pill.sysmonMove(1, 0); }
                     else if (pill.recorderOpen) { e.accepted = pill.recorderStep(5); }
                     else if (pill.settingsLike) { pill.settingsAdjust(1); e.accepted = true; }
                 }
@@ -441,8 +454,15 @@ ShellRoot {
                         e.accepted = true;
                         return;
                     }
+                    /** Held Shift+Delete on dictation or vocabulary drives the clear-all heat; release drains it. */
+                    if (e.key === Qt.Key_Delete && (e.modifiers & Qt.ShiftModifier) && (pill.dictationOpen || pill.vocabOpen)) {
+                        if (!e.isAutoRepeat) pill.wipePress();
+                        e.accepted = true;
+                        return;
+                    }
+                    /** Held Delete on keep-awake drives the focused preset's hold-to-wipe heat. */
                     if (e.key === Qt.Key_Delete && pill.awakeOpen) {
-                        pill.awakeDelete();
+                        if (!e.isAutoRepeat) pill.awakeDelete();
                         e.accepted = true;
                         return;
                     }
@@ -470,6 +490,8 @@ ShellRoot {
                     } else if (pill.powerOpen) {
                         if (!e.isAutoRepeat) pill.powerPress();
                         e.accepted = true;
+                    } else if (pill.sysmonOpen && !e.isAutoRepeat && pill.sysmonActivate()) {
+                        e.accepted = true;
                     } else if (pill.vocabOpen && pill.vocabEnter()) {
                         e.accepted = true;
                     } else if (pill.settingsLike) {
@@ -483,6 +505,11 @@ ShellRoot {
                 Keys.onReleased: (e) => {
                     if (e.isAutoRepeat)
                         return;
+                    if (e.key === Qt.Key_Delete && (pill.awakeOpen || pill.dictationOpen || pill.vocabOpen)) {
+                        if (pill.awakeOpen) pill.awakeDeleteRelease(); else pill.wipeRelease();
+                        e.accepted = true;
+                        return;
+                    }
                     if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space
                         || (e.text.length === 1 && "wlsruWLSRU".indexOf(e.text) >= 0))
                         && pill.powerOpen) {

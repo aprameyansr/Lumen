@@ -79,8 +79,10 @@ SettingsSurface {
     Connections {
         target: root
         function onActiveChanged() {
-            if (!root.active)
+            if (!root.active) {
                 root.micMenuOpen = false;
+                histWipe.cancel();
+            }
         }
     }
 
@@ -110,6 +112,24 @@ SettingsSurface {
             root.kbIndex = Math.min(keep, root.rows.length - 1);
             root.focusRowItem = root.kbIndex >= 0 ? root.rows[root.kbIndex].item : null;
         });
+    }
+
+    /** Clear all history; a focused history row is gone, so focus falls back off the list. */
+    function wipeHistory() {
+        if (root.focusRowItem && root.focusRowItem.parent === histCol) {
+            root.focusRowItem = null;
+            root.kbIndex = -1;
+        }
+        Dictate.wipeHistory();
+    }
+
+    /** Held Shift+Delete: drive the history wipe heat like a pointer hold. */
+    function wipePress() {
+        if (histWipe.visible)
+            histWipe.keyPress();
+    }
+    function wipeRelease() {
+        histWipe.keyRelease();
     }
 
     function when(t) {
@@ -360,18 +380,99 @@ SettingsSurface {
 
         // ── history ──
 
-        Text {
+        /** History label; 掃 on the right clears it all on a hold (or a held Shift+Delete). */
+        Item {
             width: parent.width
-            leftPadding: 9 * root.s
-            topPadding: 14 * root.s
-            bottomPadding: 6 * root.s
-            text: "History"
-            color: Theme.faint
-            font.family: Theme.font
-            font.pixelSize: 8.5 * root.s
-            font.weight: Font.Bold
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 1.2 * root.s
+            height: histLabel.implicitHeight
+
+            Text {
+                id: histLabel
+                width: parent.width
+                leftPadding: 9 * root.s
+                topPadding: 14 * root.s
+                bottomPadding: 6 * root.s
+                text: "History"
+                color: Theme.faint
+                font.family: Theme.font
+                font.pixelSize: 8.5 * root.s
+                font.weight: Font.Bold
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 1.2 * root.s
+            }
+
+            Item {
+                id: histWipe
+                visible: root.items.length > 0
+                anchors.right: parent.right
+                anchors.rightMargin: 9 * root.s
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: (histLabel.topPadding - histLabel.bottomPadding) / 2
+                width: 16 * root.s
+                height: 16 * root.s
+
+                readonly property real hold: histWipeHeat.hold
+                readonly property bool holding: histWipeHeat.holding
+                readonly property color tone: holding ? Theme.vermLit : (histWipeArea.containsMouse ? Theme.cream : Theme.faint)
+
+                function keyPress() { histWipeHeat.press(); }
+                function keyRelease() { histWipeHeat.release(); }
+                function cancel() { histWipeHeat.cancel(); }
+
+                Tooltip {
+                    s: root.s
+                    title: "hold to wipe"
+                    show: histWipeArea.containsMouse || histWipe.holding
+                }
+
+                Text {
+                    visible: Flags.showGlyphs
+                    anchors.centerIn: parent
+                    text: "掃"
+                    color: histWipe.tone
+                    font.family: Theme.fontJp
+                    font.pixelSize: 12 * root.s
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+
+                GlyphIcon {
+                    visible: !Flags.showGlyphs
+                    anchors.centerIn: parent
+                    width: 12 * root.s
+                    height: 12 * root.s
+                    name: "trash"
+                    color: histWipe.tone
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                }
+
+                HeatHold {
+                    id: histWipeHeat
+                    onConfirmed: root.wipeHistory()
+                }
+
+                MouseArea {
+                    id: histWipeArea
+                    anchors.fill: parent
+                    anchors.margins: -5 * root.s
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onPressed: histWipeHeat.press()
+                    onReleased: histWipeHeat.release()
+                    onExited: histWipeHeat.cancel()
+                }
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 1
+                width: parent.width * histWipe.hold
+                visible: histWipe.holding
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+                    GradientStop { position: 1.0; color: Theme.vermLit }
+                }
+            }
         }
 
         Text {
@@ -573,7 +674,7 @@ SettingsSurface {
                 anchors.leftMargin: 4 * root.s
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.focusRowItem && root.focusRowItem.parent === histCol
-                    ? "enter copy · del remove · esc back" : "enter open · esc back"
+                    ? "enter copy · del remove · hold ⇧del wipe" : "enter open · esc back"
                 color: Theme.faint
                 font.family: Theme.font
                 font.pixelSize: 9.5 * root.s

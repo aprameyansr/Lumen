@@ -16,15 +16,21 @@ Item {
     property string title: ""
     property bool showBack: false
 
+    readonly property point soulPoint: glyphText.visible
+        ? Qt.point(glyphText.width / 2, glyphText.y + labels.y - 3 * s)
+        : Qt.point(-8 * s, height / 2)
+
     width: parent ? parent.width : 0
     height: 22 * head.s
 
     Row {
+        id: labels
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         spacing: 8 * head.s
 
         Text {
+            id: glyphText
             anchors.verticalCenter: parent.verticalCenter
             visible: Flags.showGlyphs && head.glyph.length > 0
             text: head.glyph

@@ -88,6 +88,9 @@ Item {
     readonly property bool spaceappsOpen: surface === "spaceapps"
     readonly property bool recorderOpen: surface === "recorder"
     readonly property bool sysmonOpen: surface === "sysmon"
+    readonly property var sysmonPages: ["cpu", "gpu", "mem", "net", "disk", "swap"]
+    readonly property bool sysmonDetailOpen: surface.startsWith("sysmon-")
+        && (sysmonPages.includes(surface.slice("sysmon-".length)) || surface === "sysmon-apps")
     readonly property bool appearanceOpen: surface === "appearance"
     readonly property bool displayOpen: surface === "display"
     readonly property bool inputOpen: surface === "input"
@@ -265,7 +268,7 @@ Item {
      * derive from this, so adding a surface is one entry here plus its Loader —
      * no parallel ternary chains to keep in lockstep.
      */
-    readonly property var surfaces: ({
+    readonly property var surfaces: Object.assign({
         calendar:  { size: () => { const it = surfaceItem(ldCalendar); return Qt.size((it.implicitWidth > 0 ? it.implicitWidth : 282 * s) + 36 * s, it.implicitHeight + 32 * s); }, ame: () => surfaceItem(ldCalendar) },
         launcher:  { size: () => { surfaceItem(ldLauncher); return Qt.size(launcherW, launcherH); }, ame: () => surfaceItem(ldLauncher) },
         emoji: { size: () => { surfaceItem(ldEmoji); return Qt.size(emojiW, emojiH); }, ame: () => surfaceItem(ldEmoji)},
@@ -288,6 +291,7 @@ Item {
         spaceapps: { size: () => Qt.size(spaceappsW, surfaceItem(ldSpaceapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldSpaceapps) },
         recorder:  { size: () => Qt.size(recorderW, surfaceItem(ldRecorder).implicitHeight + 33 * s), ame: () => surfaceItem(ldRecorder) },
         sysmon:    { size: () => Qt.size(sysmonW, surfaceItem(ldSysmon).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmon) },
+        "sysmon-apps": { size: () => Qt.size(536 * s, surfaceItem(ldSysmonApps).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmonApps) },
         appearance: { size: () => Qt.size(appearanceW, surfaceItem(ldAppearance).implicitHeight + 29 * s), ame: () => surfaceItem(ldAppearance) },
         display:    { size: () => Qt.size(displayW, surfaceItem(ldDisplay).implicitHeight + 29 * s), ame: () => surfaceItem(ldDisplay) },
         input:      { size: () => Qt.size(inputW, surfaceItem(ldInput).implicitHeight + 29 * s), ame: () => surfaceItem(ldInput) },
@@ -298,7 +302,19 @@ Item {
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) },
         vocab: { size: () => Qt.size(vocabW, surfaceItem(ldVocab).implicitHeight + 29 * s), ame: () => surfaceItem(ldVocab) },
         dictation: { size: () => Qt.size(dictationW, surfaceItem(ldDictation).implicitHeight + 29 * s), ame: () => surfaceItem(ldDictation) }
-    })
+    }, sysmonSurfaceEntries())
+
+    function sysmonSurfaceEntries() {
+        const entries = {};
+        for (let index = 0; index < sysmonPages.length; index++) {
+            const load = () => surfaceItem(sysmonDetails.itemAt(index));
+            entries["sysmon-" + sysmonPages[index]] = {
+                size: () => Qt.size(sysmonW, load().implicitHeight + 33 * s),
+                ame: load
+            };
+        }
+        return entries;
+    }
 
     /**
      * Anything expanded (an open page, pinned, or the hover row) holds the pill:
@@ -481,6 +497,8 @@ Item {
      * pill. Empty space in the body never triggers this.
      */
     function surfaceBack() {
+        if (sysmonBack())
+            return;
         if (pill.vocabOpen) {
             if (!(ldVocab.item && ldVocab.item.back()))
                 pill.requestSurface("dictation");
@@ -539,15 +557,59 @@ Item {
         return (pill.clockOpen && ldClock.item) ? ldClock.item.key(k, mods) : false;
     }
 
-    /** Delete on the keep-awake surface: remove the keyboard-focused preset. */
+    /** Held Delete on the keep-awake surface: hold-to-wipe the keyboard-focused preset. */
     function awakeDelete() {
         if (pill.awakeOpen && ldAwake.item && !ldAwake.item.formOpen)
-            ldAwake.item.deleteFocused();
+            ldAwake.item.deletePress();
+    }
+    function awakeDeleteRelease() {
+        if (pill.awakeOpen && ldAwake.item)
+            ldAwake.item.deleteRelease();
+    }
+
+    function sysmonMove(dx, dy) {
+        if (surface === "sysmon-apps")
+            return dy !== 0 && ldSysmonApps.item && ldSysmonApps.item.move(dy);
+        return (pill.sysmonOpen && ldSysmon.item) ? ldSysmon.item.move(dx, dy) : false;
+    }
+
+    function sysmonActivate() {
+        return (pill.sysmonOpen && ldSysmon.item) ? ldSysmon.item.activate() : false;
+    }
+
+    function sysmonEscape() {
+        if (!sysmonOpen && !sysmonDetailOpen)
+            return false;
+        hoverClean = true;
+        hoverLatch = true;
+        if (!hovered)
+            graceTimer.restart();
+        requestClose();
+        return true;
+    }
+
+    function sysmonBack() {
+        if (!sysmonDetailOpen)
+            return false;
+        requestSurface("sysmon");
+        return true;
     }
 
     /** Esc on the vocabulary page folds an add or teach view back to the list; false on the list itself. */
     function vocabBack() {
         return (pill.vocabOpen && ldVocab.item) ? ldVocab.item.back() : false;
+    }
+
+    /** Held Shift+Delete on dictation or vocabulary: start / drop the clear-all heat. */
+    function wipePress() {
+        const it = pill.dictationOpen ? ldDictation.item : (pill.vocabOpen ? ldVocab.item : null);
+        if (it)
+            it.wipePress();
+    }
+    function wipeRelease() {
+        const it = pill.dictationOpen ? ldDictation.item : (pill.vocabOpen ? ldVocab.item : null);
+        if (it)
+            it.wipeRelease();
     }
 
     /** Delete on the dictation page: drop the focused history entry. */
@@ -673,8 +735,10 @@ Item {
         onTriggered: {
             const cold = [ldSound, ldCalendar, ldClock, ldLauncher, ldEmoji, ldClip, ldWall, ldPower, ldWifi, ldBt,
                           ldAwake, ldBattery, ldSettings, ldKeybinds, ldWorkspaces, ldStash, ldSpaceapps,
-                          ldRecorder, ldSysmon, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
+                          ldRecorder, ldSysmon, ldSysmonApps, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
                           ldTime, ldNotifications, ldFontpicker, ldVocab, ldDictation];
+            for (let i = 0; i < sysmonDetails.count; i++)
+                cold.push(sysmonDetails.itemAt(i));
             for (const ld of cold)
                 if (ld.active && !(ld.item && ld.item.busy === true))
                     ld.active = false;
@@ -2327,7 +2391,42 @@ Item {
             s: pill.s
             open: pill.sysmonOpen
             morphCloseness: pill.morphCloseness
+            onRequestDetail: key => pill.requestSurface("sysmon-" + key)
             onRequestClose: pill.requestClose()
+        }
+    }
+
+    Loader {
+        id: ldSysmonApps
+        active: false
+        visible: !pill.criticalToast
+        anchors.fill: parent
+        sourceComponent: SysmonApps {
+            s: pill.s
+            open: pill.surface === "sysmon-apps"
+            morphCloseness: pill.morphCloseness
+            onRequestClose: pill.sysmonEscape()
+        }
+    }
+
+    Repeater {
+        id: sysmonDetails
+        model: pill.sysmonPages
+
+        Loader {
+            id: detailLoader
+            required property string modelData
+
+            active: false
+            visible: !pill.criticalToast
+            anchors.fill: parent
+            sourceComponent: SysmonDetail {
+                s: pill.s
+                page: detailLoader.modelData
+                open: pill.surface === "sysmon-" + page
+                morphCloseness: pill.morphCloseness
+                onRequestClose: pill.requestClose()
+            }
         }
     }
 

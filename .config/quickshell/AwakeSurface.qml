@@ -12,7 +12,7 @@ import "Singletons"
  * how long to run (chips plus a custom scrub) and what happens at zero. Below,
  * one-tap presets that apply and start a session, with a "save current" form.
  * Every row is on the keyboard row registry: arrows move and adjust, Enter
- * activates, Delete removes the focused preset. State lives in Flags through
+ * activates, holding Delete wipes the focused preset. State lives in Flags through
  * the Awake singleton, so the pill's eye icon and this surface never disagree.
  */
 SettingsSurface {
@@ -47,11 +47,19 @@ SettingsSurface {
             root.closeForm();
     }
 
-    /** Delete key: drop the keyboard-focused preset row, if one is focused. */
-    function deleteFocused() {
+    /** Held Delete: drive the keyboard-focused preset's hold-to-wipe heat; letting go drains it. */
+    property Item heldRow: null
+    function deletePress() {
         var it = root.focusRowItem;
-        if (it && it.presetIndex !== undefined && it.presetIndex >= 0)
-            Awake.deletePreset(it.presetIndex);
+        if (it && it.presetIndex !== undefined && it.presetIndex >= 0) {
+            root.heldRow = it;
+            it.delPress();
+        }
+    }
+    function deleteRelease() {
+        if (root.heldRow)
+            root.heldRow.delRelease();
+        root.heldRow = null;
     }
 
     onActiveChanged: if (!active) formOpen = false
@@ -386,6 +394,25 @@ SettingsSurface {
                 sub: root.presetSub(modelData)
                 last: index === presetRepeater.count - 1
 
+                function delPress() { delHeat.press(); }
+                function delRelease() { delHeat.release(); }
+                onFocusedChanged: if (!focused) delHeat.cancel()
+
+                /** Hold-to-wipe heat line along the row's foot, as on the clipboard (reparented out of the control slot). */
+                Rectangle {
+                    parent: prow
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: 1
+                    width: parent.width * delHeat.hold
+                    visible: delHeat.holding
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+                        GradientStop { position: 1.0; color: Theme.vermLit }
+                    }
+                }
+
                 Row {
                     spacing: 10 * root.s
 
@@ -404,14 +431,25 @@ SettingsSurface {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 14 * root.s
                         height: 14 * root.s
-                        opacity: (prow.focused || delArea.containsMouse) ? 1 : 0.35
+                        opacity: (prow.focused || delArea.containsMouse || delHeat.holding) ? 1 : 0.35
                         Behavior on opacity { NumberAnimation { duration: Motion.fast } }
 
                         GlyphIcon {
                             anchors.fill: parent
                             name: "trash"
-                            color: delArea.containsMouse ? Theme.vermLit : Theme.iconDim
+                            color: (delArea.containsMouse || delHeat.holding) ? Theme.vermLit : Theme.iconDim
                             stroke: 1.7
+                        }
+
+                        Tooltip {
+                            s: root.s
+                            title: "hold to delete"
+                            show: delArea.containsMouse || delHeat.holding
+                        }
+
+                        HeatHold {
+                            id: delHeat
+                            onConfirmed: Awake.deletePreset(prow.presetIndex)
                         }
 
                         MouseArea {
@@ -420,7 +458,9 @@ SettingsSurface {
                             anchors.margins: -6 * root.s
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: Awake.deletePreset(prow.presetIndex)
+                            onPressed: delHeat.press()
+                            onReleased: delHeat.release()
+                            onExited: delHeat.cancel()
                         }
                     }
                 }

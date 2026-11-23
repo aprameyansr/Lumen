@@ -3,18 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "Singletons"
 
-/**
- * 系 SYSTEM surface: a flat washi card of live machine vitals fed by the Sysmon
- * singleton. The header carries the kanji, label and uptime. Below it sit flame
- * dials for CPU, GPU and memory load, each a 270deg arc stroked with the mixer's
- * vermLit-to-vermBurn gradient on a thread track and rounded caps, the sweep
- * eased over the value change; the centre shows the value, a unit and a sub line
- * (CPU/GPU temperature, memory total). A hairline stripe underneath reports
- * network throughput, root-disk fill, swap and VRAM with their units folded into
- * the faint labels so the values read bare. On a machine with no discrete GPU the
- * GPU dial and VRAM cell drop and the remaining dials recentre. Polling lives in
- * the singleton and only runs while this surface is open.
- */
+/** Live overview and hardware navigation for the 系 SYSTEM surface. */
 PillSurface {
     id: root
 
@@ -23,12 +12,70 @@ PillSurface {
     mRight: 16
     mBottom: 16
 
+    signal requestDetail(string key)
+
+    property string focusKey: ""
+    readonly property var overviewRows: [["apps"], dialKeys, ["net", "disk", "swap"]]
+    readonly property Item focusedTarget: targetFor(focusKey)
     implicitHeight: content.implicitHeight
 
     readonly property var dialKeys: Sysmon.hasGpu ? ["cpu", "gpu", "mem"] : ["cpu", "mem"]
     readonly property var cellKeys: Sysmon.hasVram ? ["net", "disk", "swap", "vram"] : ["net", "disk", "swap"]
 
-    onActiveChanged: Sysmon.open = active
+    function targetFor(key) {
+        if (key === "apps")
+            return processes;
+        const dialIndex = dialKeys.indexOf(key);
+        if (dialIndex >= 0)
+            return dialIndex < dials.count ? dials.itemAt(dialIndex) : null;
+        const cellIndex = cellKeys.indexOf(key);
+        return cellIndex >= 0 && cellIndex < cells.count ? cells.itemAt(cellIndex) : null;
+    }
+
+    function move(dx, dy) {
+        if (!focusedTarget) {
+            focusKey = dialKeys[0];
+            return true;
+        }
+
+        const row = overviewRows.findIndex(keys => keys.includes(focusKey));
+        const keys = overviewRows[row];
+        if (dx) {
+            const index = Math.max(0, Math.min(keys.length - 1, keys.indexOf(focusKey) + dx));
+            focusKey = keys[index];
+        } else if (row + dy >= 0 && row + dy < overviewRows.length) {
+            const center = focusedTarget.mapToItem(root, focusedTarget.width / 2, 0).x;
+            let distance = Infinity;
+            let nearest = focusKey;
+            for (const key of overviewRows[row + dy]) {
+                const candidate = targetFor(key);
+                if (!candidate)
+                    continue;
+                const offset = Math.abs(candidate.mapToItem(root, candidate.width / 2, 0).x - center);
+                if (offset < distance) {
+                    distance = offset;
+                    nearest = key;
+                }
+            }
+            focusKey = nearest;
+        }
+        return true;
+    }
+
+    function activate() {
+        if (!focusedTarget)
+            return false;
+        requestDetail(focusKey);
+        return true;
+    }
+
+    Connections {
+        target: Sysmon
+        function onOpenChanged() {
+            if (!Sysmon.open)
+                root.focusKey = "";
+        }
+    }
 
     /**
      * The soul ember rests with the 系 header kanji: the kanji is the lantern,
@@ -49,7 +96,16 @@ PillSurface {
     }
 
     ameForm: open ? "soul" : "off"
-    amePoint: soulPoint
+    amePoint: {
+        const item = focusedTarget;
+        if (!item)
+            return soulPoint;
+        void item.x;
+        void item.y;
+        void root.width;
+        void root.height;
+        return item.mapToItem(root, item.width / 2, item.height + 6 * s);
+    }
 
     component Dial: Item {
         id: dial
@@ -60,7 +116,7 @@ PillSurface {
         property string sub: ""
         property string label: ""
         property bool shrink: false
-
+        property bool selected: false
         property real display: 0
         onArcChanged: display = arc
         Component.onCompleted: display = arc
@@ -92,8 +148,8 @@ PillSurface {
                 ctx.stroke();
                 var v = Math.max(0, Math.min(100, dial.display));
                 if (v > 0.5) {
-                    var diag = r * 0.7071;
-                    var grad = ctx.createLinearGradient(cx - diag, cy + diag, cx + diag, cy - diag);
+                    const diag = r * 0.7071;
+                    const grad = ctx.createLinearGradient(cx - diag, cy + diag, cx + diag, cy - diag);
                     grad.addColorStop(0, Theme.vermBurn);
                     grad.addColorStop(0.35, Theme.vermBurn);
                     grad.addColorStop(1, Theme.vermLit);
@@ -143,17 +199,27 @@ PillSurface {
             anchors.top: bigRow.bottom
             anchors.topMargin: 3 * root.s
             anchors.horizontalCenter: bigRow.horizontalCenter
-            spacing: 3 * root.s
+            spacing: 2 * root.s
 
-            Text {
+            Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: dial.label
-                color: Theme.faint
-                font.family: Theme.font
-                font.pixelSize: 8.5 * root.s
-                font.weight: Font.Bold
-                font.capitalization: Font.AllUppercase
-                font.letterSpacing: 1 * root.s
+                spacing: 3 * root.s
+                Text {
+                    text: dial.label
+                    color: Theme.faint
+                    font.family: Theme.font
+                    font.pixelSize: 8.5 * root.s
+                    font.weight: Font.Bold
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 1 * root.s
+                }
+                GlyphIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "chevron-right"
+                    width: 7 * root.s
+                    height: width
+                    color: dial.selected ? Theme.cream : Theme.faint
+                }
             }
 
             Text {
@@ -194,30 +260,67 @@ PillSurface {
                     font.weight: Font.Medium
                     font.pixelSize: 16 * root.s
                 }
-                Text {
-                    id: sysLabel
+                Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "SYSTEM"
-                    color: Theme.subtle
-                    font.family: Theme.font
-                    font.pixelSize: 10 * root.s
-                    font.weight: Font.DemiBold
-                    font.capitalization: Font.AllUppercase
-                    font.letterSpacing: 1.8 * root.s
+                    spacing: 2 * root.s
+
+                    Text {
+                        id: sysLabel
+                        text: "SYSTEM"
+                        color: Theme.subtle
+                        font.family: Theme.font
+                        font.pixelSize: 10 * root.s
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1.8 * root.s
+                    }
+                    Text {
+                        text: Sysmon.uptime
+                        color: Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 8.5 * root.s
+                        font.weight: Font.Bold
+                        font.letterSpacing: 0.7 * root.s
+                        font.features: { "tnum": 1 }
+                    }
                 }
             }
 
-            Text {
+            SysmonTarget {
+                id: processes
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: Sysmon.uptime
-                color: Theme.dim
-                font.family: Theme.font
-                font.pixelSize: 9.5 * root.s
-                font.weight: Font.Bold
-                font.capitalization: Font.AllUppercase
-                font.letterSpacing: 1.1 * root.s
-                font.features: { "tnum": 1 }
+                width: processesLabel.implicitWidth + 8 * root.s
+                height: parent.height
+                key: "apps"
+                onTargeted: root.focusKey = key
+                onActivated: {
+                    root.focusKey = key;
+                    root.requestDetail(key);
+                }
+
+                Row {
+                    id: processesLabel
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 5 * root.s
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "PROCESSES"
+                        color: root.focusKey === "apps" ? Theme.cream : Theme.subtle
+                        font.family: Theme.font
+                        font.pixelSize: 10 * root.s
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1.3 * root.s
+                    }
+                    GlyphIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "chevron-right"
+                        width: 10 * root.s
+                        height: width
+                        color: root.focusKey === "apps" ? Theme.cream : Theme.iconDim
+                    }
+                }
             }
         }
 
@@ -228,26 +331,40 @@ PillSurface {
             height: 110 * root.s
 
             Repeater {
+                id: dials
                 model: root.dialKeys
 
-                Dial {
+                SysmonTarget {
+                    id: tile
                     required property int index
                     required property var modelData
-                    readonly property string key: modelData
+                    key: modelData
+                    onTargeted: root.focusKey = key
+                    onActivated: {
+                        root.focusKey = key;
+                        root.requestDetail(key);
+                    }
                     readonly property int val: key === "cpu" ? Sysmon.cpu : key === "gpu" ? Sysmon.gpu : Sysmon.memPct
 
                     x: root.dialKeys.length > 1
                         ? index * (parent.width - width) / (root.dialKeys.length - 1)
                         : (parent.width - width) / 2
 
-                    arc: val
-                    big: key === "mem" ? Sysmon.memUsedGb.toFixed(1) : "" + val
-                    unit: key === "mem" ? "" : "%"
-                    shrink: key !== "mem" && val >= 100
-                    label: key
-                    sub: key === "cpu" ? (Sysmon.cpuTemp >= 0 ? Sysmon.cpuTemp + "°" : "")
-                        : key === "gpu" ? (Sysmon.gpuTemp >= 0 ? Sysmon.gpuTemp + "°" : "")
-                        : "/ " + Sysmon.memTotalGb.toFixed(0) + " GB"
+                    width: 110 * root.s
+                    height: parent.height
+
+                    Dial {
+                        anchors.fill: parent
+                        selected: root.focusKey === tile.key
+                        arc: Math.max(0, tile.val)
+                        big: tile.key === "mem" ? Sysmon.memUsedGb.toFixed(1) : tile.val < 0 ? "—" : "" + tile.val
+                        unit: tile.key === "mem" || tile.val < 0 ? "" : "%"
+                        shrink: tile.key !== "mem" && tile.val >= 100
+                        label: tile.key
+                        sub: tile.key === "cpu" ? (Sysmon.cpuTemp >= 0 ? Sysmon.cpuTemp + "°" : "")
+                            : tile.key === "gpu" ? (Sysmon.gpuTemp >= 0 ? Sysmon.gpuTemp + "°" : "")
+                            : "/ " + Sysmon.memTotalGb.toFixed(0) + " GB"
+                    }
                 }
             }
         }
@@ -267,13 +384,20 @@ PillSurface {
             height: 30 * root.s
 
             Repeater {
+                id: cells
                 model: root.cellKeys
 
-                Item {
+                SysmonTarget {
                     id: cell
                     required property int index
                     required property var modelData
-                    readonly property string key: modelData
+                    key: modelData
+                    onTargeted: root.focusKey = key
+                    onActivated: {
+                        root.focusKey = key;
+                        root.requestDetail(key);
+                    }
+                    drillDown: key !== "vram"
 
                     width: parent.width / root.cellKeys.length
                     height: parent.height
@@ -294,18 +418,29 @@ PillSurface {
                         anchors.centerIn: parent
                         spacing: 6 * root.s
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            text: cell.key === "net" ? "Net · " + (Math.max(Sysmon.netDown, Sysmon.netUp)>=1?"MB/S": "KB/S")
-                                : cell.key === "disk" ? "Disk · %"
-                                : cell.key === "swap" ? "Swap · GB"
-                                : "VRAM · GB"
-                            color: Theme.faint
-                            font.family: Theme.font
-                            font.pixelSize: 8 * root.s
-                            font.weight: Font.Bold
-                            font.capitalization: Font.AllUppercase
-                            font.letterSpacing: 0.9 * root.s
+                            spacing: 3 * root.s
+                            Text {
+                                text: cell.key === "net" ? "Net · " + (Math.max(Sysmon.netDown, Sysmon.netUp) >= 1 ? "MB/S" : "KB/S")
+                                    : cell.key === "disk" ? "Disk · %"
+                                    : cell.key === "swap" ? "Swap · GB"
+                                    : "VRAM · GB"
+                                color: Theme.faint
+                                font.family: Theme.font
+                                font.pixelSize: 8 * root.s
+                                font.weight: Font.Bold
+                                font.capitalization: Font.AllUppercase
+                                font.letterSpacing: 0.9 * root.s
+                            }
+                            GlyphIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: cell.drillDown
+                                name: "chevron-right"
+                                width: 7 * root.s
+                                height: width
+                                color: root.focusKey === cell.key ? Theme.cream : Theme.faint
+                            }
                         }
 
                         Row {

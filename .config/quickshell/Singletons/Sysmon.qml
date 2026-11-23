@@ -3,155 +3,248 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/**
- * System-vitals backend for the 系 SYSTEM surface. Polls CPU, memory, swap,
- * network, disk and (when a discrete GPU is present) GPU load, temperature and
- * VRAM, exposing them as live properties the surface binds to. Polling only runs
- * while `open` is true, on three decoupled cadences so a slow source never
- * stalls the dials: the cheap /proc and hwmon reads refresh every 500ms, the GPU
- * query every 1s, and disk plus uptime every 5s. Opening the surface primes all
- * three at once so the dials are populated immediately.
- *
- * CPU load is a two-sample delta of /proc/stat (busy vs total jiffies); network
- * rates are a two-sample delta of /proc/net/dev summed over every interface but
- * loopback, divided by the fast interval. CPU temperature resolves once to the
- * most accurate hwmon sensor available: AMD Tdie, else Intel "Package id 0",
- * else AMD Tctl, else the first temp1_input. The GPU path resolves once to
- * nvidia (nvidia-smi), AMD (sysfs gpu_busy_percent), Intel (i915 or xe) or
- * none; a GPU-less machine reports `hasGpu` false so the surface drops to two
- * dials and hides the VRAM cell. Disk is the root filesystem's used percent.
- *
- * Intel exposes no busy percent in sysfs and the PMU needs CAP_PERFMON, so
- * load is summed from the DRM fdinfo of every process the user can read (the
- * same numbers nvtop shows per process): i915 reports render busy time in ns,
- * xe reports render cycles against a GT timestamp. Both are cumulative, so the
- * dial is the delta between two polls; clients sharing one file description
- * are deduped by `drm-client-id`. Package temperature comes from the card's
- * hwmon (i915 temp1, xe temp2), absent on iGPUs and kernels before 6.12/6.15.
- * VRAM has no sysfs total on Intel, so the cell stays hidden.
- */
+/** Open-session samples shared by the overview and its hardware pages. */
 Singleton {
     id: root
 
     property bool open: false
+    property string page: ""
+    readonly property string probe: Quickshell.shellDir + "/lib/sysmon.py"
+
+    property var hardware: ({})
+    property var volume: ({})
+    property var adapter: ({})
+    property var gpuProperties: ({})
+    property var gpuReadings: ({})
+    readonly property var cpuProperties: hardware.cpu || ({})
+    readonly property var memoryProperties: hardware.memory || ({})
+    readonly property var gpuDevice: hardware.gpu || ({})
+    readonly property bool hasGpu: !!gpuDevice.vendor
+    readonly property bool hasVram: vramTotalGb > 0
+    readonly property real vramUsedGb: gpuReadings.vramUsed ?? 0
+    readonly property real vramTotalGb: gpuReadings.vramTotal ?? 0
 
     property int cpu: 0
     property int cpuTemp: -1
-
-    property bool hasGpu: false
-    property string gpuVendor: ""
-    property string gpuDev: ""
-    property string gpuPdev: ""
-    property var gpuPrev: null
-    property int gpu: 0
+    property int gpu: -1
     property int gpuTemp: -1
-    property bool hasVram: false
-    property real vramUsedGb: 0
-    property real vramTotalGb: 0
-
     property real memUsedGb: 0
     property real memTotalGb: 0
     property int memPct: 0
     property real swapUsedGb: 0
+    property real swapTotalGb: 0
+    readonly property int swapPct: swapTotalGb > 0 ? Math.round(100 * swapUsedGb / swapTotalGb) : 0
+    property string swapBacking: ""
+    property var swapUsageHistory: []
+    property var swapInHistory: []
+    property var swapOutHistory: []
+    property real swapInRate: 0
+    property real swapOutRate: 0
+    property var previousSwap: null
 
     property real netDown: 0
     property real netUp: 0
+    property string netInterface: ""
+    property real received: 0
+    property real sent: 0
+    property real receiveRate: 0
+    property real sendRate: 0
 
-    property int diskPct: 0
-    property string uptime: ""
+    property int uptimeSeconds: -1
+    readonly property string uptime: uptimeSeconds < 0 ? ""
+        : "UP " + Math.floor(uptimeSeconds / 86400) + "D "
+            + pad(Math.floor(uptimeSeconds / 3600) % 24) + ":" + pad(Math.floor(uptimeSeconds / 60) % 60)
+    property real diskUsed: 0
+    property real diskAvailable: 0
+    property real diskTotal: 0
+    readonly property int diskPct: diskUsed + diskAvailable > 0
+        ? Math.ceil(100 * diskUsed / (diskUsed + diskAvailable)) : 0
 
-    property string tempPath: ""
+    property var cpuHistory: []
+    property var memoryHistory: []
+    property var gpuHistory: []
+    property var receiveHistory: []
+    property var sendHistory: []
 
     property real prevCpuTotal: 0
     property real prevCpuIdle: 0
-    property real prevRx: 0
-    property real prevTx: 0
     property real prevNetTime: 0
+    property var prevInterfaces: ({})
+    property var prevGpu: null
+    property string gpuPage: ""
+    property string slowPage: ""
+    property bool slowPending: false
 
-    /**
-     * Turns a cumulative fdinfo sample into a percent: i915 render ns against
-     * wall time, xe render cycles against the GT timestamp delta. The first
-     * sample after opening only seeds the baseline.
-     */
-    function fdinfoLoad(ns, cyc, tot) {
-        var now = Date.now();
-        var prev = root.gpuPrev;
-        root.gpuPrev = { ns: ns, cyc: cyc, tot: tot, t: now };
-        if (!prev || now <= prev.t)
-            return 0;
-        var pct = tot > prev.tot
-            ? (cyc - prev.cyc) * 100 / (tot - prev.tot)
-            : (ns - prev.ns) / ((now - prev.t) * 1e4);
-        return Math.max(0, Math.min(100, Math.round(pct)));
+    function pad(n) {
+        return String(n).padStart(2, "0");
     }
 
-    function primeAll() {
-        if (tempPath.length === 0 || gpuVendor.length === 0) {
-            detectProc.running = true;
+    function push(history, value, limit) {
+        return history.slice(1 - limit).concat([value]);
+    }
+
+    function unpack(text) {
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function refreshGpu() {
+        if (open && hasGpu && !gpuProc.running) {
+            gpuPage = page;
+            gpuProc.running = true;
+        }
+    }
+
+    function refreshSlow() {
+        if (slowProc.running) {
+            slowPending = true;
             return;
         }
-        prevCpuTotal = 0;
-        prevRx = 0;
-        prevNetTime = 0;
-        gpuPrev = null;
-        fastProc.running = true;
-        if (hasGpu)
-            gpuProc.running = true;
+        slowPage = page;
+        slowPending = false;
         slowProc.running = true;
     }
 
-    onOpenChanged: if (open) primeAll()
-
-    function fmtUptime(sec) {
-        var d = Math.floor(sec / 86400);
-        var h = Math.floor((sec % 86400) / 3600);
-        var m = Math.floor((sec % 3600) / 60);
-        var hh = h < 10 ? "0" + h : "" + h;
-        var mm = m < 10 ? "0" + m : "" + m;
-        return "UP " + d + "D " + hh + ":" + mm;
+    function setInterface(name) {
+        if (netInterface === name)
+            return;
+        netInterface = name;
+        adapter = ({});
+        receiveHistory = [];
+        sendHistory = [];
+        received = 0;
+        sent = 0;
+        receiveRate = 0;
+        sendRate = 0;
     }
 
-    Component.onCompleted: detectProc.running = true
+    function sampleNetwork(interfaces) {
+        const now = Date.now();
+        const dt = (now - prevNetTime) / 1000;
+        let down = 0;
+        let up = 0;
+        for (const [name, counters] of Object.entries(interfaces)) {
+            const previous = prevInterfaces[name];
+            if (!previous || dt <= 0)
+                continue;
+            down += Math.max(0, counters[0] - previous[0]) / dt;
+            up += Math.max(0, counters[1] - previous[1]) / dt;
+        }
+        netDown = down / 1048576;
+        netUp = up / 1048576;
+        const current = interfaces[netInterface];
+        const previous = prevInterfaces[netInterface];
+        if (current) {
+            received = current[0];
+            sent = current[1];
+            if (previous && dt > 0) {
+                receiveRate = Math.max(0, received - previous[0]) / dt;
+                sendRate = Math.max(0, sent - previous[1]) / dt;
+                receiveHistory = push(receiveHistory, receiveRate, 120);
+                sendHistory = push(sendHistory, sendRate, 120);
+            }
+        }
+        prevInterfaces = interfaces;
+        prevNetTime = now;
+    }
+
+    // Intel's busiest engine gives one GPU-wide reading without adding overlapping work.
+    function intelLoad(sample) {
+        const previous = prevGpu;
+        prevGpu = sample;
+        if (!previous || sample.time <= previous.time)
+            return null;
+        const elapsed = sample.time - previous.time;
+        const engines = {};
+        for (const [id, counters] of Object.entries(sample.clients)) {
+            const last = previous.clients[id] || {};
+            for (const [key, value] of Object.entries(counters)) {
+                let engine;
+                let utilization;
+                if (key.startsWith("cycles-")) {
+                    engine = key.slice(7);
+                    const clock = "total-cycles-" + engine;
+                    const delta = counters[clock] - last[clock];
+                    if (!(delta > 0))
+                        continue;
+                    utilization = (value - (last[key] ?? 0)) / delta;
+                } else if (key.startsWith("engine-") && !key.startsWith("engine-capacity-")) {
+                    engine = key.slice(7);
+                    if (counters["total-cycles-" + engine] !== undefined
+                        && counters["cycles-" + engine] !== undefined)
+                        continue;
+                    utilization = (value - (last[key] ?? 0)) / elapsed;
+                } else {
+                    continue;
+                }
+                const capacity = Math.max(1, counters["engine-capacity-" + engine] ?? 1);
+                engines[engine] = (engines[engine] || 0) + Math.max(0, utilization) / capacity;
+            }
+        }
+        return Math.min(100, Math.round(100 * Math.max(0, ...Object.values(engines))));
+    }
+
+    function sampleSwap(inPages, outPages) {
+        const now = Date.now();
+        const previous = previousSwap;
+        previousSwap = swapTotalGb > 0 ? { time: now, input: inPages, output: outPages } : null;
+        if (!previousSwap) {
+            swapInRate = 0;
+            swapOutRate = 0;
+            return;
+        }
+        const dt = previous ? (now - previous.time) / 1000 : 0;
+        if (dt <= 0 || !hardware.pageSize)
+            return;
+        swapInRate = Math.max(0, inPages - previous.input) * hardware.pageSize / dt;
+        swapOutRate = Math.max(0, outPages - previous.output) * hardware.pageSize / dt;
+        swapInHistory = push(swapInHistory, swapInRate, 120);
+        swapOutHistory = push(swapOutHistory, swapOutRate, 120);
+    }
+
+    onOpenChanged: {
+        if (!open)
+            return;
+        cpuHistory = [];
+        memoryHistory = [];
+        swapUsageHistory = [];
+        swapInHistory = [];
+        swapOutHistory = [];
+        swapInRate = 0;
+        swapOutRate = 0;
+        previousSwap = null;
+        gpuHistory = [];
+        receiveHistory = [];
+        sendHistory = [];
+        prevCpuTotal = 0;
+        prevNetTime = 0;
+        prevInterfaces = ({});
+        prevGpu = null;
+        fastProc.running = true;
+        refreshGpu();
+        refreshSlow();
+    }
+    onPageChanged: {
+        if (open) {
+            refreshSlow();
+            if (page === "gpu")
+                refreshGpu();
+        }
+    }
 
     Process {
         id: detectProc
-        command: ["sh", "-c",
-            "tp=''; for h in /sys/class/hwmon/hwmon*; do for l in \"$h\"/temp*_label; do [ -r \"$l\" ] || continue; [ \"$(cat \"$l\")\" = Tdie ] && { tp=\"${l%_label}_input\"; break 2; }; done; done; "
-            + "[ -z \"$tp\" ] && for h in /sys/class/hwmon/hwmon*; do for l in \"$h\"/temp*_label; do [ -r \"$l\" ] || continue; [ \"$(cat \"$l\")\" = 'Package id 0' ] && { tp=\"${l%_label}_input\"; break 2; }; done; done; "
-            + "[ -z \"$tp\" ] && for h in /sys/class/hwmon/hwmon*; do for l in \"$h\"/temp*_label; do [ -r \"$l\" ] || continue; [ \"$(cat \"$l\")\" = Tctl ] && { tp=\"${l%_label}_input\"; break 2; }; done; done; "
-            + "[ -z \"$tp\" ] && for h in /sys/class/hwmon/hwmon*; do [ -r \"$h/temp1_input\" ] && { tp=\"$h/temp1_input\"; break; }; done; "
-            + "echo \"TEMP $tp\"; "
-            + "if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then echo 'GPU nvidia'; "
-            + "else for d in /sys/class/drm/card*/device; do [ -r \"$d/vendor\" ] || continue; [ \"$(cat \"$d/vendor\")\" = 0x1002 ] && [ -r \"$d/gpu_busy_percent\" ] && { v=0; [ -r \"$d/mem_info_vram_total\" ] && v=1; echo \"GPU amd $d $v\"; exit; }; done; "
-            + "for d in /sys/class/drm/card*/device; do [ -r \"$d/vendor\" ] || continue; [ \"$(cat \"$d/vendor\")\" = 0x8086 ] || continue; case \"$(readlink \"$d/driver\")\" in */i915|*/xe) echo \"GPU intel $d $(basename \"$(readlink -f \"$d\")\")\"; exit;; esac; done; fi"]
+        running: true
+        command: ["python3", "-B", root.probe, "detect"]
         stdout: StdioCollector {
             onStreamFinished: {
-                var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var p = lines[i].trim().split(/\s+/);
-                    if (p[0] === "TEMP" && p.length > 1)
-                        root.tempPath = p.slice(1).join(" ");
-                    else if (p[0] === "GPU" && p[1] === "nvidia") {
-                        root.gpuVendor = "nvidia";
-                        root.hasGpu = true;
-                        root.hasVram = true;
-                    } else if (p[0] === "GPU" && p[1] === "amd") {
-                        root.gpuVendor = "amd";
-                        root.gpuDev = p.slice(2, p.length - 1).join(" ");
-                        root.hasGpu = true;
-                        root.hasVram = p[p.length - 1] === "1";
-                    } else if (p[0] === "GPU" && p[1] === "intel") {
-                        root.gpuVendor = "intel";
-                        root.gpuDev = p.slice(2, p.length - 1).join(" ");
-                        root.gpuPdev = p[p.length - 1];
-                        root.hasGpu = true;
-                        root.hasVram = false;
-                    }
-                }
-                if (root.gpuVendor.length === 0)
-                    root.gpuVendor = "none";
-                if (root.open)
-                    root.primeAll();
+                const data = root.unpack(text);
+                if (data)
+                    root.hardware = data;
+                Qt.callLater(root.refreshGpu);
             }
         }
     }
@@ -161,116 +254,101 @@ Singleton {
         command: ["sh", "-c",
             "read -r _ a b c d e f g h _ < /proc/stat; echo \"CPU $((a+b+c+d+e+f+g+h)) $((d+e))\"; "
             + "awk '/^MemTotal:/{mt=$2}/^MemAvailable:/{ma=$2}/^SwapTotal:/{st=$2}/^SwapFree:/{sf=$2}END{print \"MEM\",mt,ma,st,sf}' /proc/meminfo; "
-            + "awk 'NR>2{gsub(\":\",\" \");if($1!=\"lo\"){rx+=$2;tx+=$10}}END{print \"NET\",rx+0,tx+0}' /proc/net/dev; "
+            + "awk '$1==\"pswpin\"{i=$2}$1==\"pswpout\"{o=$2}END{print \"SWAP\",i+0,o+0}' /proc/vmstat; "
+            + "awk -F: 'NR>2{gsub(/^[ \\t]+|[ \\t]+$/, \"\", $1); if($1!=\"lo\"){n=split($2,a,/[ \\t]+/); k=(a[1]==\"\"); print \"NET\", $1, a[1+k], a[9+k]}}' /proc/net/dev; "
             + "if [ -n \"$1\" ] && [ -r \"$1\" ]; then echo \"TMP $(cat \"$1\")\"; else echo 'TMP -'; fi",
-            "_", root.tempPath]
+            "_", root.hardware.sensor || ""]
         stdout: StdioCollector {
             onStreamFinished: {
-                var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var p = lines[i].trim().split(/\s+/);
+                if (!root.open)
+                    return;
+                const interfaces = Object.create(null);
+                for (const line of text.trim().split("\n")) {
+                    const p = line.trim().split(/\s+/);
                     if (p[0] === "CPU") {
-                        var total = parseFloat(p[1]);
-                        var idle = parseFloat(p[2]);
-                        if (root.prevCpuTotal > 0) {
-                            var dt = total - root.prevCpuTotal;
-                            var di = idle - root.prevCpuIdle;
-                            root.cpu = dt > 0 ? Math.max(0, Math.min(100, Math.round(100 * (dt - di) / dt))) : 0;
+                        const total = Number(p[1]);
+                        const idle = Number(p[2]);
+                        const dt = total - root.prevCpuTotal;
+                        if (root.prevCpuTotal > 0 && dt > 0) {
+                            const di = idle - root.prevCpuIdle;
+                            root.cpu = Math.max(0, Math.min(100, Math.round(100 * (dt - di) / dt)));
+                            root.cpuHistory = root.push(root.cpuHistory, root.cpu, 120);
                         }
                         root.prevCpuTotal = total;
                         root.prevCpuIdle = idle;
                     } else if (p[0] === "MEM") {
-                        var mt = parseFloat(p[1]);
-                        var ma = parseFloat(p[2]);
-                        var st = parseFloat(p[3]);
-                        var sf = parseFloat(p[4]);
-                        root.memTotalGb = mt / 1048576;
-                        root.memUsedGb = (mt - ma) / 1048576;
-                        root.memPct = mt > 0 ? Math.round(100 * (mt - ma) / mt) : 0;
-                        root.swapUsedGb = (st - sf) / 1048576;
-                    } else if (p[0] === "NET") {
-                        var rx = parseFloat(p[1]);
-                        var tx = parseFloat(p[2]);
-                        var now = Date.now();
-                        var dt = (now - root.prevNetTime) / 1000;
-                        if (root.prevNetTime > 0 && dt > 0) {
-                            root.netDown = Math.max(0, (rx - root.prevRx) / dt / 1048576);
-                            root.netUp = Math.max(0, (tx - root.prevTx) / dt / 1048576);
+                        const [total, available, swapTotal, swapFree] = p.slice(1).map(Number);
+                        root.memTotalGb = total / 1048576;
+                        root.memUsedGb = (total - available) / 1048576;
+                        root.memPct = total > 0 ? Math.round(100 * (total - available) / total) : 0;
+                        if (total > 0)
+                            root.memoryHistory = root.push(root.memoryHistory, root.memPct, 120);
+                        if (root.swapTotalGb > 0 && swapTotal === 0) {
+                            root.swapUsageHistory = [];
+                            root.swapInHistory = [];
+                            root.swapOutHistory = [];
                         }
-                        root.prevRx = rx;
-                        root.prevTx = tx;
-                        root.prevNetTime = now;
+                        root.swapTotalGb = swapTotal / 1048576;
+                        root.swapUsedGb = (swapTotal - swapFree) / 1048576;
+                        if (swapTotal > 0)
+                            root.swapUsageHistory = root.push(root.swapUsageHistory, root.swapPct, 120);
+                    } else if (p[0] === "SWAP") {
+                        root.sampleSwap(Number(p[1]), Number(p[2]));
+                    } else if (p[0] === "NET") {
+                        interfaces[p[1]] = [Number(p[2]), Number(p[3])];
                     } else if (p[0] === "TMP") {
-                        root.cpuTemp = p[1] === "-" ? -1 : Math.round(parseFloat(p[1]) / 1000);
+                        const temp = Number(p[1]);
+                        root.cpuTemp = isFinite(temp) ? Math.round(temp / 1000) : -1;
                     }
                 }
+                root.sampleNetwork(interfaces);
             }
         }
     }
 
     Process {
         id: gpuProc
-        command: root.gpuVendor === "nvidia"
-            ? ["sh", "-c", "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,memory.used,memory.total --format=csv,noheader,nounits | head -1"]
-            : root.gpuVendor === "intel"
-            ? ["sh", "-c",
-                "d=\"$1\"; t=$( { cat \"$d\"/hwmon/hwmon*/temp2_input || cat \"$d\"/hwmon/hwmon*/temp1_input; } 2>/dev/null | head -1); echo \"TEMP ${t:--1000}\"; "
-                + "for f in $(find /proc/[0-9]*/fd -lname '/dev/dri/*' 2>/dev/null); do cat \"${f%/fd/*}/fdinfo/${f##*/}\"; done 2>/dev/null | awk -v pdev=\"$2\" "
-                + "'/^drm-pdev:/{p=$2} /^drm-client-id:/{dup=seen[$2]++} "
-                + "p==pdev && !dup && /^drm-engine-render:/{ns+=$2} p==pdev && !dup && /^drm-cycles-rcs:/{cyc+=$2} p==pdev && /^drm-total-cycles-rcs:/{tot=$2} "
-                + "END{print \"FD\", ns+0, cyc+0, tot+0}'",
-                "_", root.gpuDev, root.gpuPdev]
-            : ["sh", "-c",
-                "d=\"$1\"; echo \"BUSY $(cat \"$d/gpu_busy_percent\" 2>/dev/null)\"; "
-                + "t=$(cat \"$d\"/hwmon/hwmon*/temp1_input 2>/dev/null | head -1); echo \"TEMP ${t:-0}\"; "
-                + "echo \"VU $(cat \"$d/mem_info_vram_used\" 2>/dev/null)\"; echo \"VT $(cat \"$d/mem_info_vram_total\" 2>/dev/null)\"",
-                "_", root.gpuDev]
+        command: ["python3", "-B", root.probe, "gpu", root.gpuDevice.vendor || "",
+                  root.gpuDevice.path || "", root.gpuDevice.pci || "", root.gpuDevice.card || "", root.gpuPage]
         stdout: StdioCollector {
             onStreamFinished: {
-                if (root.gpuVendor === "nvidia") {
-                    var c = this.text.trim().split(",");
-                    if (c.length >= 4) {
-                        root.gpu = Math.max(0, Math.min(100, Math.round(parseFloat(c[0]) || 0)));
-                        root.gpuTemp = Math.round(parseFloat(c[1]) || 0);
-                        root.vramUsedGb = (parseFloat(c[2]) || 0) / 1024;
-                        root.vramTotalGb = (parseFloat(c[3]) || 0) / 1024;
-                    }
+                const data = root.unpack(text);
+                if (!data || !root.open)
                     return;
-                }
-                var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var p = lines[i].trim().split(/\s+/);
-                    if (p[0] === "BUSY")
-                        root.gpu = Math.max(0, Math.min(100, Math.round(parseFloat(p[1]) || 0)));
-                    else if (p[0] === "FD")
-                        root.gpu = root.fdinfoLoad(parseFloat(p[1]) || 0, parseFloat(p[2]) || 0, parseFloat(p[3]) || 0);
-                    else if (p[0] === "TEMP")
-                        root.gpuTemp = Math.round((parseFloat(p[1]) || 0) / 1000);
-                    else if (p[0] === "VU")
-                        root.vramUsedGb = (parseFloat(p[1]) || 0) / 1073741824;
-                    else if (p[0] === "VT")
-                        root.vramTotalGb = (parseFloat(p[1]) || 0) / 1073741824;
-                }
+                root.gpuReadings = data;
+                const usage = data.clients ? root.intelLoad(data) : data.usage;
+                root.gpu = usage == null ? -1 : Math.max(0, Math.min(100, Math.round(usage)));
+                root.gpuTemp = data.temp == null ? -1 : Math.round(data.temp);
+                root.gpuHistory = root.push(root.gpuHistory, root.gpu < 0 ? null : root.gpu, 60);
             }
         }
     }
 
     Process {
         id: slowProc
-        command: ["sh", "-c",
-            "df -P / | awk 'NR==2{gsub(\"%\",\"\",$5);print \"DISK \"$5}'; awk '{print \"UP \"int($1)}' /proc/uptime"]
+        command: ["python3", "-B", root.probe, "slow", root.slowPage,
+                  root.gpuDevice.pci || "", root.gpuDevice.path || ""]
         stdout: StdioCollector {
             onStreamFinished: {
-                var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var p = lines[i].trim().split(/\s+/);
-                    if (p[0] === "DISK")
-                        root.diskPct = parseInt(p[1], 10) || 0;
-                    else if (p[0] === "UP")
-                        root.uptime = root.fmtUptime(parseInt(p[1], 10) || 0);
-                }
+                const data = root.unpack(text);
+                if (!data || !root.open)
+                    return;
+                root.diskUsed = data.used;
+                root.diskAvailable = data.available;
+                root.diskTotal = data.total;
+                root.uptimeSeconds = data.uptime == null ? -1 : Math.floor(data.uptime);
+                root.setInterface(data.netInterface);
+                if (data.net)
+                    root.adapter = data.net;
+                if (data.swapBacking !== undefined)
+                    root.swapBacking = data.swapBacking;
+                if (data.disk)
+                    root.volume = data.disk;
+                if (data.gpu)
+                    root.gpuProperties = data.gpu;
             }
         }
+        onExited: if (root.open && root.slowPending) Qt.callLater(root.refreshSlow)
     }
 
     Timer {
@@ -284,13 +362,13 @@ Singleton {
         interval: 1000
         running: root.open && root.hasGpu
         repeat: true
-        onTriggered: if (!gpuProc.running) gpuProc.running = true
+        onTriggered: root.refreshGpu()
     }
 
     Timer {
-        interval: 5000
+        interval: 1000
         running: root.open
         repeat: true
-        onTriggered: if (!slowProc.running) slowProc.running = true
+        onTriggered: root.refreshSlow()
     }
 }

@@ -285,6 +285,12 @@ Singleton {
         root.saveHistory();
     }
 
+    /** Drop every history entry; the word count is kept apart and stays. */
+    function wipeHistory() {
+        root.history = [];
+        root.saveHistory();
+    }
+
     function copyText(text) {
         copyProc.command = ["wl-copy", "--", text];
         copyProc.running = true;
