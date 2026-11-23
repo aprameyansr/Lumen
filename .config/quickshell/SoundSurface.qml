@@ -86,9 +86,15 @@ PillSurface {
 
     readonly property bool micTab: tab === "mic"
 
-    ameForm: focusBand >= 0 ? "tick" : "off"
+    ameForm: soundTabs.pointedOption ? "soul" : focusBand >= 0 ? "tick" : "off"
     amePoint: {
         void root.focusBand;
+        const option = soundTabs.pointedOption;
+        if (option) {
+            void soundTabs.x;
+            void option.x;
+            return option.mapToItem(root, option.width / 2, option.height + 4 * root.s);
+        }
         const b = bandRep.itemAt(root.focusBand);
         return b ? b.tickCenter : Qt.point(width / 2, height / 2);
     }
@@ -574,6 +580,7 @@ PillSurface {
             height: 24 * root.s
 
             Row {
+                id: soundTitle
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 8 * root.s
@@ -595,16 +602,30 @@ PillSurface {
                     font.weight: Font.DemiBold
                     font.letterSpacing: 1.6 * root.s
                 }
-                SettingsSeg {
-                    anchors.verticalCenter: parent.verticalCenter
-                    s: root.s
-                    options: [{ label: "Apps", value: "apps" }, { label: "Mic", value: "mic" }, { label: "EQ", value: "eq" }, { label: "Combine", value: "share" }]
-                    value: root.tab
-                    onPicked: (v) => { root.tab = v; root.editing = false; root.routeStream = null; root.pickerOpen = false; root.boostOpen = false; root.aeqOpen = false; root.closeShareForm(); }
+            }
+
+            SettingsSeg {
+                id: soundTabs
+                anchors.verticalCenter: parent.verticalCenter
+                x: Math.max(soundTitle.width + 8 * root.s,
+                    Math.min((parent.width - width) / 2, soundActions.x - width - 8 * root.s))
+                s: root.s
+                options: [{ label: "Apps", value: "apps" }, { label: "Mic", value: "mic" },
+                          { label: "EQ", value: "eq" }, { label: "Combine", value: "share" }]
+                value: root.tab
+                onPicked: value => {
+                    root.tab = value;
+                    root.editing = false;
+                    root.routeStream = null;
+                    root.pickerOpen = false;
+                    root.boostOpen = false;
+                    root.aeqOpen = false;
+                    root.closeShareForm();
                 }
             }
 
             Row {
+                id: soundActions
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 14 * root.s

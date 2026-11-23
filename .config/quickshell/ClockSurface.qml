@@ -5,8 +5,8 @@ import QtQuick.Controls
 import "Singletons"
 
 /**
- * 刻 CLOCK surface: stopwatch, timer and world clock behind one sliding tab
- * capsule in the header, with a calendar link beside it. Everything runs in the
+ * 刻 CLOCK surface: stopwatch, timer and world clock behind segmented tabs
+ * in the header, with a calendar link beside them. Everything runs in the
  * Clocks singleton, so this page is only a view: closing it, or reloading the
  * shell, never stops a stopwatch or a timer.
  *
@@ -254,7 +254,7 @@ PillSurface {
         : (root.searching ? searchBox
         : (root.worldIndex >= 0 ? (root.worldIndex < root.worldCount - 1 ? worldRepeater.itemAt(root.worldIndex) : addRow) : null))
 
-    ameForm: root.tab === "stopwatch" ? (Clocks.swIdle ? "off" : "seam")
+    ameForm: clockTabs.pointedOption ? "soul" : root.tab === "stopwatch" ? (Clocks.swIdle ? "off" : "seam")
         : (root.tab === "timer" ? (Clocks.tmIdle ? "off" : "seam")
         : (root.focusedWorldRow ? "rowseam" : "off"))
 
@@ -263,6 +263,12 @@ PillSurface {
         void root.height;
         void root.liveNow;
         void root.tab;
+        const option = clockTabs.pointedOption;
+        if (option) {
+            void clockTabs.x;
+            void option.x;
+            return option.mapToItem(root, option.width / 2, option.height + 4 * root.s);
+        }
         if (root.tab === "stopwatch") {
             void sweep.width;
             return sweep.mapToItem(root, sweep.width * ((root.swElapsed % 60000) / 60000), sweep.height / 2);
@@ -287,34 +293,6 @@ PillSurface {
         font.weight: Font.Bold
         font.capitalization: Font.AllUppercase
         font.letterSpacing: 1.2 * root.s
-    }
-
-    component TabChip: Item {
-        id: tchip
-        property string key: ""
-        property string label: ""
-        width: tchipText.implicitWidth + 17 * root.s
-        height: parent ? parent.height : 0
-
-        Text {
-            id: tchipText
-            anchors.centerIn: parent
-            text: tchip.label
-            color: root.tab === tchip.key ? Theme.cream : (tchipArea.containsMouse ? Theme.subtle : Theme.faint)
-            font.family: Theme.font
-            font.pixelSize: 9.5 * root.s
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.4 * root.s
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
-        }
-
-        MouseArea {
-            id: tchipArea
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: Flags.clockTab = tchip.key
-        }
     }
 
     /** Primary (flame tint) or secondary (outlined) action button. */
@@ -519,7 +497,7 @@ PillSurface {
         anchors.right: parent.right
         spacing: 0
 
-        // ── header: kanji + title, tab capsule, calendar link ──
+        // ── header: title, tabs, calendar link ──
         Item {
             width: parent.width
             height: 22 * root.s
@@ -550,68 +528,38 @@ PillSurface {
                 }
             }
 
-            Row {
+            SettingsSeg {
+                id: clockTabs
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                s: root.s
+                options: [{ label: "Stopwatch", value: "stopwatch" },
+                          { label: "Timer", value: "timer" },
+                          { label: "World", value: "world" }]
+                value: root.tab
+                onPicked: value => Flags.clockTab = value
+            }
+
+            Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 10 * root.s
+                width: 16 * root.s
+                height: 16 * root.s
 
-                Rectangle {
-                    id: tabCapsule
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: tabRow.implicitWidth + 6 * root.s
-                    height: 22 * root.s
-                    radius: height / 2
-                    color: Theme.frameBg
-                    border.width: 1
-                    border.color: Theme.hairSoft
-
-                    readonly property Item currentChip: root.tab === "stopwatch" ? chipSw : (root.tab === "timer" ? chipTm : chipWorld)
-
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: parent.height - 4 * root.s
-                        radius: height / 2
-                        x: tabRow.x + tabCapsule.currentChip.x + 2 * root.s
-                        width: tabCapsule.currentChip.width - 4 * root.s
-                        color: Qt.alpha(Theme.onGlow, 0.18)
-                        border.width: 1
-                        border.color: Qt.alpha(Theme.onGlow, 0.45)
-                        Behavior on x { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-                        Behavior on width { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-                    }
-
-                    Row {
-                        id: tabRow
-                        anchors.left: parent.left
-                        anchors.leftMargin: 3 * root.s
-                        height: parent.height
-
-                        TabChip { id: chipSw; key: "stopwatch"; label: "Stopwatch" }
-                        TabChip { id: chipTm; key: "timer"; label: "Timer" }
-                        TabChip { id: chipWorld; key: "world"; label: "World" }
-                    }
+                GlyphIcon {
+                    anchors.fill: parent
+                    name: "calendar"
+                    color: calArea.containsMouse ? Theme.cream : Theme.iconDim
+                    stroke: 1.7
                 }
 
-                Item {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 16 * root.s
-                    height: 16 * root.s
-
-                    GlyphIcon {
-                        anchors.fill: parent
-                        name: "calendar"
-                        color: calArea.containsMouse ? Theme.cream : Theme.iconDim
-                        stroke: 1.7
-                    }
-
-                    MouseArea {
-                        id: calArea
-                        anchors.fill: parent
-                        anchors.margins: -6 * root.s
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.requestSurface("calendar")
-                    }
+                MouseArea {
+                    id: calArea
+                    anchors.fill: parent
+                    anchors.margins: -6 * root.s
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.requestSurface("calendar")
                 }
             }
         }
