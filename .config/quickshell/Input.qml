@@ -9,8 +9,8 @@ import "Singletons"
 /**
  * 操 INPUT sub-surface: edits the pointer, keyboard and cursor settings that live
  * in the Hyprland Lua modules, writing each change straight back to its source so
- * the choice survives a restart. Pointer and keyboard fields rewrite input.lua
- * and reload Hyprland; the layout row cycles a curated list of common layouts.
+ * the choice survives a restart. Pointer and keyboard preferences rewrite input.lua
+ * and reload Hyprland. Cleaning Mode applies only to the current session.
  * Cursor size and theme apply live through `hyprctl setcursor` with no reload,
  * and persist by rewriting the XCURSOR/HYPRCURSOR env lines and the autostart
  * setcursor call. The theme list is scanned from the installed icon themes that
@@ -354,10 +354,12 @@ SettingsSurface {
         property string label: ""
         property string caption: ""
         property string icon: ""
+        property bool showCaption: false
+        property var pointerAction: null
         default property alias control: ctrl.data
 
         readonly property bool focused: root.focusRowItem === frow
-        readonly property bool expanded: fhover.hovered || frow.focused
+        readonly property bool expanded: frow.showCaption || fhover.hovered || frow.focused
         readonly property real rowH: 30 * root.s
         readonly property real capH: 14 * root.s
 
@@ -392,7 +394,12 @@ SettingsSurface {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.activateRow(frow)
+            onClicked: {
+                if (frow.pointerAction)
+                    frow.pointerAction();
+                else
+                    root.activateRow(frow);
+            }
         }
 
         GlyphIcon {
@@ -592,6 +599,34 @@ SettingsSurface {
                         root.writeInputField("numlock_by_default", root.numlockOn ? "true" : "false");
                     }
                 }
+            }
+
+            FieldRow {
+                label: "Cleaning Mode"
+                caption: "Disables all keyboard keys for cleaning"
+                icon: "keyboard"
+                showCaption: true
+                enabled: !KeyboardCleaning.busy
+                pointerAction: () => KeyboardCleaning.toggle()
+
+                LinkToggle {
+                    s: root.s
+                    on: KeyboardCleaning.active
+                    onToggled: KeyboardCleaning.toggle()
+                }
+            }
+
+            Text {
+                width: parent.width
+                leftPadding: 9 * root.s
+                topPadding: 4 * root.s
+                visible: text.length > 0
+                text: KeyboardCleaning.error
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                color: Theme.subtle
+                font.family: Theme.font
+                font.pixelSize: 10 * root.s
             }
 
             GroupLabel {

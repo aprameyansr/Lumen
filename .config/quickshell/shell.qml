@@ -55,7 +55,7 @@ ShellRoot {
 
     PanelWindow {
         id: inhibitWin
-        visible: Flags.keepAwake
+        visible: Flags.keepAwake || KeyboardCleaning.active
         implicitWidth: 1
         implicitHeight: 1
         color: "transparent"
@@ -69,7 +69,7 @@ ShellRoot {
         }
         IdleInhibitor {
             window: inhibitWin
-            enabled: Flags.keepAwake
+            enabled: inhibitWin.visible
         }
     }
 

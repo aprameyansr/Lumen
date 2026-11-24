@@ -5,6 +5,7 @@ singleton Notifs Notifs.qml
 singleton Cliphist Cliphist.qml
 singleton Walls Walls.qml
 singleton Devices Devices.qml
+singleton KeyboardCleaning KeyboardCleaning.qml
 singleton Battery Battery.qml
 singleton Backlight Backlight.qml
 singleton ScreenRec ScreenRec.qml
