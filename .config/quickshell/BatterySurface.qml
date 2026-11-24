@@ -3,206 +3,219 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import "Singletons"
 
-/**
- * 蓄 BATTERY surface: a typographic read-out for the laptop battery. The
- * percentage is the hero, set over a time-to-empty/full subline, with a thin
- * charge meter and an adaptive stat list (Rate / Health / Capacity) beneath a
- * hairline. Health drops when UPower can't report it and the time line drops
- * when no estimate exists; on AC-full the subline reads "Plugged in". Charging
- * warms the percentage, subline and meter to the flame tones. Exposes
- * `implicitHeight` from its content and docks Ame as a seam at the charge head.
- */
 PillSurface {
     id: root
 
-    mTop: 16
-    mLeft: 19
-    mRight: 19
-    mBottom: 16
+    mTop: 14
+    mLeft: 16
+    mRight: 16
+    mBottom: 12
 
     implicitHeight: content.implicitHeight
+    onActiveChanged: if (active)
+        Battery.refreshHardware()
 
-    /**
-     * Where the seam docks: the head of the charge meter, mirroring the
-     * seek-stroke head on the media card. Sits clear of the hero number and
-     * tracks the charge level. mapToItem isn't reactive, so the void reads
-     * force re-eval across the morph and on charge changes.
-     */
-    readonly property point chargeHead: {
+    ameForm: "seam"
+    amePoint: {
         void root.width;
         void root.height;
-        void Battery.frac;
-        void meter.width;
+        void meter.x;
+        void meter.y;
+        void chargeCard.y;
         return meter.mapToItem(root, meter.width * Battery.frac, meter.height / 2);
     }
 
-    ameForm: "seam"
-    amePoint: chargeHead
-
     Column {
         id: content
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        spacing: 0
+        width: parent.width
+        spacing: 10 * root.s
 
-        Item {
-            width: parent.width
-            height: 22 * root.s
-
-            Row {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 8 * root.s
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: Flags.showGlyphs
-                    text: "蓄"
-                    color: Theme.cream
-                    font.family: Theme.fontJp
-                    font.weight: Font.Medium
-                    font.pixelSize: 16 * root.s
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "BATTERY"
-                    color: Theme.subtle
-                    font.family: Theme.font
-                    font.pixelSize: 10 * root.s
-                    font.weight: Font.DemiBold
-                    font.capitalization: Font.AllUppercase
-                    font.letterSpacing: 1.6 * root.s
-                }
-            }
-
-            Text {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: Battery.stateLabel
-                color: Battery.charging ? Theme.flameGlow : Theme.dim
-                font.family: Theme.font
-                font.pixelSize: 9.5 * root.s
-                font.weight: Font.Bold
-                font.capitalization: Font.AllUppercase
-                font.letterSpacing: 1.1 * root.s
-            }
-        }
-
-        Column {
-            width: parent.width
-            topPadding: 16 * root.s
-            bottomPadding: 14 * root.s
-            spacing: 9 * root.s
-
-            Text {
-                text: Battery.pct + "%"
-                color: Battery.low ? Theme.vermLit : (Battery.charging ? Theme.flameGlow : Theme.cream)
-                font.family: Theme.font
-                font.pixelSize: 46 * root.s
-                font.weight: Font.Bold
-                font.letterSpacing: -1 * root.s
-                font.features: {
-                    "tnum": 1
-                }
-            }
-
-            Text {
-                readonly property string body: Battery.full ? "Plugged in" : (Battery.hasTime ? Battery.timeStr + (Battery.charging ? " to full" : " remaining") : "")
-                visible: body.length > 0
-                text: body
-                color: Battery.charging ? Theme.flameCore : Theme.subtle
-                font.family: Theme.font
-                font.pixelSize: 11 * root.s
-                font.weight: Font.DemiBold
-            }
+        SettingsHeader {
+            s: root.s
+            glyph: "蓄"
+            title: "Battery"
+            showAction: false
         }
 
         Rectangle {
-            id: meter
+            id: chargeCard
             width: parent.width
-            height: 3 * root.s
-            radius: 1.5 * root.s
-            color: Theme.threadBg
+            height: charge.implicitHeight + 22 * root.s
+            radius: 10 * root.s
+            color: Theme.frameBg
+            border.color: Theme.frameBorder
+            border.width: 1
 
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * Battery.frac
-                radius: parent.radius
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop {
-                        position: 0.0
-                        color: Battery.charging ? Theme.vermLit : Theme.vermDeep
+            Column {
+                id: charge
+                anchors.centerIn: parent
+                width: parent.width - 24 * root.s
+                spacing: 9 * root.s
+
+                Item {
+                    width: parent.width
+                    height: chargeLevel.implicitHeight
+
+                    Text {
+                        id: chargeLevel
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Battery.present ? Battery.pct + "%" : "—"
+                        color: Battery.present && Battery.low ? Theme.vermLit : Battery.charging ? Theme.flameGlow : Theme.cream
+                        font.family: Theme.font
+                        font.pixelSize: 40 * root.s
+                        font.weight: Font.Bold
+                        font.letterSpacing: -root.s
+                        font.features: { "tnum": 1 }
                     }
-                    GradientStop {
-                        position: 1.0
-                        color: Battery.charging ? Theme.flameGlow : Theme.vermLit
+
+                    Column {
+                        anchors.left: chargeLevel.right
+                        anchors.leftMargin: 8 * root.s
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 3 * root.s
+
+                        Text {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignRight
+                            text: Battery.present ? Battery.stateLabel : "Charge unavailable"
+                            color: Battery.charging ? Theme.flameGlow : Theme.cream
+                            font.family: Theme.font
+                            font.pixelSize: 10 * root.s
+                            font.weight: Font.Bold
+                            font.capitalization: Font.AllUppercase
+                            font.letterSpacing: 0.8 * root.s
+                        }
+
+                        Text {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignRight
+                            visible: Battery.hasTime
+                            text: Battery.timeStr + (Battery.charging ? " to full" : " remaining")
+                            color: Theme.subtle
+                            font.family: Theme.font
+                            font.pixelSize: 11 * root.s
+                        }
                     }
+                }
+
+                Rectangle {
+                    id: meter
+                    width: parent.width
+                    height: 4 * root.s
+                    radius: height / 2
+                    color: Theme.threadBg
+
+                    Rectangle {
+                        width: parent.width * Battery.frac
+                        height: parent.height
+                        radius: parent.radius
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop {
+                                position: 0
+                                color: Battery.charging ? Theme.vermLit : Theme.vermDeep
+                            }
+                            GradientStop {
+                                position: 1
+                                color: Battery.charging ? Theme.flameGlow : Theme.vermLit
+                            }
+                        }
+                    }
+                }
+
+                StatRow {
+                    visible: Math.abs(Battery.rateW) >= 0.05
+                    label: "Rate"
+                    value: (Battery.rateW > 0 ? "+" : "−") + Math.abs(Battery.rateW).toFixed(1) + " W"
+                    valueColor: Battery.charging ? Theme.flameGlow : Theme.cream
+                }
+
+                StatRow {
+                    visible: Battery.capacityWh >= 1
+                    label: "Full charge capacity"
+                    value: Battery.capacityWh.toFixed(1) + " Wh"
                 }
             }
         }
 
+        Text {
+            text: "Properties"
+            color: Theme.subtle
+            font.family: Theme.font
+            font.pixelSize: 9 * root.s
+            font.weight: Font.Bold
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 1.1 * root.s
+        }
+
         Column {
             width: parent.width
-            topPadding: 16 * root.s
-            spacing: 10 * root.s
 
-            StatRow {
-                visible: Math.abs(Battery.rateW) >= 0.05
-                label: "Rate"
-                value: (Battery.rateW > 0 ? "+" : "−") + Math.abs(Battery.rateW).toFixed(1) + " W"
-                warm: Battery.charging
-            }
+            Repeater {
+                model: [
+                    ["Battery Health", Battery.health],
+                    ["Design Capacity", Battery.designCapacity],
+                    ["Charge Cycles", Battery.chargeCycles],
+                    ["Technology", Battery.technology],
+                    ["Manufacturer", Battery.manufacturer],
+                    ["Model Name", Battery.modelName],
+                    ["Device", Battery.deviceName]
+                ]
 
-            StatRow {
-                visible: Battery.healthSupported
-                label: "Health"
-                value: Battery.health + "%"
-                warm: true
-            }
+                StatRow {
+                    required property var modelData
 
-            StatRow {
-                visible: Battery.capacityWh >= 1
-                label: "Capacity"
-                value: Battery.capacityWh.toFixed(1) + " Wh"
+                    height: 25 * root.s
+                    label: modelData[0]
+                    value: modelData[1]
+
+                    Rectangle {
+                        width: parent.width
+                        height: 1
+                        color: Theme.hairSoft
+                    }
+                }
             }
         }
     }
 
     component StatRow: Item {
         id: stat
-        width: parent ? parent.width : 0
-        height: vText.implicitHeight
-        property string label: ""
-        property string value: ""
-        property bool warm: false
+
+        required property string label
+        required property string value
+        property color valueColor: Theme.cream
+
+        width: parent.width
+        height: Math.max(caption.implicitHeight, reading.implicitHeight)
 
         Text {
+            id: caption
             anchors.left: parent.left
-            anchors.baseline: vText.baseline
+            anchors.verticalCenter: parent.verticalCenter
             text: stat.label
-            color: Theme.faint
+            color: Theme.subtle
             font.family: Theme.font
-            font.pixelSize: 10 * root.s
+            font.pixelSize: 10.5 * root.s
             font.weight: Font.Medium
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 0.8 * root.s
         }
 
         Text {
-            id: vText
+            id: reading
+            anchors.left: caption.right
+            anchors.leftMargin: 10 * root.s
             anchors.right: parent.right
-            text: stat.value
-            color: stat.warm ? Theme.flameGlow : Theme.cream
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: Text.AlignRight
+            elide: Text.ElideRight
+            text: stat.value || "N/A"
+            textFormat: Text.PlainText
+            color: stat.value ? stat.valueColor : Theme.dim
             font.family: Theme.font
-            font.pixelSize: 12.5 * root.s
+            font.pixelSize: 11 * root.s
             font.weight: Font.DemiBold
-            font.features: {
-                "tnum": 1
-            }
+            font.features: { "tnum": 1 }
         }
     }
 }
