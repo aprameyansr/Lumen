@@ -50,7 +50,7 @@ SettingsSurface {
     /** Held Delete: drive the keyboard-focused preset's hold-to-wipe heat; letting go drains it. */
     property Item heldRow: null
     function deletePress() {
-        var it = root.focusRowItem;
+        const it = root.focusRowItem;
         if (it && it.presetIndex !== undefined && it.presetIndex >= 0) {
             root.heldRow = it;
             it.delPress();
@@ -62,51 +62,102 @@ SettingsSurface {
         root.heldRow = null;
     }
 
-    onActiveChanged: if (!active) formOpen = false
-    onFormOpenChanged: if (formOpen) Qt.callLater(nameField.forceActiveFocus)
+    onActiveChanged: if (!active)
+        formOpen = false
+    onFormOpenChanged: if (formOpen)
+        Qt.callLater(nameField.forceActiveFocus)
 
     function presetSub(p) {
-        var lid = p.lid === "sleep" ? "Lid sleeps" : "Lid stays on";
+        const lid = p.lid === "sleep" ? "Lid sleeps" : "Lid stays on";
         if (p.mins <= 0)
             return lid + " · until turned off";
         return lid + " · " + Awake.durLabel(p.mins) + " · then " + Awake.endLabels[p.end];
     }
 
     rows: {
-        var r = [{ item: toggleRow, kind: "toggle", get: function () { return Awake.on; }, set: function (v) { if (v !== Awake.on) Awake.toggle(); } }];
+        const r = [
+            {
+                item: toggleRow,
+                kind: "toggle",
+                get: function () {
+                    return Awake.on;
+                },
+                set: function (v) {
+                    if (v !== Awake.on)
+                        Awake.toggle();
+                }
+            }
+        ];
         if (Awake.timed)
-            r.push({ item: extendRow, kind: "action", run: function () { Awake.extend(15); } });
-        r.push({ item: lidRow, kind: "seg", vals: root.lidVals, get: function () { return Flags.awakeLid; }, set: function (v) { Flags.awakeLid = v; } });
-        r.push({ item: durRow, kind: "seg", vals: root.durChips, get: function () { return Flags.awakeMins; }, set: function (v) { Awake.setMins(v); } });
-        r.push({ item: customRow, kind: "scrub", bump: function (d) { customScrub.bump(d); }, run: function () { Awake.setMins(Flags.awakeCustom); } });
-        r.push({ item: endRow, kind: "seg", vals: root.endVals, get: function () { return Flags.awakeEnd; }, set: function (v) { Flags.awakeEnd = v; } });
-        void presetRepeater.count;
-        for (var i = 0; i < presetRepeater.count; i++) {
-            var it = presetRepeater.itemAt(i);
-            if (!it)
+            r.push({
+                item: extendRow,
+                kind: "action",
+                run: function () {
+                    Awake.extend(15);
+                }
+            });
+        r.push({
+            item: lidRow,
+            kind: "seg",
+            vals: root.lidVals,
+            get: function () {
+                return Flags.awakeLid;
+            },
+            set: function (v) {
+                Flags.awakeLid = v;
+            }
+        });
+        r.push({
+            item: durRow,
+            kind: "seg",
+            vals: root.durChips,
+            get: function () {
+                return Flags.awakeMins;
+            },
+            set: function (v) {
+                Awake.setMins(v);
+            }
+        });
+        r.push({
+            item: customRow,
+            kind: "scrub",
+            bump: function (d) {
+                customScrub.bump(d);
+            },
+            run: function () {
+                Awake.setMins(Flags.awakeCustom);
+            }
+        });
+        r.push({
+            item: endRow,
+            kind: "seg",
+            vals: root.endVals,
+            get: function () {
+                return Flags.awakeEnd;
+            },
+            set: function (v) {
+                Flags.awakeEnd = v;
+            }
+        });
+        for (let i = 0; i < presetRepeater.count; i++) {
+            const row = presetRepeater.itemAt(i);
+            if (!row)
                 continue;
-            (function (row) {
-                r.push({ item: row, kind: "action", run: function () { Awake.applyPreset(row.preset); } });
-            })(it);
+            r.push({
+                item: row,
+                kind: "action",
+                run: () => Awake.applyPreset(row.preset)
+            });
         }
         if (!root.formOpen)
-            r.push({ item: saveRow, kind: "action", run: function () { root.openForm(); } });
+            r.push({
+                item: saveRow,
+                kind: "action",
+                run: function () {
+                    root.openForm();
+                }
+            });
         return r;
-    }
-
-    /** Enter on the custom row picks the custom length, same as a click on it. */
-    function kbActivate() {
-        if (kbIndex < 0)
-            return;
-        var r = rows[kbIndex];
-        if (r.item === customRow)
-            r.run();
-        else if (r.kind === "toggle")
-            r.set(!r.get());
-        else if (r.kind === "seg")
-            segCycle(r, 1);
-        else if (r.kind === "action")
-            r.run();
     }
 
     /**
@@ -121,8 +172,7 @@ SettingsSurface {
      * step by its glide). Idle when closed or untimed.
      */
     property real liveNow: Date.now()
-    readonly property real liveFrac: (Awake.timed && Awake.until > Awake.from)
-        ? Math.max(0, Math.min(1, (Awake.until - liveNow) / (Awake.until - Awake.from))) : 0
+    readonly property real liveFrac: (Awake.timed && Awake.until > Awake.from) ? Math.max(0, Math.min(1, (Awake.until - liveNow) / (Awake.until - Awake.from))) : 0
 
     FrameAnimation {
         running: root.active && Awake.timed
@@ -202,7 +252,9 @@ SettingsSurface {
                 font.weight: Font.Bold
                 font.capitalization: Font.AllUppercase
                 font.letterSpacing: 1.1 * root.s
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
         }
 
@@ -216,9 +268,7 @@ SettingsSurface {
 
             Text {
                 width: parent.width
-                text: (Awake.timed
-                        ? "Until " + Awake.wall(Awake.until) + ", then " + Awake.endLabels[Flags.awakeEnd]
-                        : "Until you turn it off")
+                text: (Awake.timed ? "Until " + Awake.wall(Awake.until) + ", then " + Awake.endLabels[Flags.awakeEnd] : "Until you turn it off")
                 color: Awake.on ? Theme.flameCore : Theme.subtle
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
@@ -243,13 +293,21 @@ SettingsSurface {
                 radius: parent.radius
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Theme.vermLit }
-                    GradientStop { position: 1.0; color: Theme.flameGlow }
+                    GradientStop {
+                        position: 0.0
+                        color: Theme.vermLit
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Theme.flameGlow
+                    }
                 }
             }
         }
 
-        GroupLabel { text: "Session" }
+        GroupLabel {
+            text: "Session"
+        }
 
         SettingsRow {
             id: toggleRow
@@ -275,9 +333,22 @@ SettingsSurface {
             captionOnFocus: true
             SettingsSeg {
                 s: root.s
-                options: [{ label: "+15m", value: 15 }, { label: "+30m", value: 30 }, { label: "+1h", value: 60 }]
+                options: [
+                    {
+                        label: "+15m",
+                        value: 15
+                    },
+                    {
+                        label: "+30m",
+                        value: 30
+                    },
+                    {
+                        label: "+1h",
+                        value: 60
+                    }
+                ]
                 value: -1
-                onPicked: (v) => Awake.extend(v)
+                onPicked: v => Awake.extend(v)
             }
         }
 
@@ -290,9 +361,18 @@ SettingsSurface {
             captionOnFocus: true
             SettingsSeg {
                 s: root.s
-                options: [{ label: "Sleeps", value: "sleep" }, { label: "Stays on", value: "awake" }]
+                options: [
+                    {
+                        label: "Sleeps",
+                        value: "sleep"
+                    },
+                    {
+                        label: "Stays on",
+                        value: "awake"
+                    }
+                ]
                 value: Flags.awakeLid
-                onPicked: (v) => Flags.awakeLid = v
+                onPicked: v => Flags.awakeLid = v
             }
         }
 
@@ -305,9 +385,14 @@ SettingsSurface {
             captionOnFocus: true
             SettingsSeg {
                 s: root.s
-                options: root.durChips.map(function (m) { return { label: Awake.durLabel(m), value: m }; })
+                options: root.durChips.map(function (m) {
+                    return {
+                        label: Awake.durLabel(m),
+                        value: m
+                    };
+                })
                 value: Flags.awakeMins
-                onPicked: (v) => Awake.setMins(v)
+                onPicked: v => Awake.setMins(v)
             }
         }
 
@@ -330,7 +415,11 @@ SettingsSurface {
                     radius: width / 2
                     color: Theme.flameGlow
                     opacity: customRow.picked ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 ScrubValue {
@@ -341,8 +430,8 @@ SettingsSurface {
                     to: 720
                     step: 5
                     value: Flags.awakeCustom
-                    fmt: (v) => Awake.durLabel(v)
-                    onEdited: (v) => {
+                    fmt: v => Awake.durLabel(v)
+                    onEdited: v => {
                         Flags.awakeCustom = v;
                         Awake.setMins(v);
                     }
@@ -361,13 +450,28 @@ SettingsSurface {
             opacity: Flags.awakeMins > 0 || Awake.timed ? 1 : 0.55
             SettingsSeg {
                 s: root.s
-                options: [{ label: "Turn off", value: "off" }, { label: "Sleep", value: "sleep" }, { label: "Shut down", value: "poweroff" }]
+                options: [
+                    {
+                        label: "Turn off",
+                        value: "off"
+                    },
+                    {
+                        label: "Sleep",
+                        value: "sleep"
+                    },
+                    {
+                        label: "Shut down",
+                        value: "poweroff"
+                    }
+                ]
                 value: Flags.awakeEnd
-                onPicked: (v) => Flags.awakeEnd = v
+                onPicked: v => Flags.awakeEnd = v
             }
         }
 
-        GroupLabel { text: "Presets" }
+        GroupLabel {
+            text: "Presets"
+        }
 
         SettingsRow {
             visible: (Flags.awakePresets || []).length === 0
@@ -394,9 +498,14 @@ SettingsSurface {
                 sub: root.presetSub(modelData)
                 last: index === presetRepeater.count - 1
 
-                function delPress() { delHeat.press(); }
-                function delRelease() { delHeat.release(); }
-                onFocusedChanged: if (!focused) delHeat.cancel()
+                function delPress() {
+                    delHeat.press();
+                }
+                function delRelease() {
+                    delHeat.release();
+                }
+                onFocusedChanged: if (!focused)
+                    delHeat.cancel()
 
                 /** Hold-to-wipe heat line along the row's foot, as on the clipboard (reparented out of the control slot). */
                 Rectangle {
@@ -408,8 +517,14 @@ SettingsSurface {
                     visible: delHeat.holding
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-                        GradientStop { position: 1.0; color: Theme.vermLit }
+                        GradientStop {
+                            position: 0.0
+                            color: Qt.alpha(Theme.vermLit, 0.15)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Theme.vermLit
+                        }
                     }
                 }
 
@@ -432,7 +547,11 @@ SettingsSurface {
                         width: 14 * root.s
                         height: 14 * root.s
                         opacity: (prow.focused || delArea.containsMouse || delHeat.holding) ? 1 : 0.35
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         GlyphIcon {
                             anchors.fill: parent
@@ -573,7 +692,11 @@ SettingsSurface {
                 Text {
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    text: root.presetSub({ lid: Flags.awakeLid, mins: Flags.awakeMins, end: Flags.awakeEnd })
+                    text: root.presetSub({
+                        lid: Flags.awakeLid,
+                        mins: Flags.awakeMins,
+                        end: Flags.awakeEnd
+                    })
                     color: Theme.faint
                     font.family: Theme.font
                     font.pixelSize: 8.5 * root.s
@@ -620,9 +743,14 @@ SettingsSurface {
                         maximumLength: 24
                         text: root.formName
                         onTextEdited: root.formName = text
-                        Keys.onPressed: (e) => {
-                            if (e.key === Qt.Key_Escape) { root.closeForm(); e.accepted = true; }
-                            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.saveForm(); e.accepted = true; }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Escape) {
+                                root.closeForm();
+                                e.accepted = true;
+                            } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                                root.saveForm();
+                                e.accepted = true;
+                            }
                         }
                     }
                 }
@@ -630,7 +758,9 @@ SettingsSurface {
 
             Text {
                 width: parent.width
-                visible: (Flags.awakePresets || []).some(function (p) { return p.name.toLowerCase() === root.formName.trim().toLowerCase(); })
+                visible: (Flags.awakePresets || []).some(function (p) {
+                    return p.name.toLowerCase() === root.formName.trim().toLowerCase();
+                })
                 text: "Replaces the preset with this name"
                 color: Theme.flameGlow
                 font.family: Theme.font
@@ -681,7 +811,11 @@ SettingsSurface {
                     radius: 8 * root.s
                     opacity: ready ? 1 : 0.45
                     color: Qt.alpha(Theme.onGlow, saveBtnArea.containsMouse && ready ? 0.24 : 0.16)
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         id: saveLabel

@@ -58,8 +58,10 @@ Rectangle {
                     else if (seg.focusedOption === opt)
                         seg.focusedOption = null;
                 }
-                Keys.onReturnPressed: if (seg.keyboardNavigation) seg.picked(modelData.value)
-                Keys.onSpacePressed: if (seg.keyboardNavigation) seg.picked(modelData.value)
+                Keys.onReturnPressed: if (seg.keyboardNavigation)
+                    seg.picked(modelData.value)
+                Keys.onSpacePressed: if (seg.keyboardNavigation)
+                    seg.picked(modelData.value)
                 Accessible.role: Accessible.Button
                 Accessible.name: modelData.label
                 Accessible.onPressAction: seg.picked(modelData.value)
@@ -68,7 +70,11 @@ Rectangle {
                 height: optLabel.implicitHeight + 12 * seg.s
                 radius: 8 * seg.s
                 color: opt.current ? Qt.alpha(Theme.onGlow, 0.16) : (opt.targeted ? Theme.frameBg : "transparent")
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
                 Text {
                     id: optLabel
@@ -86,7 +92,8 @@ Rectangle {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onEntered: seg.hoveredOption = opt
-                    onExited: if (seg.hoveredOption === opt) seg.hoveredOption = null
+                    onExited: if (seg.hoveredOption === opt)
+                        seg.hoveredOption = null
                     onClicked: seg.picked(opt.modelData.value)
                 }
             }

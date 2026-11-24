@@ -62,9 +62,9 @@ Singleton {
     function reloadEvents() {
         var arr = [];
         try {
-            var t = file.text();
+            const t = file.text();
             if (t && t.trim().length > 0) {
-                var parsed = JSON.parse(t);
+                const parsed = JSON.parse(t);
                 if (Array.isArray(parsed))
                     arr = parsed;
             }
@@ -73,11 +73,11 @@ Singleton {
         }
         var maxId = 0;
         var healed = false;
-        for (var i = 0; i < arr.length; i++) {
-            var n = Number(arr[i].id);
+        for (let i = 0; i < arr.length; i++) {
+            const n = Number(arr[i].id);
             if (n > maxId)
                 maxId = n;
-            var e = arr[i];
+            const e = arr[i];
             if (e.recur === undefined) {
                 e.recur = e.yearly === true ? "year" : (root.isBirthday(e.text) ? "year" : "");
                 delete e.yearly;
@@ -109,7 +109,9 @@ Singleton {
 
     /** Events covering `dateStr`, sorted by start time; an empty time sorts first. */
     function forDate(dateStr) {
-        var out = root.events.filter(function (e) { return root.covers(e, dateStr); });
+        var out = root.events.filter(function (e) {
+            return root.covers(e, dateStr);
+        });
         out.sort(function (a, b) {
             var at = a.time || "";
             var bt = b.time || "";
@@ -125,7 +127,7 @@ Singleton {
     }
 
     function hasEvents(dateStr) {
-        for (var i = 0; i < root.events.length; i++) {
+        for (let i = 0; i < root.events.length; i++) {
             if (root.covers(root.events[i], dateStr))
                 return true;
         }
@@ -150,7 +152,9 @@ Singleton {
     }
 
     function remove(id) {
-        root.events = root.events.filter(function (e) { return e.id !== id; });
+        root.events = root.events.filter(function (e) {
+            return e.id !== id;
+        });
         root.persist();
     }
 

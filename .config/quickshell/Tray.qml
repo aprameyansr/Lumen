@@ -62,7 +62,11 @@ Item {
                     border.width: 1
                     border.color: Theme.frameBorder
                     opacity: area.containsMouse ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 Image {
@@ -84,7 +88,7 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                    onClicked: (mouse) => {
+                    onClicked: mouse => {
                         if (mouse.button === Qt.MiddleButton) {
                             slot.modelData.secondaryActivate();
                         } else if (mouse.button === Qt.RightButton) {
@@ -95,7 +99,7 @@ Item {
                             slot.modelData.activate();
                         }
                     }
-                    onWheel: (wheel) => {
+                    onWheel: wheel => {
                         slot.modelData.scroll(wheel.angleDelta.y, false);
                     }
                 }
@@ -121,7 +125,7 @@ Item {
         property var entryData
         property real indent: 0
         property bool expanded: false
-        signal activated()
+        signal activated
 
         height: entryData.isSeparator ? 9 * tray.s : 32 * tray.s
 
@@ -141,8 +145,7 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: mrow.indent
             radius: 8 * tray.s
-            color: mrowArea.containsMouse && mrow.entryData?.enabled
-                ? Theme.frameBg : "transparent"
+            color: mrowArea.containsMouse && mrow.entryData?.enabled ? Theme.frameBg : "transparent"
 
             Rectangle {
                 anchors.left: parent.left
@@ -153,7 +156,11 @@ Item {
                 radius: width / 2
                 color: Theme.vermLit
                 opacity: mrowArea.containsMouse && mrow.entryData?.enabled ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
 
             Rectangle {
@@ -206,8 +213,7 @@ Item {
                 anchors.right: chevron.visible ? chevron.left : parent.right
                 anchors.rightMargin: 14 * tray.s
                 text: mrow.entryData?.text ?? ""
-                color: !mrow.entryData?.enabled ? Theme.dim
-                    : (mrowArea.containsMouse ? Theme.cream : Theme.creamMenu)
+                color: !mrow.entryData?.enabled ? Theme.dim : (mrowArea.containsMouse ? Theme.cream : Theme.creamMenu)
                 font.family: Theme.font
                 font.pixelSize: 13 * tray.s
                 font.weight: mrowArea.containsMouse ? Font.DemiBold : Font.Normal
@@ -226,7 +232,11 @@ Item {
                 color: mrow.expanded ? Theme.vermLit : Theme.iconDim
                 stroke: 2
                 rotation: mrow.expanded ? 90 : 0
-                Behavior on rotation { NumberAnimation { duration: Motion.fast } }
+                Behavior on rotation {
+                    NumberAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
 
             MouseArea {
@@ -262,7 +272,12 @@ Item {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
         WlrLayershell.namespace: "pill-tray"
 
-        anchors { top: true; left: true; right: true; bottom: true }
+        anchors {
+            top: true
+            left: true
+            right: true
+            bottom: true
+        }
 
         MouseArea {
             anchors.fill: parent
@@ -285,8 +300,14 @@ Item {
                 clip: true
 
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Theme.cardTop }
-                    GradientStop { position: 1.0; color: Theme.cardBot }
+                    GradientStop {
+                        position: 0.0
+                        color: Theme.cardTop
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Theme.cardBot
+                    }
                 }
                 border.width: 1
                 border.color: Theme.border
@@ -315,7 +336,9 @@ Item {
                     shadowVerticalOffset: 4 * tray.s
                 }
 
-                MouseArea { anchors.fill: parent }
+                MouseArea {
+                    anchors.fill: parent
+                }
 
                 Column {
                     id: col

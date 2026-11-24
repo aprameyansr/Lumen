@@ -64,9 +64,13 @@ PillSurface {
     readonly property var monMap: {
         var scr = Quickshell.screens;
         if (scr.length < 2)
-            return { w: 0, h: 0, tiles: [] };
+            return {
+                w: 0,
+                h: 0,
+                tiles: []
+            };
         var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (var i = 0; i < scr.length; i++) {
+        for (let i = 0; i < scr.length; i++) {
             minX = Math.min(minX, scr[i].x);
             minY = Math.min(minY, scr[i].y);
             maxX = Math.max(maxX, scr[i].x + scr[i].width);
@@ -74,7 +78,7 @@ PillSurface {
         }
         var k = Math.min(Math.min(26 * scr.length, 120) * s / (maxX - minX), (22 * s) / (maxY - minY));
         var tiles = [];
-        for (i = 0; i < scr.length; i++)
+        for (let i = 0; i < scr.length; i++)
             tiles.push({
                 name: scr[i].name,
                 x: (scr[i].x - minX) * k,
@@ -82,7 +86,11 @@ PillSurface {
                 w: scr[i].width * k,
                 h: scr[i].height * k
             });
-        return { w: (maxX - minX) * k, h: (maxY - minY) * k, tiles: tiles };
+        return {
+            w: (maxX - minX) * k,
+            h: (maxY - minY) * k,
+            tiles: tiles
+        };
     }
 
     readonly property var localItems: {
@@ -90,7 +98,7 @@ PillSurface {
             return Walls.entries;
         var wantMotion = kindFilter === "motion";
         var out = [];
-        for (var i = 0; i < Walls.entries.length; i++)
+        for (let i = 0; i < Walls.entries.length; i++)
             if (isMotion(Walls.entries[i].path) === wantMotion)
                 out.push(Walls.entries[i]);
         return out;
@@ -148,7 +156,8 @@ PillSurface {
         onTriggered: root.previewArmed = true
     }
 
-    onItemsChanged: if (focusIndex >= itemCount) focusIndex = Math.max(0, itemCount - 1);
+    onItemsChanged: if (focusIndex >= itemCount)
+        focusIndex = Math.max(0, itemCount - 1)
 
     Timer {
         id: hintDwell
@@ -166,11 +175,11 @@ PillSurface {
 
     clip: true
 
-    readonly property var slotW:      [196, 126, 104, 88, 74]
-    readonly property var slotH:      [110, 71, 59, 50, 42]
-    readonly property var slotCX:     [0, 143, 244, 326, 393]
+    readonly property var slotW: [196, 126, 104, 88, 74]
+    readonly property var slotH: [110, 71, 59, 50, 42]
+    readonly property var slotCX: [0, 143, 244, 326, 393]
     readonly property var slotBright: [1, 0.56, 0.42, 0.30, 0.22]
-    readonly property var slotSat:    [1, 0.65, 0.55, 0.45, 0.40]
+    readonly property var slotSat: [1, 0.65, 0.55, 0.45, 0.40]
 
     function slotLerp(arr, ao) {
         if (ao >= 4)
@@ -221,7 +230,7 @@ PillSurface {
 
     function centerOnCurrent() {
         var idx = 0;
-        for (var i = 0; i < localItems.length; i++)
+        for (let i = 0; i < localItems.length; i++)
             if (localItems[i].path === Walls.current) {
                 idx = i;
                 break;
@@ -299,9 +308,7 @@ PillSurface {
             if (root.focusedPreviewUrl === "")
                 return;
             prevFetch.url = root.focusedPreviewUrl;
-            prevFetch.command = ["bash", "-c",
-                "f=\"/tmp/lumen-wp-preview-$(printf %s \"$1\" | md5sum | cut -d' ' -f1).webm\"; [ -s \"$f\" ] || curl -fsL --max-time 25 -A 'Mozilla/5.0' -o \"$f\" \"$1\" || { rm -f \"$f\"; exit 1; }; printf %s \"$f\"",
-                "_", root.focusedPreviewUrl];
+            prevFetch.command = ["bash", "-c", "f=\"/tmp/lumen-wp-preview-$(printf %s \"$1\" | md5sum | cut -d' ' -f1).webm\"; [ -s \"$f\" ] || curl -fsL --max-time 25 -A 'Mozilla/5.0' -o \"$f\" \"$1\" || { rm -f \"$f\"; exit 1; }; printf %s \"$f\"", "_", root.focusedPreviewUrl];
             prevFetch.running = true;
         }
     }
@@ -344,9 +351,7 @@ PillSurface {
                 return;
             dimsProc.running = false;
             dimsProc.path = p;
-            dimsProc.command = ["sh", "-c",
-                "ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 \"$1\" | head -1",
-                "_", p];
+            dimsProc.command = ["sh", "-c", "ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 \"$1\" | head -1", "_", p];
             dimsProc.running = true;
         }
     }
@@ -358,7 +363,7 @@ PillSurface {
             onStreamFinished: {
                 var t = this.text.trim();
                 if (t.length && dimsProc.path.length) {
-                    var c = Object.assign({}, root.dimsCache);
+                    let c = Object.assign({}, root.dimsCache);
                     c[dimsProc.path] = t;
                     root.dimsCache = c;
                 }
@@ -385,7 +390,7 @@ PillSurface {
             onStreamFinished: {
                 var out = [];
                 try {
-                    var parsed = JSON.parse(this.text);
+                    const parsed = JSON.parse(this.text);
                     if (Array.isArray(parsed))
                         out = parsed;
                 } catch (e) {
@@ -406,7 +411,7 @@ PillSurface {
         stdout: StdioCollector {
             onStreamFinished: dlProc.savedPath = this.text.trim()
         }
-        onExited: function(exitCode) {
+        onExited: function (exitCode) {
             if (exitCode === 0 && savedPath.length) {
                 failed = "";
                 Walls.refresh();
@@ -438,10 +443,10 @@ PillSurface {
             root.query = text;
             debounce.restart();
         }
-        onMoved: (d) => root.move(d)
+        onMoved: d => root.move(d)
         onAccepted: root.activate()
         onDismissed: root.exitSearch()
-        onKeyPressed: (e) => {
+        onKeyPressed: e => {
             if (e.key === Qt.Key_Backspace && root.query.length <= 1 && searchField.input.selectedText.length === 0) {
                 root.exitSearch();
                 e.accepted = true;
@@ -467,7 +472,11 @@ PillSurface {
             font.pixelSize: 9.5 * root.s
             font.weight: Font.DemiBold
             font.letterSpacing: 0.4 * root.s
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -506,8 +515,18 @@ PillSurface {
             color: Qt.alpha(Theme.onGlow, 0.18)
             border.width: 1
             border.color: Qt.alpha(Theme.onGlow, 0.45)
-            Behavior on x { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-            Behavior on width { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on x {
+                NumberAnimation {
+                    duration: Motion.standard
+                    easing.type: Motion.easeStandard
+                }
+            }
+            Behavior on width {
+                NumberAnimation {
+                    duration: Motion.standard
+                    easing.type: Motion.easeStandard
+                }
+            }
         }
 
         Row {
@@ -516,9 +535,21 @@ PillSurface {
             anchors.leftMargin: 3 * root.s
             height: parent.height
 
-            FilterChip { id: chipAll; kind: "all"; label: "all" }
-            FilterChip { id: chipStill; kind: "still"; label: "still" }
-            FilterChip { id: chipLive; kind: "motion"; label: "live" }
+            FilterChip {
+                id: chipAll
+                kind: "all"
+                label: "all"
+            }
+            FilterChip {
+                id: chipStill
+                kind: "still"
+                label: "still"
+            }
+            FilterChip {
+                id: chipLive
+                kind: "motion"
+                label: "live"
+            }
         }
     }
 
@@ -529,7 +560,6 @@ PillSurface {
      * focus while editing, so its keys never reach the strip's type-to-search.
      */
     Item {
-        id: folderRow
         anchors.top: parent.top
         anchors.topMargin: 6 * root.s
         anchors.left: parent.left
@@ -550,7 +580,11 @@ PillSurface {
             color: folderHover.hovered ? Theme.subtle : Theme.faint
             font.family: Theme.font
             font.pixelSize: 9.5 * root.s
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         TextInput {
@@ -566,7 +600,7 @@ PillSurface {
             font.pixelSize: 11 * root.s
             selectByMouse: true
             selectionColor: Theme.verm
-            Keys.onPressed: (e) => {
+            Keys.onPressed: e => {
                 if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
                     Flags.wallpaperDir = dirField.text.trim();
                     root.editingDir = false;
@@ -640,16 +674,10 @@ PillSurface {
              * static thumb, which also stays underneath as the loading frame.
              */
             readonly property bool isGif: /\.gif(\?|$)/i.test(remote ? (modelData.image || "") : modelData.path)
-            readonly property string videoSource: remote
-                ? (focused && root.previewFile !== "" ? "file://" + root.previewFile : "")
-                : (/\.(mp4|webm|mkv|mov)$/i.test(modelData.path) ? "file://" + modelData.path : "")
+            readonly property string videoSource: remote ? (focused && root.previewFile !== "" ? "file://" + root.previewFile : "") : (/\.(mp4|webm|mkv|mov)$/i.test(modelData.path) ? "file://" + modelData.path : "")
             readonly property bool showPreview: focused && root.previewArmed && ao < 0.5
-            readonly property string resLabel: remote
-                ? (modelData.w > 0 ? modelData.w + "x" + modelData.h : "")
-                : (root.dimsCache[modelData.path] !== undefined ? root.dimsCache[modelData.path] : "")
-            readonly property bool motion: remote
-                ? (modelData.preview !== undefined || isGif)
-                : /\.(gif|mp4|webm|mkv|mov)$/i.test(modelData.path)
+            readonly property string resLabel: remote ? (modelData.w > 0 ? modelData.w + "x" + modelData.h : "") : (root.dimsCache[modelData.path] !== undefined ? root.dimsCache[modelData.path] : "")
+            readonly property bool motion: remote ? (modelData.preview !== undefined || isGif) : /\.(gif|mp4|webm|mkv|mov)$/i.test(modelData.path)
 
             readonly property real off: index - root.pos
             readonly property real ao: Math.abs(off)
@@ -680,7 +708,8 @@ PillSurface {
             visible: ao <= 5
             opacity: edgeFade * (ao <= 4 ? 1 : Math.max(0, 5 - ao))
 
-            onFocusedChanged: if (!focused) trashHeat.cancel()
+            onFocusedChanged: if (!focused)
+                trashHeat.cancel()
 
             ClippingRectangle {
                 id: card
@@ -717,7 +746,7 @@ PillSurface {
                 AnimatedImage {
                     anchors.fill: parent
                     source: tile.showPreview && tile.isGif ? (tile.remote ? tile.modelData.image : "file://" + tile.modelData.path) : ""
-                    playing: source != ""
+                    playing: source.toString().length > 0
                     visible: status === AnimatedImage.Ready
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
@@ -741,7 +770,8 @@ PillSurface {
                             videoOutput: videoPreview
                             loops: MediaPlayer.Infinite
                             source: tile.videoSource
-                            onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia) play()
+                            onMediaStatusChanged: if (mediaStatus === MediaPlayer.LoadedMedia)
+                                play()
                         }
                     }
                 }
@@ -760,9 +790,18 @@ PillSurface {
                     height: card.height * tile.commitProgress
                     visible: tile.committing
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermBurn, 0.66) }
-                        GradientStop { position: 0.74; color: Qt.alpha(Theme.vermLit, 0.30) }
-                        GradientStop { position: 1.0; color: Qt.alpha(Theme.flameGlow, 0.0) }
+                        GradientStop {
+                            position: 0.0
+                            color: Qt.alpha(Theme.vermBurn, 0.66)
+                        }
+                        GradientStop {
+                            position: 0.74
+                            color: Qt.alpha(Theme.vermLit, 0.30)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Qt.alpha(Theme.flameGlow, 0.0)
+                        }
                     }
 
                     Rectangle {
@@ -773,9 +812,18 @@ PillSurface {
                         opacity: Math.min(1, tile.commitProgress * 3)
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: Qt.alpha(Theme.flameGlow, 0.0) }
-                            GradientStop { position: 0.5; color: Theme.flameGlow }
-                            GradientStop { position: 1.0; color: Qt.alpha(Theme.flameGlow, 0.0) }
+                            GradientStop {
+                                position: 0.0
+                                color: Qt.alpha(Theme.flameGlow, 0.0)
+                            }
+                            GradientStop {
+                                position: 0.5
+                                color: Theme.flameGlow
+                            }
+                            GradientStop {
+                                position: 1.0
+                                color: Qt.alpha(Theme.flameGlow, 0.0)
+                            }
                         }
                     }
                 }
@@ -825,7 +873,9 @@ PillSurface {
                         color: Theme.bright
                         font.family: Theme.font
                         font.pixelSize: 9.5 * root.s
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                 }
             }
@@ -840,14 +890,19 @@ PillSurface {
                         return Theme.vermLit;
                     return tile.committing ? Theme.vermLit : Theme.border;
                 }
-                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                Behavior on border.color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
 
             HeatHold {
                 id: trashHeat
                 tapThreshold: 0.25
                 enabled: !tile.remote
-                onConfirmed: if (!tile.remote) Walls.trash(tile.modelData.path)
+                onConfirmed: if (!tile.remote)
+                    Walls.trash(tile.modelData.path)
                 onTapped: root.activate()
             }
 
@@ -863,9 +918,11 @@ PillSurface {
                     else
                         trashHeat.press();
                 }
-                onReleased: if (tile.focused && !tile.remote) trashHeat.release()
+                onReleased: if (tile.focused && !tile.remote)
+                    trashHeat.release()
                 onExited: trashHeat.cancel()
-                onClicked: if (!tile.focused) root.focusIndex = tile.index
+                onClicked: if (!tile.focused)
+                    root.focusIndex = tile.index
             }
 
             /**
@@ -880,7 +937,8 @@ PillSurface {
 
                 property string hoverOut: ""
 
-                onHoverOutChanged: if (tile.focused) root.monHover = hoverOut
+                onHoverOutChanged: if (tile.focused)
+                    root.monHover = hoverOut
 
                 visible: tile.focused && !tile.remote && root.monMap.tiles.length > 0
                 anchors.right: parent.right
@@ -891,7 +949,11 @@ PillSurface {
                 radius: 6 * root.s
                 color: Qt.rgba(0, 0, 0, 0.62)
 
-                Behavior on width { NumberAnimation { duration: Motion.fast } }
+                Behavior on width {
+                    NumberAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
                 Text {
                     id: hoverLabel
@@ -932,8 +994,16 @@ PillSurface {
                             border.width: 1
                             border.color: monHover.hovered ? Theme.vermLit : Qt.rgba(1, 1, 1, 0.35)
 
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
+                            Behavior on border.color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             HoverHandler {
                                 id: monHover
@@ -1032,16 +1102,30 @@ PillSurface {
         height: hintLegend.height
         visible: root.itemCount > 0 && !root.searching
         opacity: (root.hintShown || root.monHover.length > 0) ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.standard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+            }
+        }
 
         Row {
             id: hintLegend
             spacing: 14 * root.s
             visible: root.monHover.length === 0
 
-            HintKey { key: "tap"; caption: root.monMap.tiles.length > 0 ? "set all" : "set" }
-            HintKey { visible: root.monMap.tiles.length > 0; key: "corner"; caption: "one screen" }
-            HintKey { key: "hold"; caption: "delete" }
+            HintKey {
+                key: "tap"
+                caption: root.monMap.tiles.length > 0 ? "set all" : "set"
+            }
+            HintKey {
+                visible: root.monMap.tiles.length > 0
+                key: "corner"
+                caption: "one screen"
+            }
+            HintKey {
+                key: "hold"
+                caption: "delete"
+            }
         }
 
         Text {
@@ -1100,7 +1184,7 @@ PillSurface {
             onTriggered: wheelArea.release()
         }
 
-        onWheel: (event) => {
+        onWheel: event => {
             event.accepted = true;
             if (root.itemCount === 0)
                 return;

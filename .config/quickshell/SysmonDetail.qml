@@ -25,9 +25,7 @@ PillSurface {
     readonly property bool swapEnabled: Sysmon.swapTotalGb > 0
     readonly property bool graphics: page === "gpu"
     readonly property var squirrel: DesktopEntries.applications.values.find(entry => entry.id === "lumen-squirreldisk")
-    readonly property string deviceName: cpu ? (Sysmon.cpuProperties.name || "")
-        : graphics ? (Sysmon.gpuProperties.name || Sysmon.gpuDevice.name || "")
-        : network ? Sysmon.netInterface : storage ? (Sysmon.volume.model || "") : ""
+    readonly property string deviceName: cpu ? (Sysmon.cpuProperties.name || "") : graphics ? (Sysmon.gpuProperties.name || Sysmon.gpuDevice.name || "") : network ? Sysmon.netInterface : storage ? (Sysmon.volume.model || "") : ""
     readonly property real peakReceive: Math.max(0, ...Sysmon.receiveHistory)
     readonly property real peakSend: Math.max(0, ...Sysmon.sendHistory)
     readonly property var properties: {
@@ -38,44 +36,21 @@ PillSurface {
         const n = Sysmon.adapter;
         const d = Sysmon.volume;
         if (cpu)
-            return [
-                ["Max frequency", frequency(p.maxMhz)], ["Logical cores", p.logical],
-                ["Physical cores", p.physical], ["Sockets", p.sockets],
-                ["Uptime", elapsed(Sysmon.uptimeSeconds)], ["Virtualization", p.virtualization],
-                ["Architecture", p.architecture]
-            ];
+            return [["Max frequency", frequency(p.maxMhz)], ["Logical cores", p.logical], ["Physical cores", p.physical], ["Sockets", p.sockets], ["Uptime", elapsed(Sysmon.uptimeSeconds)], ["Virtualization", p.virtualization], ["Architecture", p.architecture]];
         if (memory)
-            return [
-                ["Slots used", m.populated == null ? "" : m.populated + " of " + m.slots],
-                ["Speed", m.speed ? m.speed + " MT/s" : ""], ["Form factor", m.formFactor],
-                ["Type", m.type], ["Type detail", m.typeDetail]
-            ];
+            return [["Slots used", m.populated == null ? "" : m.populated + " of " + m.slots], ["Speed", m.speed ? m.speed + " MT/s" : ""], ["Form factor", m.formFactor], ["Type", m.type], ["Type detail", m.typeDetail]];
         if (graphics)
-            return [
-                ["GPU frequency", frequency(r.coreMhz)], ["Video memory frequency", frequency(r.memoryMhz)],
-                ["Power usage", watts(r.watts)], ["Manufacturer", g.manufacturer],
-                ["PCI slot", g.pci || Sysmon.gpuDevice.pci], ["Driver used", g.driver],
-                ["Max power cap", watts(r.cap)], ["Link", r.link]
-            ];
+            return [["GPU frequency", frequency(r.coreMhz)], ["Video memory frequency", frequency(r.memoryMhz)], ["Power usage", watts(r.watts)], ["Manufacturer", g.manufacturer], ["PCI slot", g.pci || Sysmon.gpuDevice.pci], ["Driver used", g.driver], ["Max power cap", watts(r.cap)], ["Link", r.link]];
         if (network)
-            return [
-                ["Manufacturer", n.manufacturer], ["Driver used", n.driver], ["Interface", Sysmon.netInterface],
-                ["Hardware address", n.address], ["Network name", n.name], ["Link", n.link],
-                ["Link speed", n.speed]
-            ];
+            return [["Manufacturer", n.manufacturer], ["Driver used", n.driver], ["Interface", Sysmon.netInterface], ["Hardware address", n.address], ["Network name", n.name], ["Link", n.link], ["Link speed", n.speed]];
         if (swap)
             return [["Backing", swapEnabled ? Sysmon.swapBacking : ""]];
         if (storage)
-            return [
-                ["Type", d.type], ["Device", d.device], ["Capacity", bytes(d.capacity, 2)],
-                ["Writable", yesNo(d.writable)], ["Removable", yesNo(d.removable)], ["Link", d.link],
-                ["Root volume", d.volume], ["Filesystem", d.filesystem]
-            ];
+            return [["Type", d.type], ["Device", d.device], ["Capacity", bytes(d.capacity, 2)], ["Writable", yesNo(d.writable)], ["Removable", yesNo(d.removable)], ["Link", d.link], ["Root volume", d.volume], ["Filesystem", d.filesystem]];
         return [];
     }
 
-    implicitHeight: header.height + 9 * s + Math.min(content.implicitHeight, 440 * s)
-        + (cleanup.visible ? cleanup.height + 9 * s : 0)
+    implicitHeight: header.height + 9 * s + Math.min(content.implicitHeight, 440 * s) + (cleanup.visible ? cleanup.height + 9 * s : 0)
 
     function bytes(value, decimals) {
         if (value == null)
@@ -106,18 +81,17 @@ PillSurface {
         if (value < 0)
             return "";
         const days = Math.floor(value / 86400);
-        return (days ? days + "d " : "") + Sysmon.pad(Math.floor(value / 3600) % 24)
-            + ":" + Sysmon.pad(Math.floor(value / 60) % 60) + ":" + Sysmon.pad(value % 60);
+        return (days ? days + "d " : "") + Sysmon.pad(Math.floor(value / 3600) % 24) + ":" + Sysmon.pad(Math.floor(value / 60) % 60) + ":" + Sysmon.pad(value % 60);
     }
 
-    onActiveChanged: if (active) scroll.contentY = 0
+    onActiveChanged: if (active)
+        scroll.contentY = 0
 
     SettingsHeader {
         id: header
         s: detail.s
         glyph: "系"
-        title: detail.cpu ? "CPU" : detail.graphics ? "GPU" : detail.memory ? "Memory"
-            : detail.network ? "Network" : detail.swap ? "Swap" : "Storage"
+        title: detail.cpu ? "CPU" : detail.graphics ? "GPU" : detail.memory ? "Memory" : detail.network ? "Network" : detail.swap ? "Swap" : "Storage"
         showBack: true
     }
 
@@ -134,7 +108,11 @@ PillSurface {
         contentHeight: content.implicitHeight
         boundsBehavior: Flickable.StopAtBounds
 
-        WheelScroller { anchors.fill: parent; s: detail.s; flick: scroll }
+        WheelScroller {
+            anchors.fill: parent
+            s: detail.s
+            flick: scroll
+        }
 
         Column {
             id: content
@@ -180,11 +158,7 @@ PillSurface {
                     Readout {
                         visible: !detail.network
                         label: detail.storage ? "Root filesystem" : "Usage"
-                        value: detail.storage ? (Sysmon.diskTotal > 0 ? Sysmon.diskPct + "%" : "")
-                            : detail.cpu ? Sysmon.cpu + "%"
-                            : detail.memory ? (Sysmon.memTotalGb > 0 ? Sysmon.memPct + "%" : "")
-                            : detail.swap ? Sysmon.swapPct + "%"
-                            : Sysmon.gpu >= 0 ? Sysmon.gpu + "%" : ""
+                        value: detail.storage ? (Sysmon.diskTotal > 0 ? Sysmon.diskPct + "%" : "") : detail.cpu ? Sysmon.cpu + "%" : detail.memory ? (Sysmon.memTotalGb > 0 ? Sysmon.memPct + "%" : "") : detail.swap ? Sysmon.swapPct + "%" : Sysmon.gpu >= 0 ? Sysmon.gpu + "%" : ""
                         strong: true
                     }
                     Readout {
@@ -201,8 +175,7 @@ PillSurface {
                         s: detail.s
                         split: detail.network
                         samples: detail.graphics ? 60 : 120
-                        primary: detail.network ? Sysmon.receiveHistory : detail.cpu ? Sysmon.cpuHistory
-                            : detail.memory ? Sysmon.memoryHistory : detail.swap ? Sysmon.swapUsageHistory : Sysmon.gpuHistory
+                        primary: detail.network ? Sysmon.receiveHistory : detail.cpu ? Sysmon.cpuHistory : detail.memory ? Sysmon.memoryHistory : detail.swap ? Sysmon.swapUsageHistory : Sysmon.gpuHistory
                         secondary: detail.network ? Sysmon.sendHistory : []
                         ceiling: detail.network ? Math.max(1024, detail.peakReceive, detail.peakSend) : 100
                     }
@@ -210,8 +183,7 @@ PillSurface {
                     Readout {
                         visible: detail.swap
                         label: "Used / total"
-                        value: detail.bytes(Sysmon.swapUsedGb * 1073741824) + " / "
-                            + detail.bytes(Sysmon.swapTotalGb * 1073741824)
+                        value: detail.bytes(Sysmon.swapUsedGb * 1073741824) + " / " + detail.bytes(Sysmon.swapTotalGb * 1073741824)
                     }
                     Readout {
                         visible: detail.swap
@@ -237,10 +209,7 @@ PillSurface {
                     Readout {
                         visible: detail.memory
                         label: "Memory"
-                        value: Sysmon.memTotalGb > 0
-                            ? detail.bytes(Sysmon.memUsedGb * 1073741824, 2) + " / "
-                                + detail.bytes(Sysmon.memTotalGb * 1073741824, 2)
-                            : ""
+                        value: Sysmon.memTotalGb > 0 ? detail.bytes(Sysmon.memUsedGb * 1073741824, 2) + " / " + detail.bytes(Sysmon.memTotalGb * 1073741824, 2) : ""
                     }
                     Readout {
                         visible: (detail.cpu && Sysmon.cpuTemp >= 0) || (detail.graphics && Sysmon.gpuTemp >= 0)
@@ -360,8 +329,13 @@ PillSurface {
 
         Keys.onReturnPressed: launch()
         Keys.onSpacePressed: launch()
-        HoverHandler { id: cleanupHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: cleanup.launch() }
+        HoverHandler {
+            id: cleanupHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            onTapped: cleanup.launch()
+        }
 
         Text {
             anchors.left: parent.left
@@ -417,7 +391,9 @@ PillSurface {
             font.family: Theme.font
             font.pixelSize: (line.strong && !detail.network ? 17 : 11) * detail.s
             font.weight: line.strong ? Font.Bold : Font.DemiBold
-            font.features: { "tnum": 1 }
+            font.features: {
+                "tnum": 1
+            }
         }
     }
 }

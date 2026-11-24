@@ -23,7 +23,7 @@ Row {
      */
     function restoreWorkspace() {
         var ms = Hyprland.monitors.values;
-        for (var i = 0; i < ms.length; i++)
+        for (let i = 0; i < ms.length; i++)
             if (ms[i].name === root.screenName && ms[i].activeWorkspace)
                 return ms[i].activeWorkspace.id;
         return Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1;
@@ -32,8 +32,8 @@ Row {
     readonly property var items: {
         var out = [];
         var tl = Hyprland.toplevels.values;
-        for (var i = 0; i < tl.length; i++) {
-            var t = tl[i];
+        for (let i = 0; i < tl.length; i++) {
+            const t = tl[i];
             if (t && t.workspace && t.workspace.name === "special:minimized")
                 out.push(t);
         }
@@ -47,13 +47,12 @@ Row {
      * a direct icon-theme lookup as fallback.
      */
     function iconFor(t) {
-        var cls = (t && t.lastIpcObject && t.lastIpcObject.class) ? t.lastIpcObject.class
-            : (t && t.wayland && t.wayland.appId ? t.wayland.appId : "");
+        var cls = (t && t.lastIpcObject && t.lastIpcObject.class) ? t.lastIpcObject.class : (t && t.wayland && t.wayland.appId ? t.wayland.appId : "");
         if (!cls)
             return "";
         var apps = DesktopEntries.applications.values;
-        for (var i = 0; i < apps.length; i++) {
-            var e = apps[i];
+        for (let i = 0; i < apps.length; i++) {
+            const e = apps[i];
             if (e && e.id && e.id.toLowerCase() === cls.toLowerCase() && e.icon)
                 return Quickshell.iconPath(e.icon, "application-x-executable");
         }
@@ -80,7 +79,11 @@ Row {
                 smooth: true
                 source: chip.iconSrc
                 opacity: area.containsMouse ? 1 : 0.78
-                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
 
             MouseArea {

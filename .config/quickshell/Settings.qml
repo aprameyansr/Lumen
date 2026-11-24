@@ -14,16 +14,56 @@ SettingsSurface {
     implicitHeight: content.implicitHeight
 
     rows: [
-        { item: appearanceRow, kind: "nav", surface: "appearance" },
-        { item: notificationsRow, kind: "nav", surface: "notifications" },
-        { item: timeRow, kind: "nav", surface: "time" },
-        { item: lookRow, kind: "nav", surface: "look" },
-        { item: displayRow, kind: "nav", surface: "display" },
-        { item: inputRow, kind: "nav", surface: "input" },
-        { item: dictationRow, kind: "nav", surface: "dictation" },
-        { item: animationRow, kind: "nav", surface: "animation" },
-        { item: keybindsRow, kind: "nav", surface: "keybinds" },
-        { item: workspacesRow, kind: "nav", surface: "workspaces" }
+        {
+            item: appearanceRow,
+            kind: "nav",
+            surface: "appearance"
+        },
+        {
+            item: notificationsRow,
+            kind: "nav",
+            surface: "notifications"
+        },
+        {
+            item: timeRow,
+            kind: "nav",
+            surface: "time"
+        },
+        {
+            item: lookRow,
+            kind: "nav",
+            surface: "look"
+        },
+        {
+            item: displayRow,
+            kind: "nav",
+            surface: "display"
+        },
+        {
+            item: inputRow,
+            kind: "nav",
+            surface: "input"
+        },
+        {
+            item: dictationRow,
+            kind: "nav",
+            surface: "dictation"
+        },
+        {
+            item: animationRow,
+            kind: "nav",
+            surface: "animation"
+        },
+        {
+            item: keybindsRow,
+            kind: "nav",
+            surface: "keybinds"
+        },
+        {
+            item: workspacesRow,
+            kind: "nav",
+            surface: "workspaces"
+        }
     ]
 
     Column {

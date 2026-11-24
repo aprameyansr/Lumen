@@ -31,7 +31,7 @@ Item {
         var seen = ({});
         var ruled = Workspacerules.byMonitor[screenName];
         if (ruled && ruled.length) {
-            for (var r = 0; r < ruled.length; r++) {
+            for (let r = 0; r < ruled.length; r++) {
                 if (!seen[ruled[r]]) {
                     seen[ruled[r]] = true;
                     out.push(ruled[r]);
@@ -40,8 +40,8 @@ Item {
         }
 
         var wss = Hyprland.workspaces.values;
-        for (var i = 0; i < wss.length; i++) {
-            var w = wss[i];
+        for (let i = 0; i < wss.length; i++) {
+            let w = wss[i];
             if (w.id >= 1 && w.monitor && w.monitor.name === screenName && !seen[w.id]) {
                 seen[w.id] = true;
                 out.push(w.id);
@@ -50,10 +50,12 @@ Item {
         var a = activeId;
         if (a >= 1 && !seen[a])
             out.push(a);
-        out.sort(function (x, y) { return x - y; });
+        out.sort(function (x, y) {
+            return x - y;
+        });
         if (show === "all" && out.length > 0) {
-            var full = [];
-            for (var n = (ruled && ruled.length) ? out[0] : 1; n <= out[out.length - 1]; n++)
+            const full = [];
+            for (let n = (ruled && ruled.length) ? out[0] : 1; n <= out[out.length - 1]; n++)
                 full.push(n);
             return full;
         }
@@ -68,7 +70,7 @@ Item {
     readonly property var names: {
         var m = ({});
         var wss = Hyprland.workspaces.values;
-        for (var i = 0; i < wss.length; i++)
+        for (let i = 0; i < wss.length; i++)
             if (wss[i].id >= 1)
                 m[wss[i].id] = wss[i].name;
         return m;
@@ -121,7 +123,7 @@ Item {
      * Wheel notches add up to 120 per step, touchpad pixels included, and a short gap after each switch keeps one fling from racing across.
      */
     MouseArea {
-        id: wheel
+        id: wheelArea
 
         property real acc: 0
         property real lastWheel: 0
@@ -132,19 +134,19 @@ Item {
         anchors.bottomMargin: -8 * workspaces.s
         enabled: workspaces.scroll
         acceptedButtons: Qt.NoButton
-        onWheel: (e) => {
+        onWheel: e => {
             const now = Date.now();
-            if (now - wheel.lastWheel > 400)
-                wheel.acc = 0;
-            wheel.lastWheel = now;
-            wheel.acc += e.angleDelta.y !== 0 ? e.angleDelta.y : -e.angleDelta.x;
-            if (Math.abs(wheel.acc) < 120)
+            if (now - wheelArea.lastWheel > 400)
+                wheelArea.acc = 0;
+            wheelArea.lastWheel = now;
+            wheelArea.acc += e.angleDelta.y !== 0 ? e.angleDelta.y : -e.angleDelta.x;
+            if (Math.abs(wheelArea.acc) < 120)
                 return;
-            const dir = wheel.acc > 0 ? -1 : 1;
-            wheel.acc = 0;
-            if (now - wheel.lastStep < 100)
+            const dir = wheelArea.acc > 0 ? -1 : 1;
+            wheelArea.acc = 0;
+            if (now - wheelArea.lastStep < 100)
                 return;
-            wheel.lastStep = now;
+            wheelArea.lastStep = now;
             workspaces.step(dir);
         }
     }
@@ -168,12 +170,14 @@ Item {
                 readonly property int wsId: modelData
                 readonly property bool isActive: workspaces.activeId === wsId
 
-                Layout.preferredWidth: workspaces.dots ? (slot.isActive ? workspaces.stickW : workspaces.dotW)
-                    : Math.max(label.implicitWidth, 2 * workspaces.dotW)
+                Layout.preferredWidth: workspaces.dots ? (slot.isActive ? workspaces.stickW : workspaces.dotW) : Math.max(label.implicitWidth, 2 * workspaces.dotW)
                 Layout.preferredHeight: 22 * workspaces.s
                 Behavior on Layout.preferredWidth {
                     enabled: workspaces.dots
-                    NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard }
+                    NumberAnimation {
+                        duration: Motion.fast
+                        easing.type: Motion.easeStandard
+                    }
                 }
 
                 Rectangle {
@@ -184,7 +188,11 @@ Item {
                     radius: height / 2
                     color: slot.isActive ? Theme.vermLit : Theme.cream
                     opacity: slot.isActive ? 1.0 : (area.pressed ? 0.9 : (area.containsMouse ? 0.7 : 0.3))
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 Text {
@@ -197,8 +205,14 @@ Item {
                     font.family: Theme.font
                     font.pixelSize: workspaces.fontPx
                     font.weight: Font.DemiBold
-                    font.features: { "tnum": 1 }
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    font.features: {
+                        "tnum": 1
+                    }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 MouseArea {

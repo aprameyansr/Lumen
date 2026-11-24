@@ -42,7 +42,9 @@ Item {
     SequentialAnimation {
         id: anim
         loops: Animation.Infinite
-        PauseAnimation { duration: 1800 }
+        PauseAnimation {
+            duration: 1800
+        }
         NumberAnimation {
             target: root
             property: "scrollX"
@@ -51,7 +53,9 @@ Item {
             duration: Math.max(1, label.implicitWidth - root.width) * 22
             easing.type: Easing.InOutSine
         }
-        PauseAnimation { duration: 1800 }
+        PauseAnimation {
+            duration: 1800
+        }
         NumberAnimation {
             target: root
             property: "scrollX"

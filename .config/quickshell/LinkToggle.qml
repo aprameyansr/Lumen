@@ -10,7 +10,7 @@ Rectangle {
 
     property real s: 1
     property bool on: false
-    signal toggled()
+    signal toggled
 
     width: 28 * s
     height: 16 * s
@@ -26,7 +26,11 @@ Rectangle {
         radius: width / 2
         color: Theme.cream
         x: toggle.on ? toggle.width - width - 3 * toggle.s : 3 * toggle.s
-        Behavior on x { NumberAnimation { duration: Motion.fast } }
+        Behavior on x {
+            NumberAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 
     MouseArea {

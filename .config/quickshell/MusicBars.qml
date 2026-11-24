@@ -30,12 +30,21 @@ Row {
             height: Math.max(2 * root.s, (Cava.levels[index] || 0) * root.span * root.s)
 
             gradient: Gradient {
-                GradientStop { position: 0.0; color: Theme.flameGlow }
-                GradientStop { position: 1.0; color: Theme.vermLit }
+                GradientStop {
+                    position: 0.0
+                    color: Theme.flameGlow
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Theme.vermLit
+                }
             }
 
             Behavior on height {
-                NumberAnimation { duration: Motion.fast; easing.type: Easing.OutQuad }
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.OutQuad
+                }
             }
         }
     }

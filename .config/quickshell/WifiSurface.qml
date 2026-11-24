@@ -24,15 +24,18 @@ PillSurface {
     mBottom: 13
 
     readonly property var devices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
-    readonly property var wifiDev: devices.find(function(d) { return d && d.type === DeviceType.Wifi }) || null
+    readonly property var wifiDev: devices.find(function (d) {
+        return d && d.type === DeviceType.Wifi;
+    }) || null
     readonly property bool wifiOn: (typeof Networking !== "undefined" && Networking) ? Networking.wifiEnabled : false
     readonly property var nets: (wifiDev && wifiDev.networks) ? wifiDev.networks.values : []
-    readonly property var netsSorted: nets.slice().sort(function(a, b) {
-        return ((b ? b.signalStrength : 0) || 0) - ((a ? a.signalStrength : 0) || 0)
+    readonly property var netsSorted: nets.slice().sort(function (a, b) {
+        return ((b ? b.signalStrength : 0) || 0) - ((a ? a.signalStrength : 0) || 0);
     })
-    readonly property var activeNet: nets.find(function(n) { return n && n.connected }) || null
-    readonly property string statusText: !wifiOn ? "Off"
-        : (activeNet ? (activeNet.name || "Connected") : "Not connected")
+    readonly property var activeNet: nets.find(function (n) {
+        return n && n.connected;
+    }) || null
+    readonly property string statusText: !wifiOn ? "Off" : (activeNet ? (activeNet.name || "Connected") : "Not connected")
 
     property var securityMap: ({})
     property var knownProfiles: ({})
@@ -47,8 +50,10 @@ PillSurface {
     property string connBandRate: ""
     readonly property string connDetail: {
         var p = [];
-        if (connIp.length) p.push(connIp);
-        if (connBandRate.length) p.push(connBandRate);
+        if (connIp.length)
+            p.push(connIp);
+        if (connBandRate.length)
+            p.push(connBandRate);
         return p.join(" · ");
     }
 
@@ -61,7 +66,6 @@ PillSurface {
     property string revealedSsid: ""
     property string revealedPw: ""
     property bool revealResolved: false
-
 
     /**
      * Draft of the password being typed for `expandedSsid`. Lives on the root so
@@ -92,9 +96,12 @@ PillSurface {
      * leading field. Returns null for lines without a field separator.
      */
     function splitTerse(line) {
-        for (var k = line.length - 1; k >= 0; k--) {
+        for (let k = line.length - 1; k >= 0; k--) {
             if (line[k] === ":" && (k === 0 || line[k - 1] !== "\\"))
-                return { head: line.slice(0, k).replace(/\\:/g, ":"), tail: line.slice(k + 1) };
+                return {
+                    head: line.slice(0, k).replace(/\\:/g, ":"),
+                    tail: line.slice(k + 1)
+                };
         }
         return null;
     }
@@ -248,9 +255,11 @@ PillSurface {
         }
     }
 
-    onWifiOnChanged: if (!wifiOn) stopScan()
+    onWifiOnChanged: if (!wifiOn)
+        stopScan()
 
-    onExpandedSsidChanged: if (revealedSsid !== expandedSsid) hidePassword()
+    onExpandedSsidChanged: if (revealedSsid !== expandedSsid)
+        hidePassword()
 
     /** The known-profile spinner ends when the attempted network reports connected; the detail line follows every active-network change. */
     onActiveNetChanged: {
@@ -294,10 +303,10 @@ PillSurface {
             onStreamFinished: {
                 var map = {};
                 var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
+                for (let i = 0; i < lines.length; i++) {
                     if (!lines[i].length)
                         continue;
-                    var parts = root.splitTerse(lines[i]);
+                    let parts = root.splitTerse(lines[i]);
                     if (parts && parts.head.length)
                         map[parts.head] = parts.tail;
                 }
@@ -313,8 +322,8 @@ PillSurface {
             onStreamFinished: {
                 var set = {};
                 var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var parts = root.splitTerse(lines[i]);
+                for (let i = 0; i < lines.length; i++) {
+                    let parts = root.splitTerse(lines[i]);
                     if (parts && parts.head.length && parts.tail === "802-11-wireless")
                         set[parts.head] = true;
                 }
@@ -329,16 +338,13 @@ PillSurface {
      */
     Process {
         id: detailProc
-        command: ["sh", "-c",
-            "nmcli -t -f ACTIVE,BAND,RATE dev wifi list | awk -F: '$1==\"yes\"{print \"BR \" $2 \" \" $3}'; "
-            + "ip -4 -o addr show dev \"$1\" scope global | awk '{split($4,a,\"/\"); print \"IP \" a[1]; exit}'",
-            "sh", root.wifiDev ? root.wifiDev.name : ""]
+        command: ["sh", "-c", "nmcli -t -f ACTIVE,BAND,RATE dev wifi list | awk -F: '$1==\"yes\"{print \"BR \" $2 \" \" $3}'; " + "ip -4 -o addr show dev \"$1\" scope global | awk '{split($4,a,\"/\"); print \"IP \" a[1]; exit}'", "sh", root.wifiDev ? root.wifiDev.name : ""]
         stdout: StdioCollector {
             onStreamFinished: {
                 var br = "";
                 var ip = "";
                 var lines = this.text.split("\n");
-                for (var i = 0; i < lines.length; i++) {
+                for (let i = 0; i < lines.length; i++) {
                     if (lines[i].indexOf("BR ") === 0)
                         br = lines[i].slice(3).trim();
                     else if (lines[i].indexOf("IP ") === 0)
@@ -354,12 +360,14 @@ PillSurface {
         id: connProc
         stdinEnabled: true
         stdout: StdioCollector {}
-        stderr: StdioCollector { id: connErr }
+        stderr: StdioCollector {
+            id: connErr
+        }
         onStarted: {
             write(root.pendingPw + "\n");
             root.pendingPw = "";
         }
-        onExited: function(exitCode) {
+        onExited: function (exitCode) {
             root.connecting = false;
             if (exitCode === 0) {
                 root.expandedSsid = "";
@@ -369,8 +377,10 @@ PillSurface {
                 root.refresh();
             } else {
                 root.connectFailed = true;
-                var err = connErr.text.split("\n").filter(function(l) { return l.trim().length > 0; });
-                var last = err.length ? err[err.length - 1].trim() : "";
+                const err = connErr.text.split("\n").filter(function (l) {
+                    return l.trim().length > 0;
+                });
+                const last = err.length ? err[err.length - 1].trim() : "";
                 root.connFailReason = last.replace(/^Error:\s*/, "").replace(/\.$/, "");
                 if (!root.attemptWasKnown && root.attemptSsid.length) {
                     cleanupProc.command = ["nmcli", "connection", "delete", "id", root.attemptSsid];
@@ -414,12 +424,14 @@ PillSurface {
         }
     }
 
-    onNetsChanged: if (active) secRefresh.restart()
+    onNetsChanged: if (active)
+        secRefresh.restart()
 
     Timer {
         id: secRefresh
         interval: 1200
-        onTriggered: if (root.active) secProc.running = true
+        onTriggered: if (root.active)
+            secProc.running = true
     }
 
     /**
@@ -502,7 +514,8 @@ PillSurface {
                         to: 360
                         duration: 1000
                         loops: Animation.Infinite
-                        onRunningChanged: if (!running) reloadGlyph.rotation = 0
+                        onRunningChanged: if (!running)
+                            reloadGlyph.rotation = 0
                     }
                 }
 
@@ -589,17 +602,20 @@ PillSurface {
                             pwField.forceActiveFocus();
                         }
 
-                        onExpandedChanged: if (asking) Qt.callLater(syncPwField)
-                        Component.onCompleted: if (asking) Qt.callLater(syncPwField)
+                        onExpandedChanged: if (asking)
+                            Qt.callLater(syncPwField)
+                        Component.onCompleted: if (asking)
+                            Qt.callLater(syncPwField)
 
                         Rectangle {
                             width: parent.width
                             height: 30 * root.s
                             radius: 9 * root.s
-                            color: netItem.isActive ? Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.14)
-                                : (rowHover.hovered ? Theme.frameBg : "transparent")
+                            color: netItem.isActive ? Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.14) : (rowHover.hovered ? Theme.frameBg : "transparent")
 
-                            HoverHandler { id: rowHover }
+                            HoverHandler {
+                                id: rowHover
+                            }
 
                             MouseArea {
                                 anchors.fill: parent
@@ -639,8 +655,18 @@ PillSurface {
                                     SequentialAnimation on opacity {
                                         running: root.connecting && root.attemptSsid === netItem.ssid
                                         loops: Animation.Infinite
-                                        NumberAnimation { from: 0.35; to: 1; duration: Motion.pulse; easing.type: Easing.InOutSine }
-                                        NumberAnimation { from: 1; to: 0.35; duration: Motion.pulse; easing.type: Easing.InOutSine }
+                                        NumberAnimation {
+                                            from: 0.35
+                                            to: 1
+                                            duration: Motion.pulse
+                                            easing.type: Easing.InOutSine
+                                        }
+                                        NumberAnimation {
+                                            from: 1
+                                            to: 0.35
+                                            duration: Motion.pulse
+                                            easing.type: Easing.InOutSine
+                                        }
                                     }
                                 }
 
@@ -711,7 +737,6 @@ PillSurface {
                                 spacing: 6 * root.s
 
                                 Rectangle {
-                                    id: primaryBtn
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: primaryLabel.implicitWidth + 20 * root.s
                                     height: 22 * root.s
@@ -736,9 +761,7 @@ PillSurface {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: netItem.isActive
-                                            ? root.disconnectNetwork(netItem.modelData)
-                                            : root.connectKnown(netItem.modelData)
+                                        onClicked: netItem.isActive ? root.disconnectNetwork(netItem.modelData) : root.connectKnown(netItem.modelData)
                                     }
                                 }
 
@@ -752,9 +775,7 @@ PillSurface {
                                     radius: 7 * root.s
                                     color: revealArea.containsMouse ? Theme.tileBg : "transparent"
                                     border.width: 1
-                                    border.color: revealBtn.shown
-                                        ? Theme.vermDim
-                                        : (revealArea.containsMouse ? Theme.vermDim : Theme.border)
+                                    border.color: revealBtn.shown ? Theme.vermDim : (revealArea.containsMouse ? Theme.vermDim : Theme.border)
 
                                     Text {
                                         id: revealLabel
@@ -777,14 +798,11 @@ PillSurface {
                                 }
 
                                 Rectangle {
-                                    id: forgetBtn
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: forgetLabel.implicitWidth + 20 * root.s
                                     height: 22 * root.s
                                     radius: 7 * root.s
-                                    color: forgetArea.containsMouse
-                                        ? Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.2)
-                                        : Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.12)
+                                    color: forgetArea.containsMouse ? Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.2) : Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.12)
                                     border.width: 1
                                     border.color: Qt.rgba(Theme.vermLit.r, Theme.vermLit.g, Theme.vermLit.b, 0.45)
 
@@ -907,8 +925,18 @@ PillSurface {
                                     SequentialAnimation on opacity {
                                         running: root.connecting && netItem.asking
                                         loops: Animation.Infinite
-                                        NumberAnimation { from: 0.35; to: 1; duration: Motion.pulse; easing.type: Easing.InOutSine }
-                                        NumberAnimation { from: 1; to: 0.35; duration: Motion.pulse; easing.type: Easing.InOutSine }
+                                        NumberAnimation {
+                                            from: 0.35
+                                            to: 1
+                                            duration: Motion.pulse
+                                            easing.type: Easing.InOutSine
+                                        }
+                                        NumberAnimation {
+                                            from: 1
+                                            to: 0.35
+                                            duration: Motion.pulse
+                                            easing.type: Easing.InOutSine
+                                        }
                                     }
                                 }
 

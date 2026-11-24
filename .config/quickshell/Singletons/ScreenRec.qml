@@ -91,7 +91,7 @@ Singleton {
     property string quickMon: ""
 
     signal targetReady(string token)
-    signal targetAborted()
+    signal targetAborted
 
     /**
      * Run the pre-roll for a freshly resolved capture token. Zero countdown starts
@@ -163,9 +163,14 @@ Singleton {
     readonly property var monitors: {
         var out = [];
         var sc = Quickshell.screens;
-        for (var i = 0; i < sc.length; i++) {
-            var s = sc[i];
-            out.push({ name: s.name, w: s.width, h: s.height, label: s.name + " · " + s.width + "×" + s.height });
+        for (let i = 0; i < sc.length; i++) {
+            const s = sc[i];
+            out.push({
+                name: s.name,
+                w: s.width,
+                h: s.height,
+                label: s.name + " · " + s.width + "×" + s.height
+            });
         }
         return out;
     }
@@ -177,11 +182,11 @@ Singleton {
      * lossless preset.
      */
     readonly property var qualityPreset: ({
-        medium: "medium",
-        high: "high",
-        ultra: "very_high",
-        lossless: "ultra"
-    })
+            medium: "medium",
+            high: "high",
+            ultra: "very_high",
+            lossless: "ultra"
+        })
 
     function timestamp() {
         return Qt.formatDateTime(new Date(), "yyyy-MM-dd_HH-mm-ss");
@@ -228,10 +233,7 @@ Singleton {
     }
 
     function buildArgs(captureToken, file) {
-        var args = ["gpu-screen-recorder", "-w", captureToken,
-                    "-f", String(fps), "-q", qualityPreset[quality] || "high",
-                    "-cursor", captureCursor ? "yes" : "no",
-                    "-fallback-cpu-encoding", "yes"];
+        var args = ["gpu-screen-recorder", "-w", captureToken, "-f", String(fps), "-q", qualityPreset[quality] || "high", "-cursor", captureCursor ? "yes" : "no", "-fallback-cpu-encoding", "yes"];
         var a = audioArg();
         if (a.length > 0)
             args = args.concat(["-a", a]);
@@ -302,7 +304,7 @@ Singleton {
      */
     function clearRecent() {
         var newest = 0;
-        for (var i = 0; i < recent.length; i++)
+        for (let i = 0; i < recent.length; i++)
             newest = Math.max(newest, recent[i].mtime);
         Flags.recordClearedBefore = newest;
         recent = [];
@@ -325,9 +327,7 @@ Singleton {
      * the directory unchanged.
      */
     function pickDir() {
-        pickProc.command = ["sh", "-c",
-            "d=\"$1\"; if command -v kdialog >/dev/null 2>&1; then kdialog --getexistingdirectory \"$d\"; else zenity --file-selection --directory --filename=\"$d/\"; fi",
-            "_", outDir];
+        pickProc.command = ["sh", "-c", "d=\"$1\"; if command -v kdialog >/dev/null 2>&1; then kdialog --getexistingdirectory \"$d\"; else zenity --file-selection --directory --filename=\"$d/\"; fi", "_", outDir];
         pickProc.running = true;
     }
 
@@ -365,7 +365,7 @@ Singleton {
                     root.targetAborted();
             }
         }
-        onExited: function(exitCode) {
+        onExited: function (exitCode) {
             if (exitCode !== 0)
                 root.targetAborted();
         }
@@ -392,19 +392,20 @@ Singleton {
      */
     Process {
         id: recProc
-        stderr: StdioCollector { id: recErr }
+        stderr: StdioCollector {
+            id: recErr
+        }
         onStarted: {
             root.recording = true;
         }
-        onExited: function(exitCode) {
+        onExited: function (exitCode) {
             stopGuard.stop();
             root.recording = false;
             var forced = root.forcedStop;
             root.forcedStop = false;
             if (exitCode !== 0 && !forced) {
-                var msg = recErr.text.trim();
-                failProc.command = ["notify-send", "-a", "Lumen", "-u", "critical",
-                    "Recording failed", msg.length > 0 ? msg : "gpu-screen-recorder exited " + exitCode];
+                const msg = recErr.text.trim();
+                failProc.command = ["notify-send", "-a", "Lumen", "-u", "critical", "Recording failed", msg.length > 0 ? msg : "gpu-screen-recorder exited " + exitCode];
                 failProc.running = true;
             } else {
                 savedProc.running = true;
@@ -423,8 +424,7 @@ Singleton {
 
     Process {
         id: savedProc
-        command: ["notify-send", "-a", "Lumen", "Recording saved",
-            root.currentFile.substring(root.currentFile.lastIndexOf("/") + 1)]
+        command: ["notify-send", "-a", "Lumen", "Recording saved", root.currentFile.substring(root.currentFile.lastIndexOf("/") + 1)]
     }
 
     Process {
@@ -435,22 +435,20 @@ Singleton {
 
     Process {
         id: listProc
-        command: ["sh", "-c",
-            "d=\"$1\"; [ -d \"$d\" ] || exit 0; find \"$d\" -maxdepth 1 -type f -name 'recording_*.mp4' -printf '%T@\\t%s\\t%p\\n' | sort -rn | head -n 40",
-            "_", root.outDir]
+        command: ["sh", "-c", "d=\"$1\"; [ -d \"$d\" ] || exit 0; find \"$d\" -maxdepth 1 -type f -name 'recording_*.mp4' -printf '%T@\\t%s\\t%p\\n' | sort -rn | head -n 40", "_", root.outDir]
         stdout: StdioCollector {
             onStreamFinished: {
                 var lines = this.text.split("\n");
                 var out = [];
-                for (var i = 0; i < lines.length; i++) {
-                    var cols = lines[i].split("\t");
+                for (let i = 0; i < lines.length; i++) {
+                    const cols = lines[i].split("\t");
                     if (cols.length < 3)
                         continue;
-                    var mtime = parseFloat(cols[0]);
+                    const mtime = parseFloat(cols[0]);
                     if (mtime <= Flags.recordClearedBefore)
                         continue;
-                    var path = cols[2];
-                    var name = path.substring(path.lastIndexOf("/") + 1);
+                    const path = cols[2];
+                    const name = path.substring(path.lastIndexOf("/") + 1);
                     out.push({
                         path: path,
                         name: name,
@@ -498,7 +496,8 @@ Singleton {
         interval: 1000
         running: root.recording || root.recorderOpen
         repeat: true
-        onTriggered: if (!pollProc.running) pollProc.running = true
+        onTriggered: if (!pollProc.running)
+            pollProc.running = true
     }
 
     Component.onCompleted: refreshRecent()

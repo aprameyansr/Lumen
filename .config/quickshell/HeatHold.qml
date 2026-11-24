@@ -20,8 +20,8 @@ Item {
     property real tapThreshold: 0
     property bool fired: false
 
-    signal confirmed()
-    signal tapped()
+    signal confirmed
+    signal tapped
 
     function press() {
         fired = false;

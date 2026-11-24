@@ -170,7 +170,6 @@ PillSurface {
     }
 
     Timer {
-        id: elapsedTimer
         interval: 1000
         repeat: true
         running: ScreenRec.recording
@@ -224,7 +223,11 @@ PillSurface {
                     height: optLabel.implicitHeight + 12 * root.s
                     radius: 7 * root.s
                     color: opt.current ? Theme.cardTop : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         id: optLabel
@@ -339,11 +342,12 @@ PillSurface {
             on: arow.on
             value: arow.level
             focused: arow.on && root.faderFocus === arow.faderIndex
-            onMoved: (v) => arow.faderMoved(v)
+            onMoved: v => arow.faderMoved(v)
             onFocusRequested: root.faderFocus = arow.faderIndex
 
             HoverHandler {
-                onHoveredChanged: if (hovered && arow.on) root.faderFocus = arow.faderIndex
+                onHoveredChanged: if (hovered && arow.on)
+                    root.faderFocus = arow.faderIndex
             }
 
             MouseArea {
@@ -351,7 +355,7 @@ PillSurface {
                 acceptedButtons: Qt.NoButton
                 enabled: arow.on
                 property real acc: 0
-                onWheel: (event) => {
+                onWheel: event => {
                     root.faderFocus = arow.faderIndex;
                     acc += event.angleDelta.y / 120;
                     const notches = Math.trunc(acc);
@@ -417,30 +421,39 @@ PillSurface {
                     SequentialAnimation on opacity {
                         running: ScreenRec.recording
                         loops: Animation.Infinite
-                        NumberAnimation { to: 0.25; duration: 500 }
-                        NumberAnimation { to: 1; duration: 500 }
+                        NumberAnimation {
+                            to: 0.25
+                            duration: 500
+                        }
+                        NumberAnimation {
+                            to: 1
+                            duration: 500
+                        }
                     }
                 }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: ScreenRec.recording ? root.fmtTime(root.elapsed)
-                        : (root.counting ? "GET READY" : "IDLE")
+                    text: ScreenRec.recording ? root.fmtTime(root.elapsed) : (root.counting ? "GET READY" : "IDLE")
                     color: ScreenRec.recording ? Theme.vermLit : Theme.dim
                     font.family: Theme.font
                     font.pixelSize: 10 * root.s
                     font.weight: Font.Bold
                     font.capitalization: Font.AllUppercase
                     font.letterSpacing: 1.2 * root.s
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
             }
         }
 
-        Item { width: 1; height: 13 * root.s }
+        Item {
+            width: 1
+            height: 13 * root.s
+        }
 
         Item {
-            id: stageGroup
             width: parent.width
             height: stage.height + drawer.height
 
@@ -453,7 +466,12 @@ PillSurface {
                 color: Theme.cardBot
                 transformOrigin: Item.Center
                 scale: pressActive ? 0.984 : 1
-                Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Motion.fast
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 Rectangle {
                     anchors.left: parent.left
@@ -466,10 +484,22 @@ PillSurface {
 
                 Repeater {
                     model: [
-                        { hx: false, vy: false },
-                        { hx: true, vy: false },
-                        { hx: false, vy: true },
-                        { hx: true, vy: true }
+                        {
+                            hx: false,
+                            vy: false
+                        },
+                        {
+                            hx: true,
+                            vy: false
+                        },
+                        {
+                            hx: false,
+                            vy: true
+                        },
+                        {
+                            hx: true,
+                            vy: true
+                        }
                     ]
 
                     Item {
@@ -478,12 +508,15 @@ PillSurface {
                         readonly property color arm: Qt.alpha(Theme.vermLit, 0.5)
                         width: 14 * root.s
                         height: 14 * root.s
-                        opacity: root.counting || ScreenRec.recording
-                            || (modelData.vy && root.drawerOpen) ? 0 : 1
+                        opacity: root.counting || ScreenRec.recording || (modelData.vy && root.drawerOpen) ? 0 : 1
                         x: modelData.hx ? stage.width - width - 11 * root.s : 11 * root.s
                         y: modelData.vy ? stage.height - height - 11 * root.s : 11 * root.s
                         rotation: modelData.hx ? (modelData.vy ? 180 : 90) : (modelData.vy ? 270 : 0)
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         Shape {
                             anchors.fill: parent
@@ -496,9 +529,20 @@ PillSurface {
                                 joinStyle: ShapePath.RoundJoin
                                 startX: 1 * root.s
                                 startY: 13 * root.s
-                                PathLine { x: 1 * root.s; y: 5.5 * root.s }
-                                PathQuad { controlX: 1 * root.s; controlY: 1 * root.s; x: 5.5 * root.s; y: 1 * root.s }
-                                PathLine { x: 13 * root.s; y: 1 * root.s }
+                                PathLine {
+                                    x: 1 * root.s
+                                    y: 5.5 * root.s
+                                }
+                                PathQuad {
+                                    controlX: 1 * root.s
+                                    controlY: 1 * root.s
+                                    x: 5.5 * root.s
+                                    y: 1 * root.s
+                                }
+                                PathLine {
+                                    x: 13 * root.s
+                                    y: 1 * root.s
+                                }
                             }
                         }
                     }
@@ -538,7 +582,9 @@ PillSurface {
                             color: Theme.subtle
                             font.family: Theme.font
                             font.pixelSize: 10.5 * root.s
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                             elide: Text.ElideRight
                         }
                     }
@@ -580,7 +626,12 @@ PillSurface {
                     color: root.drawerOpen ? Theme.vermLit : Theme.faint
                     stroke: 2.2
                     rotation: root.drawerOpen ? 180 : 0
-                    Behavior on rotation { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    Behavior on rotation {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
                 }
 
                 MouseArea {
@@ -601,7 +652,12 @@ PillSurface {
                 height: root.drawerOpen ? drawerCol.implicitHeight : 0
                 clip: true
                 visible: height > 0
-                Behavior on height { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                Behavior on height {
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
 
                 Rectangle {
                     anchors.fill: parent
@@ -631,26 +687,50 @@ PillSurface {
                         first: true
                         MiniSeg {
                             options: [
-                                { label: "30", value: 30 },
-                                { label: "60", value: 60 },
-                                { label: "120", value: 120 },
-                                { label: "144", value: 144 }
+                                {
+                                    label: "30",
+                                    value: 30
+                                },
+                                {
+                                    label: "60",
+                                    value: 60
+                                },
+                                {
+                                    label: "120",
+                                    value: 120
+                                },
+                                {
+                                    label: "144",
+                                    value: 144
+                                }
                             ]
                             value: ScreenRec.fps
-                            onPicked: (v) => Flags.recordFps = v
+                            onPicked: v => Flags.recordFps = v
                         }
                     }
                     ORow {
                         name: "Quality"
                         MiniSeg {
                             options: [
-                                { label: "Med", value: "medium" },
-                                { label: "High", value: "high" },
-                                { label: "Ultra", value: "ultra" },
-                                { label: "Loss", value: "lossless" }
+                                {
+                                    label: "Med",
+                                    value: "medium"
+                                },
+                                {
+                                    label: "High",
+                                    value: "high"
+                                },
+                                {
+                                    label: "Ultra",
+                                    value: "ultra"
+                                },
+                                {
+                                    label: "Loss",
+                                    value: "lossless"
+                                }
                             ]
                             value: ScreenRec.quality
-                            onPicked: (v) => Flags.recordQuality = v
+                            onPicked: v => Flags.recordQuality = v
                         }
                     }
                     ORow {
@@ -665,23 +745,37 @@ PillSurface {
                         name: "Countdown"
                         MiniSeg {
                             options: [
-                                { label: "Off", value: 0 },
-                                { label: "3s", value: 3 },
-                                { label: "5s", value: 5 },
-                                { label: "10s", value: 10 }
+                                {
+                                    label: "Off",
+                                    value: 0
+                                },
+                                {
+                                    label: "3s",
+                                    value: 3
+                                },
+                                {
+                                    label: "5s",
+                                    value: 5
+                                },
+                                {
+                                    label: "10s",
+                                    value: 10
+                                }
                             ]
                             value: Flags.recordCountdown
-                            onPicked: (v) => Flags.recordCountdown = v
+                            onPicked: v => Flags.recordCountdown = v
                         }
                     }
                 }
             }
         }
 
-        Item { width: 1; height: 13 * root.s }
+        Item {
+            width: 1
+            height: 13 * root.s
+        }
 
         Item {
-            id: actionGroup
             width: parent.width
             height: 44 * root.s
 
@@ -692,8 +786,14 @@ PillSurface {
                 clip: true
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: ScreenRec.recording ? Qt.alpha(Theme.verm, 0.34) : Qt.alpha(Theme.verm, 0.2) }
-                    GradientStop { position: 1.0; color: ScreenRec.recording ? Qt.alpha(Theme.verm, 0.16) : Qt.alpha(Theme.flameGlow, 0.09) }
+                    GradientStop {
+                        position: 0.0
+                        color: ScreenRec.recording ? Qt.alpha(Theme.verm, 0.34) : Qt.alpha(Theme.verm, 0.2)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: ScreenRec.recording ? Qt.alpha(Theme.verm, 0.16) : Qt.alpha(Theme.flameGlow, 0.09)
+                    }
                 }
 
                 ClippingRectangle {
@@ -702,15 +802,18 @@ PillSurface {
                     color: "transparent"
 
                     Rectangle {
-                        id: cdFill
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
                         visible: root.counting
-                        width: parent.width * (root.counting && Flags.recordCountdown > 0
-                            ? (Flags.recordCountdown - root.countdown + 1) / Flags.recordCountdown : 0)
+                        width: parent.width * (root.counting && Flags.recordCountdown > 0 ? (Flags.recordCountdown - root.countdown + 1) / Flags.recordCountdown : 0)
                         color: Qt.alpha(Theme.vermLit, 0.18)
-                        Behavior on width { NumberAnimation { duration: 950; easing.type: Easing.Linear } }
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 950
+                                easing.type: Easing.Linear
+                            }
+                        }
                     }
                 }
 
@@ -724,13 +827,18 @@ PillSurface {
                     height: 17 * root.s
                     radius: width / 2
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: Theme.vermLit }
-                        GradientStop { position: 1.0; color: Theme.vermDeep }
+                        GradientStop {
+                            position: 0.0
+                            color: Theme.vermLit
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Theme.vermDeep
+                        }
                     }
                 }
 
                 Rectangle {
-                    id: stopSquare
                     anchors.left: parent.left
                     anchors.leftMargin: 18 * root.s
                     anchors.verticalCenter: parent.verticalCenter
@@ -742,13 +850,20 @@ PillSurface {
                     SequentialAnimation on scale {
                         running: ScreenRec.recording
                         loops: Animation.Infinite
-                        NumberAnimation { to: 1.08; duration: 700; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1; duration: 700; easing.type: Easing.InOutSine }
+                        NumberAnimation {
+                            to: 1.08
+                            duration: 700
+                            easing.type: Easing.InOutSine
+                        }
+                        NumberAnimation {
+                            to: 1
+                            duration: 700
+                            easing.type: Easing.InOutSine
+                        }
                     }
                 }
 
                 Text {
-                    id: cdNumber
                     anchors.left: parent.left
                     anchors.leftMargin: 20 * root.s
                     anchors.verticalCenter: parent.verticalCenter
@@ -758,15 +873,16 @@ PillSurface {
                     font.family: Theme.font
                     font.pixelSize: 24 * root.s
                     font.weight: Font.ExtraBold
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
 
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: root.counting ? 46 * root.s : 47 * root.s
                     anchors.verticalCenter: parent.verticalCenter
-                    text: ScreenRec.recording ? "Stop recording"
-                        : (root.counting ? "Starting…" : "Start recording")
+                    text: ScreenRec.recording ? "Stop recording" : (root.counting ? "Starting…" : "Start recording")
                     color: Theme.cream
                     font.family: Theme.font
                     font.pixelSize: 13 * root.s
@@ -813,8 +929,16 @@ PillSurface {
 
                     Repeater {
                         model: [
-                            { kind: "screen", label: "Screen", glyph: "monitor" },
-                            { kind: "window", label: "Window / Region", glyph: "video" }
+                            {
+                                kind: "screen",
+                                label: "Screen",
+                                glyph: "monitor"
+                            },
+                            {
+                                kind: "window",
+                                label: "Window / Region",
+                                glyph: "video"
+                            }
                         ]
 
                         Rectangle {
@@ -826,7 +950,11 @@ PillSurface {
                             color: srcArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : Theme.tileBg
                             border.width: 1
                             border.color: srcArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.5) : Theme.border
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             Row {
                                 anchors.centerIn: parent
@@ -863,7 +991,6 @@ PillSurface {
             }
 
             Rectangle {
-                id: screenChooser
                 anchors.fill: parent
                 visible: root.screenChooserOpen
                 radius: 14 * root.s
@@ -896,7 +1023,11 @@ PillSurface {
                         color: monArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : Theme.tileBg
                         border.width: 1
                         border.color: monArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.5) : Theme.border
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         Column {
                             anchors.centerIn: parent
@@ -916,7 +1047,9 @@ PillSurface {
                                 color: Theme.subtle
                                 font.family: Theme.font
                                 font.pixelSize: 9.5 * root.s
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                         }
 
@@ -961,7 +1094,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 13 * root.s }
+        Item {
+            width: 1
+            height: 13 * root.s
+        }
 
         Rectangle {
             width: parent.width
@@ -969,7 +1105,10 @@ PillSurface {
             color: Theme.hair
         }
 
-        Item { width: 1; height: 11 * root.s }
+        Item {
+            width: 1
+            height: 11 * root.s
+        }
 
         AudioRow {
             glyph: "mic"
@@ -977,7 +1116,10 @@ PillSurface {
             on: ScreenRec.micOn
             faderIndex: 0
             level: root.source && root.source.audio ? root.source.audio.volume : 0
-            onFaderMoved: (v) => { if (root.source && root.source.audio) root.source.audio.volume = v; }
+            onFaderMoved: v => {
+                if (root.source && root.source.audio)
+                    root.source.audio.volume = v;
+            }
 
             MouseArea {
                 anchors.left: parent.left
@@ -995,7 +1137,10 @@ PillSurface {
             on: ScreenRec.desktopOn
             faderIndex: 1
             level: root.sink && root.sink.audio ? root.sink.audio.volume : 0
-            onFaderMoved: (v) => { if (root.sink && root.sink.audio) root.sink.audio.volume = v; }
+            onFaderMoved: v => {
+                if (root.sink && root.sink.audio)
+                    root.sink.audio.volume = v;
+            }
 
             MouseArea {
                 anchors.left: parent.left
@@ -1007,7 +1152,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 11 * root.s }
+        Item {
+            width: 1
+            height: 11 * root.s
+        }
 
         Rectangle {
             width: parent.width
@@ -1015,7 +1163,10 @@ PillSurface {
             color: Theme.hair
         }
 
-        Item { width: 1; height: 11 * root.s }
+        Item {
+            width: 1
+            height: 11 * root.s
+        }
 
         /**
          * Save-location row: a tracked "SAVE TO" label, the output directory
@@ -1098,7 +1249,6 @@ PillSurface {
             }
 
             Text {
-                id: pathText
                 anchors.left: pathLabel.right
                 anchors.leftMargin: 10 * root.s
                 anchors.right: pathActions.left
@@ -1114,7 +1264,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 11 * root.s }
+        Item {
+            width: 1
+            height: 11 * root.s
+        }
 
         Rectangle {
             width: parent.width
@@ -1122,7 +1275,10 @@ PillSurface {
             color: Theme.hair
         }
 
-        Item { width: 1; height: 12 * root.s }
+        Item {
+            width: 1
+            height: 12 * root.s
+        }
 
         Item {
             width: parent.width
@@ -1197,7 +1353,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 9 * root.s }
+        Item {
+            width: 1
+            height: 9 * root.s
+        }
 
         Item {
             width: parent.width
@@ -1235,8 +1394,7 @@ PillSurface {
                      */
                     readonly property string stamp: {
                         var m = /_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/.exec(frame.modelData.name);
-                        return m ? m[2] + "-" + m[3] + " " + m[4] + ":" + m[5]
-                                 : frame.modelData.name.replace("recording_", "").replace(".mp4", "");
+                        return m ? m[2] + "-" + m[3] + " " + m[4] + ":" + m[5] : frame.modelData.name.replace("recording_", "").replace(".mp4", "");
                     }
                     readonly property bool coverReady: cover.status === Image.Ready && cover.source !== ""
 
@@ -1259,8 +1417,14 @@ PillSurface {
                             anchors.fill: parent
                             visible: !frame.coverReady
                             gradient: Gradient {
-                                GradientStop { position: 0.0; color: Theme.cardTop }
-                                GradientStop { position: 1.0; color: Theme.tileBg }
+                                GradientStop {
+                                    position: 0.0
+                                    color: Theme.cardTop
+                                }
+                                GradientStop {
+                                    position: 1.0
+                                    color: Theme.tileBg
+                                }
                             }
                         }
 
@@ -1293,7 +1457,11 @@ PillSurface {
                             visible: frame.coverReady
                             color: Qt.rgba(0, 0, 0, 0.34)
                             opacity: frameArea.containsMouse ? 1 : 0.7
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             GlyphIcon {
                                 anchors.centerIn: parent
@@ -1310,9 +1478,12 @@ PillSurface {
                         radius: thumb.radius
                         color: "transparent"
                         border.width: 1.5
-                        border.color: frame.index === 0 ? Qt.alpha(Theme.vermLit, 0.4)
-                            : (frameArea.containsMouse ? Theme.vermDim : Theme.border)
-                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                        border.color: frame.index === 0 ? Qt.alpha(Theme.vermLit, 0.4) : (frameArea.containsMouse ? Theme.vermDim : Theme.border)
+                        Behavior on border.color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     Item {
@@ -1334,7 +1505,9 @@ PillSurface {
                             font.family: Theme.font
                             font.pixelSize: 9 * root.s
                             font.weight: Font.DemiBold
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                             elide: Text.ElideRight
                             maximumLineCount: 1
                         }
@@ -1348,7 +1521,9 @@ PillSurface {
                             font.family: Theme.font
                             font.pixelSize: 8.5 * root.s
                             font.weight: Font.DemiBold
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                         }
                     }
 
@@ -1361,7 +1536,6 @@ PillSurface {
                     }
 
                     Rectangle {
-                        id: delBadge
                         anchors.top: thumb.top
                         anchors.right: thumb.right
                         anchors.margins: 4 * root.s
@@ -1371,8 +1545,16 @@ PillSurface {
                         color: frame.armed ? "#e0533f" : Qt.rgba(0, 0, 0, 0.4)
                         opacity: frameArea.containsMouse || delClipArea.containsMouse ? 1 : 0
                         visible: opacity > 0
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.fast
+                            }
+                        }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         GlyphIcon {
                             anchors.centerIn: parent
@@ -1407,7 +1589,7 @@ PillSurface {
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.NoButton
-                onWheel: (event) => {
+                onWheel: event => {
                     var max = Math.max(0, filmstrip.contentWidth - filmstrip.width);
                     filmstrip.contentX = Math.max(0, Math.min(max, filmstrip.contentX - event.angleDelta.y / 120 * 48 * root.s));
                     event.accepted = true;

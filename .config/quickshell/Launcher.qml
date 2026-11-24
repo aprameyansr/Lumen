@@ -66,7 +66,9 @@ PillSurface {
         return entry && entry.id && entry.id.indexOf("lumen-") === 0 ? entry.id.substring(8) : "";
     }
 
-    Process { id: appimageProc }
+    Process {
+        id: appimageProc
+    }
 
     /**
      * Window-coordinate position of the last hover event that was allowed to
@@ -80,9 +82,7 @@ PillSurface {
         void root.width;
         void root.height;
         void search.input.width;
-        return search.input.mapToItem(root,
-            search.input.cursorRectangle.x + search.input.cursorRectangle.width / 2,
-            search.input.cursorRectangle.y + search.input.cursorRectangle.height / 2);
+        return search.input.mapToItem(root, search.input.cursorRectangle.x + search.input.cursorRectangle.width / 2, search.input.cursorRectangle.y + search.input.cursorRectangle.height / 2);
     }
     readonly property real caretX: caretPoint.x
     readonly property real caretY: caretPoint.y
@@ -95,23 +95,20 @@ PillSurface {
     readonly property var allEntries: {
         var src = DesktopEntries.applications.values;
         var out = [];
-        for (var i = 0; i < src.length; i++)
-            if (src[i] && !src[i].noDisplay) out.push(src[i]);
+        for (let i = 0; i < src.length; i++)
+            if (src[i] && !src[i].noDisplay)
+                out.push(src[i]);
         return out;
     }
     readonly property int totalCount: allEntries.length
     readonly property var results: Fuzzy.rank(allEntries, query, usage)
 
-    function focusField() { search.input.forceActiveFocus(); }
+    function focusField() {
+        search.input.forceActiveFocus();
+    }
 
     function mapCategory(raw) {
-        const order = [
-            ["TerminalEmulator", "Terminal"], ["WebBrowser", "Browser"],
-            ["InstantMessaging", "Chat"], ["Audio", "Media"], ["AudioVideo", "Media"],
-            ["Video", "Media"], ["Game", "Game"], ["Development", "Dev"],
-            ["Graphics", "Graphics"], ["Office", "Office"], ["Settings", "System"],
-            ["System", "System"], ["Utility", "Tool"], ["Network", "Net"]
-        ];
+        const order = [["TerminalEmulator", "Terminal"], ["WebBrowser", "Browser"], ["InstantMessaging", "Chat"], ["Audio", "Media"], ["AudioVideo", "Media"], ["Video", "Media"], ["Game", "Game"], ["Development", "Dev"], ["Graphics", "Graphics"], ["Office", "Office"], ["Settings", "System"], ["System", "System"], ["Utility", "Tool"], ["Network", "Net"]];
         const cats = String(raw).split(/[;,]/);
         for (let i = 0; i < order.length; i++)
             if (cats.includes(order[i][0]))
@@ -188,7 +185,7 @@ PillSurface {
             root.query = text;
             root.selectedIndex = 0;
         }
-        onMoved: (d) => root.move(d)
+        onMoved: d => root.move(d)
         onAccepted: root.activate()
         onDismissed: root.requestClose()
     }
@@ -303,7 +300,8 @@ PillSurface {
             readonly property bool isAppImage: entry && entry.id && entry.id.indexOf("lumen-") === 0
             readonly property bool editing: root.editIndex === index && isAppImage
             property bool armed: false
-            onEditingChanged: if (!editing) armed = false
+            onEditingChanged: if (!editing)
+                armed = false
 
             readonly property string secondary: {
                 if (!entry)
@@ -330,14 +328,14 @@ PillSurface {
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
-                onPositionChanged: (m) => {
+                onPositionChanged: m => {
                     var g = rowArea.mapToItem(null, m.x, m.y);
                     if (g.x !== root.lastPointer.x || g.y !== root.lastPointer.y) {
                         root.lastPointer = Qt.point(g.x, g.y);
                         root.selectedIndex = appRow.index;
                     }
                 }
-                onClicked: (m) => {
+                onClicked: m => {
                     if (m.button === Qt.RightButton) {
                         if (appRow.isAppImage)
                             root.editIndex = appRow.editing ? -1 : appRow.index;
@@ -362,7 +360,7 @@ PillSurface {
                     height: 22 * root.s
                     radius: 5 * root.s
                     color: Qt.rgba(1, 1, 1, 0.05)
-                    visible: !(icon.status === Image.Ready && icon.source != "")
+                    visible: !(icon.status === Image.Ready && icon.source.toString().length > 0)
                 }
                 Image {
                     id: icon
@@ -372,7 +370,7 @@ PillSurface {
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     smooth: true
-                    visible: status === Image.Ready && source != ""
+                    visible: status === Image.Ready && source.toString().length > 0
                     source: {
                         if (!appRow.entry || !appRow.entry.icon)
                             return "";

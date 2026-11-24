@@ -49,8 +49,7 @@ Item {
     readonly property bool muted: sink && sink.audio ? sink.audio.muted : false
     readonly property real volume: sink && sink.audio ? Math.max(0, Math.min(Sound.limit, sink.audio.volume)) : 0
 
-    readonly property real desiredW: kind === "workspace" ? Math.max(120 * s, wsIndicator.implicitWidth + 40 * s)
-        : (kind === "track" ? 344 * s : (kind === "record" ? 256 * s : 248 * s))
+    readonly property real desiredW: kind === "workspace" ? Math.max(120 * s, wsIndicator.implicitWidth + 40 * s) : (kind === "track" ? 344 * s : (kind === "record" ? 256 * s : 248 * s))
     readonly property real desiredH: kind === "track" ? 64 * s : 44 * s
 
     /**
@@ -73,9 +72,27 @@ Item {
     property real volAnim: volShown
     property real brightAnim: brightShown
     property real battAnim: battShown
-    Behavior on volAnim { enabled: root.barsLive; NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
-    Behavior on brightAnim { enabled: root.barsLive; NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
-    Behavior on battAnim { enabled: root.barsLive; NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
+    Behavior on volAnim {
+        enabled: root.barsLive
+        NumberAnimation {
+            duration: 260
+            easing.type: Easing.OutCubic
+        }
+    }
+    Behavior on brightAnim {
+        enabled: root.barsLive
+        NumberAnimation {
+            duration: 260
+            easing.type: Easing.OutCubic
+        }
+    }
+    Behavior on battAnim {
+        enabled: root.barsLive
+        NumberAnimation {
+            duration: 420
+            easing.type: Easing.OutCubic
+        }
+    }
 
     /**
      * Bars start animating a beat after the OSD opens. A track announce that
@@ -107,12 +124,13 @@ Item {
      */
     readonly property string activeWsName: {
         var mons = Hyprland.monitors.values;
-        for (var i = 0; i < mons.length; i++)
+        for (let i = 0; i < mons.length; i++)
             if (mons[i].name === screenName)
                 return mons[i].activeWorkspace ? mons[i].activeWorkspace.name : "";
         return "";
     }
-    onActiveWsNameChanged: if (activeWsName.length > 0 && !expanded) flash("workspace");
+    onActiveWsNameChanged: if (activeWsName.length > 0 && !expanded)
+        flash("workspace")
 
     /**
      * Wait for the track to settle before flashing. Hovering the YouTube grid
@@ -187,7 +205,6 @@ Item {
         }
     }
 
-
     Timer {
         interval: 1500
         running: true
@@ -229,8 +246,12 @@ Item {
 
     Connections {
         target: root.sink && root.sink.audio ? root.sink.audio : null
-        function onVolumesChanged() { root.flash("volume"); }
-        function onMutedChanged() { root.flash("volume"); }
+        function onVolumesChanged() {
+            root.flash("volume");
+        }
+        function onMutedChanged() {
+            root.flash("volume");
+        }
     }
 
     Connections {
@@ -268,12 +289,17 @@ Item {
      */
     Connections {
         target: Sound
-        function onVolumeKey() { root.flash("volume"); }
+        function onVolumeKey() {
+            root.flash("volume");
+        }
     }
 
     Connections {
         target: Spaces
-        function onWorkspaceKey() { if (root.onFocusedMonitor) root.flash("workspace"); }
+        function onWorkspaceKey() {
+            if (root.onFocusedMonitor)
+                root.flash("workspace");
+        }
     }
 
     Connections {
@@ -287,12 +313,15 @@ Item {
     }
 
     Item {
-        id: volRow
         anchors.fill: parent
         clip: true
         opacity: root.kind === "volume" ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
 
         /** Fixed final-size layout; the clipped row reveals it as the pill opens. */
         Item {
@@ -322,7 +351,9 @@ Item {
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
                 font.weight: Font.DemiBold
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
 
             Rectangle {
@@ -343,8 +374,24 @@ Item {
                     radius: parent.radius
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: root.muted ? Theme.vermDim : Theme.vermDeep; Behavior on color { ColorAnimation { duration: Motion.fast } } }
-                        GradientStop { position: 1.0; color: root.muted ? Theme.vermDim : Theme.vermLit; Behavior on color { ColorAnimation { duration: Motion.fast } } }
+                        GradientStop {
+                            position: 0.0
+                            color: root.muted ? Theme.vermDim : Theme.vermDeep
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: root.muted ? Theme.vermDim : Theme.vermLit
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -352,11 +399,14 @@ Item {
     }
 
     Item {
-        id: trackRow
         anchors.fill: parent
         opacity: root.kind === "track" ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
 
         ClippingRectangle {
             id: coverBox
@@ -460,12 +510,15 @@ Item {
     }
 
     Item {
-        id: brightRow
         anchors.fill: parent
         clip: true
         opacity: root.kind === "brightness" ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
 
         /** Fixed final-size layout; the clipped row reveals it as the pill opens. */
         Item {
@@ -495,7 +548,9 @@ Item {
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
                 font.weight: Font.DemiBold
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
 
             Rectangle {
@@ -516,8 +571,14 @@ Item {
                     radius: parent.radius
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.vermDeep }
-                        GradientStop { position: 1.0; color: Theme.vermLit }
+                        GradientStop {
+                            position: 0.0
+                            color: Theme.vermDeep
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Theme.vermLit
+                        }
                     }
                 }
             }
@@ -530,7 +591,11 @@ Item {
         clip: true
         opacity: root.kind === "battery" ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
 
         /** Fixed final-size layout; the clipped row reveals it as the pill opens. */
         Item {
@@ -560,7 +625,9 @@ Item {
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
                 font.weight: Font.DemiBold
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
 
             Rectangle {
@@ -583,8 +650,14 @@ Item {
                     radius: parent.radius
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.vermDeep }
-                        GradientStop { position: 1.0; color: Theme.flameGlow }
+                        GradientStop {
+                            position: 0.0
+                            color: Theme.vermDeep
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Theme.flameGlow
+                        }
                     }
 
                     Rectangle {
@@ -594,9 +667,18 @@ Item {
                         color: "transparent"
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: "#00ffffff" }
-                            GradientStop { position: 0.5; color: "#55ffe6d6" }
-                            GradientStop { position: 1.0; color: "#00ffffff" }
+                            GradientStop {
+                                position: 0.0
+                                color: "#00ffffff"
+                            }
+                            GradientStop {
+                                position: 0.5
+                                color: "#55ffe6d6"
+                            }
+                            GradientStop {
+                                position: 1.0
+                                color: "#00ffffff"
+                            }
                         }
 
                         NumberAnimation on x {
@@ -617,7 +699,11 @@ Item {
         anchors.fill: parent
         opacity: root.kind === "workspace" ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
 
         Workspaces {
             id: wsIndicator
@@ -634,7 +720,11 @@ Item {
         anchors.fill: parent
         opacity: root.kind === "record" ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
 
         Rectangle {
             id: recGlyph
@@ -648,8 +738,16 @@ Item {
             SequentialAnimation on opacity {
                 running: root.flashing && root.recordStarted && root.kind === "record"
                 loops: Animation.Infinite
-                NumberAnimation { to: 0.4; duration: 500; easing.type: Easing.InOutSine }
-                NumberAnimation { to: 1; duration: 500; easing.type: Easing.InOutSine }
+                NumberAnimation {
+                    to: 0.4
+                    duration: 500
+                    easing.type: Easing.InOutSine
+                }
+                NumberAnimation {
+                    to: 1
+                    duration: 500
+                    easing.type: Easing.InOutSine
+                }
             }
         }
 

@@ -107,7 +107,7 @@ Singleton {
         onFileChanged: reload()
         /** Several fields often change in one go (a keep-awake start sets its span and the switch together): one write per event-loop turn. */
         onAdapterUpdated: Qt.callLater(root.flush)
-        onLoadFailed: function(error) {
+        onLoadFailed: function (error) {
             if (error === FileViewError.FileNotFound)
                 writeAdapter();
         }
@@ -142,9 +142,24 @@ Singleton {
             property var worldZones: ["Europe/London", "America/New_York", "Asia/Tokyo"]
             /** Saved one-tap sessions: { name, lid, mins, end }. Seeded once; an emptied list stays empty. */
             property var awakePresets: [
-                { name: "Download", lid: "awake", mins: 120, end: "sleep" },
-                { name: "Reading", lid: "sleep", mins: 60, end: "off" },
-                { name: "Overnight", lid: "awake", mins: 240, end: "poweroff" }
+                {
+                    name: "Download",
+                    lid: "awake",
+                    mins: 120,
+                    end: "sleep"
+                },
+                {
+                    name: "Reading",
+                    lid: "sleep",
+                    mins: 60,
+                    end: "off"
+                },
+                {
+                    name: "Overnight",
+                    lid: "awake",
+                    mins: 240,
+                    end: "poweroff"
+                }
             ]
             property bool time12h: false
             property bool clockSeconds: false

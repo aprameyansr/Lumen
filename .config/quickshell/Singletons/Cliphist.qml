@@ -69,7 +69,7 @@ Singleton {
         if (!/^\d+$/.test(id))
             return;
         var kept = [];
-        for (var i = 0; i < entries.length; i++)
+        for (let i = 0; i < entries.length; i++)
             if (entries[i].id !== id)
                 kept.push(entries[i]);
         entries = kept;
@@ -134,7 +134,6 @@ Singleton {
      * good snapshot; one quiet retry heals the race without looping.
      */
     Timer {
-        id: listRetry
         interval: 2000
         onTriggered: root.refresh()
     }
@@ -145,21 +144,21 @@ Singleton {
         var metaRe = /^\[\[ binary data (.*) \]\]$/;
         var imgRe = /\b(png|jpg|jpeg|gif|bmp|webp)\b/;
         var splitRe = /^(\S+ \S+) (\w+) (\d+)x(\d+)$/;
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            var tab = line.indexOf("\t");
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const tab = line.indexOf("\t");
             if (tab < 1)
                 continue;
-            var id = line.substring(0, tab);
+            const id = line.substring(0, tab);
             if (!/^\d+$/.test(id))
                 continue;
-            var preview = line.substring(tab + 1);
-            var m = metaRe.exec(preview);
-            var isImage = m !== null && imgRe.test(m[1]);
-            var label = "";
-            var sizeLabel = "";
+            const preview = line.substring(tab + 1);
+            const m = metaRe.exec(preview);
+            const isImage = m !== null && imgRe.test(m[1]);
+            let label = "";
+            let sizeLabel = "";
             if (isImage) {
-                var p = splitRe.exec(m[1]);
+                const p = splitRe.exec(m[1]);
                 label = p ? p[2] + " " + p[3] + "×" + p[4] : m[1];
                 sizeLabel = p ? p[1] : "";
             }
@@ -179,14 +178,16 @@ Singleton {
     Process {
         id: listProc
         command: ["cliphist", "list"]
-        stdout: StdioCollector { id: collected }
+        stdout: StdioCollector {
+            id: collected
+        }
         onExited: {
             root.applyList(collected.text);
 
-    if (root.pending) {
-        root.pending = false;
-        Qt.callLater(root.refresh);
-    }
+            if (root.pending) {
+                root.pending = false;
+                Qt.callLater(root.refresh);
+            }
         }
     }
 

@@ -34,9 +34,9 @@ function parse(jsonText) {
         return [];
 
     return data.map(function (mon) {
-        var modes = (mon.availableModes || [])
-            .map(parseMode)
-            .filter(function (m) { return m !== null; });
+        var modes = (mon.availableModes || []).map(parseMode).filter(function (m) {
+            return m !== null;
+        });
         return {
             name: mon.name,
             width: mon.width,
@@ -69,11 +69,19 @@ function setMonitor(luaText, output, mode, position, scale) {
 
     var blockStart = luaText.lastIndexOf("hl.monitor({", outMatch.index);
     if (blockStart === -1)
-        return { text: luaText, ok: false, error: "no hl.monitor block for " + output };
+        return {
+            text: luaText,
+            ok: false,
+            error: "no hl.monitor block for " + output
+        };
 
     var blockEnd = luaText.indexOf("})", outMatch.index);
     if (blockEnd === -1)
-        return { text: luaText, ok: false, error: "unterminated block for " + output };
+        return {
+            text: luaText,
+            ok: false,
+            error: "unterminated block for " + output
+        };
 
     var head = luaText.slice(0, blockStart);
     var block = luaText.slice(blockStart, blockEnd);
@@ -81,15 +89,31 @@ function setMonitor(luaText, output, mode, position, scale) {
 
     var r1 = replaceField(block, "mode", '"' + mode + '"');
     if (!r1.ok)
-        return { text: luaText, ok: false, error: "mode field not found for " + output };
+        return {
+            text: luaText,
+            ok: false,
+            error: "mode field not found for " + output
+        };
     var r2 = replaceField(r1.text, "position", '"' + position + '"');
     if (!r2.ok)
-        return { text: luaText, ok: false, error: "position field not found for " + output };
+        return {
+            text: luaText,
+            ok: false,
+            error: "position field not found for " + output
+        };
     var r3 = replaceField(r2.text, "scale", String(scale));
     if (!r3.ok)
-        return { text: luaText, ok: false, error: "scale field not found for " + output };
+        return {
+            text: luaText,
+            ok: false,
+            error: "scale field not found for " + output
+        };
 
-    return { text: head + r3.text + tail, ok: true, error: "" };
+    return {
+        text: head + r3.text + tail,
+        ok: true,
+        error: ""
+    };
 }
 
 /**
@@ -102,8 +126,14 @@ function setMonitor(luaText, output, mode, position, scale) {
 function replaceField(block, name, value) {
     var re = new RegExp("(" + name + "\\s*=\\s*)(\"[^\"]*\"|[^,}\\n]*)");
     if (!re.test(block))
-        return { text: block, ok: false };
-    return { text: block.replace(re, "$1" + value), ok: true };
+        return {
+            text: block,
+            ok: false
+        };
+    return {
+        text: block.replace(re, "$1" + value),
+        ok: true
+    };
 }
 
 function escapeRe(s) {
@@ -119,9 +149,12 @@ function appendMonitor(luaText, output, mode, position, scale) {
     var text = luaText;
     if (text.length > 0 && text.charAt(text.length - 1) !== "\n")
         text += "\n";
-    text += "\nhl.monitor({\n    output   = \"" + output + "\",\n    mode     = \"" + mode
-        + "\",\n    position = \"" + position + "\",\n    scale    = " + scale + ",\n})\n";
-    return { text: text, ok: true, error: "" };
+    text += "\nhl.monitor({\n    output   = \"" + output + "\",\n    mode     = \"" + mode + "\",\n    position = \"" + position + "\",\n    scale    = " + scale + ",\n})\n";
+    return {
+        text: text,
+        ok: true,
+        error: ""
+    };
 }
 
 /**
@@ -137,24 +170,53 @@ function setWorkspaceLoops(luaText, mainName, otherName) {
     var hits = [];
     var m;
     while ((m = re.exec(luaText)) !== null)
-        hits.push({ start: m.index + m[1].length, end: m.index + m[1].length + m[4].length,
-            from: parseInt(m[2], 10), to: parseInt(m[3], 10) });
+        hits.push({
+            start: m.index + m[1].length,
+            end: m.index + m[1].length + m[4].length,
+            from: parseInt(m[2], 10),
+            to: parseInt(m[3], 10)
+        });
     if (hits.length !== 2)
-        return { text: luaText, ok: false, error: "expected 2 workspace_rule loops, found " + hits.length };
+        return {
+            text: luaText,
+            ok: false,
+            error: "expected 2 workspace_rule loops, found " + hits.length
+        };
     var firstIsMain = hits[0].from <= 1 && hits[0].to >= 1;
     var mainHit = firstIsMain ? hits[0] : hits[1];
     var otherHit = firstIsMain ? hits[1] : hits[0];
     var edits = [
-        { start: mainHit.start, end: mainHit.end, name: mainName },
-        { start: otherHit.start, end: otherHit.end, name: otherName }
-    ].sort(function (a, b) { return b.start - a.start; });
+        {
+            start: mainHit.start,
+            end: mainHit.end,
+            name: mainName
+        },
+        {
+            start: otherHit.start,
+            end: otherHit.end,
+            name: otherName
+        }
+    ].sort(function (a, b) {
+        return b.start - a.start;
+    });
     var text = luaText;
     for (var i = 0; i < edits.length; i++)
         text = text.slice(0, edits[i].start) + edits[i].name + text.slice(edits[i].end);
-    return { text: text, ok: true, error: "",
-        mainRange: [mainHit.from, mainHit.to], otherRange: [otherHit.from, otherHit.to] };
+    return {
+        text: text,
+        ok: true,
+        error: "",
+        mainRange: [mainHit.from, mainHit.to],
+        otherRange: [otherHit.from, otherHit.to]
+    };
 }
 
 if (typeof module !== "undefined" && module.exports) {
-    module.exports = { parseMode, parse, setMonitor, appendMonitor, setWorkspaceLoops };
+    module.exports = {
+        parseMode,
+        parse,
+        setMonitor,
+        appendMonitor,
+        setWorkspaceLoops
+    };
 }

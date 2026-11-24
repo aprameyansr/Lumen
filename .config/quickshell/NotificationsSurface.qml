@@ -21,23 +21,35 @@ SettingsSurface {
         var base = [3, 4, 6, 8, 12];
         if (base.indexOf(Flags.notifSecs) < 0)
             base = base.concat([Flags.notifSecs]);
-        return base.sort(function (a, b) { return a - b; });
+        return base.sort(function (a, b) {
+            return a - b;
+        });
     }
-
 
     function flashOn(k) {
         return (Flags.osdOff || []).indexOf(k) < 0;
     }
 
     function setFlash(k, on) {
-        var off = (Flags.osdOff || []).filter(function (o) { return o !== k; });
+        var off = (Flags.osdOff || []).filter(function (o) {
+            return o !== k;
+        });
         if (!on)
             off.push(k);
         Flags.osdOff = off;
     }
 
     function flashEntry(item, k) {
-        return { item: item, kind: "toggle", get: function () { return root.flashOn(k); }, set: function (v) { root.setFlash(k, v); } };
+        return {
+            item: item,
+            kind: "toggle",
+            get: function () {
+                return root.flashOn(k);
+            },
+            set: function (v) {
+                root.setFlash(k, v);
+            }
+        };
     }
 
     /**
@@ -46,27 +58,59 @@ SettingsSurface {
      * list follows Notifs.knownApps.
      */
     rows: {
-        var r = [
-            flashEntry(playRow, "play"),
-            flashEntry(songRow, "song"),
-            flashEntry(volumeRow, "volume"),
-            flashEntry(brightnessRow, "brightness"),
-            flashEntry(workspaceRow, "workspace")
-        ];
+        var r = [flashEntry(playRow, "play"), flashEntry(songRow, "song"), flashEntry(volumeRow, "volume"), flashEntry(brightnessRow, "brightness"), flashEntry(workspaceRow, "workspace")];
         if (Battery.present)
             r.push(flashEntry(batteryRow, "battery"));
         r.push(flashEntry(recordRow, "record"));
-        r.push({ item: osdTimeRow, kind: "seg", vals: root.osdTimes, get: function () { return Flags.osdTime; }, set: function (v) { Flags.osdTime = v; } });
-        r.push({ item: dndRow, kind: "toggle", get: function () { return Flags.dnd; }, set: function (v) { Flags.dnd = v; } });
-        r.push({ item: notifSecsRow, kind: "seg", vals: root.notifTimes, get: function () { return Flags.notifSecs; }, set: function (v) { Flags.notifSecs = v; } });
+        r.push({
+            item: osdTimeRow,
+            kind: "seg",
+            vals: root.osdTimes,
+            get: function () {
+                return Flags.osdTime;
+            },
+            set: function (v) {
+                Flags.osdTime = v;
+            }
+        });
+        r.push({
+            item: dndRow,
+            kind: "toggle",
+            get: function () {
+                return Flags.dnd;
+            },
+            set: function (v) {
+                Flags.dnd = v;
+            }
+        });
+        r.push({
+            item: notifSecsRow,
+            kind: "seg",
+            vals: root.notifTimes,
+            get: function () {
+                return Flags.notifSecs;
+            },
+            set: function (v) {
+                Flags.notifSecs = v;
+            }
+        });
         void appsRepeater.count;
-        for (var i = 0; i < appsRepeater.count; i++) {
-            var it = appsRepeater.itemAt(i);
+        for (let i = 0; i < appsRepeater.count; i++) {
+            const it = appsRepeater.itemAt(i);
             if (!it)
                 continue;
             (function (row) {
-                r.push({ item: row, kind: "toggle", get: function () { return !Notifs.isMuted(row.app); }, set: function (v) { Notifs.setMuted(row.app, !v); } });
-            })(it);
+                    r.push({
+                        item: row,
+                        kind: "toggle",
+                        get: function () {
+                            return !Notifs.isMuted(row.app);
+                        },
+                        set: function (v) {
+                            Notifs.setMuted(row.app, !v);
+                        }
+                    });
+                })(it);
         }
         return r;
     }
@@ -123,7 +167,9 @@ SettingsSurface {
             showBack: true
         }
 
-        GroupLabel { text: "Media" }
+        GroupLabel {
+            text: "Media"
+        }
 
         FlashRow {
             id: playRow
@@ -141,7 +187,9 @@ SettingsSurface {
             last: true
         }
 
-        GroupLabel { text: "Pill flashes" }
+        GroupLabel {
+            text: "Pill flashes"
+        }
 
         FlashRow {
             id: volumeRow
@@ -189,9 +237,14 @@ SettingsSurface {
             sub: "Scales every flash, the song card included"
             SettingsSeg {
                 s: root.s
-                options: root.osdTimes.map(function (v) { return { label: v + "×", value: v }; })
+                options: root.osdTimes.map(function (v) {
+                    return {
+                        label: v + "×",
+                        value: v
+                    };
+                })
                 value: Flags.osdTime
-                onPicked: (v) => Flags.osdTime = v
+                onPicked: v => Flags.osdTime = v
             }
         }
 
@@ -210,7 +263,9 @@ SettingsSurface {
             }
         }
 
-        GroupLabel { text: "App notifications" }
+        GroupLabel {
+            text: "App notifications"
+        }
 
         SettingsRow {
             id: notifSecsRow
@@ -222,13 +277,20 @@ SettingsSurface {
             last: true
             SettingsSeg {
                 s: root.s
-                options: root.notifTimes.map(function (v) { return { label: v + " s", value: v }; })
+                options: root.notifTimes.map(function (v) {
+                    return {
+                        label: v + " s",
+                        value: v
+                    };
+                })
                 value: Flags.notifSecs
-                onPicked: (v) => Flags.notifSecs = v
+                onPicked: v => Flags.notifSecs = v
             }
         }
 
-        GroupLabel { text: "Apps" }
+        GroupLabel {
+            text: "Apps"
+        }
 
         SettingsRow {
             visible: Notifs.knownApps.length === 0
@@ -281,6 +343,9 @@ SettingsSurface {
             }
         }
 
-        Item { width: 1; height: 10 * root.s }
+        Item {
+            width: 1
+            height: 10 * root.s
+        }
     }
 }

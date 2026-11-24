@@ -33,8 +33,7 @@ Singleton {
     property bool pending: false
 
     property string resolvedDir: ""
-    readonly property string wpDir: Flags.wallpaperDir.length > 0 ? Flags.wallpaperDir
-        : (resolvedDir.length > 0 ? resolvedDir : Quickshell.env("HOME") + "/Pictures/Wallpapers")
+    readonly property string wpDir: Flags.wallpaperDir.length > 0 ? Flags.wallpaperDir : (resolvedDir.length > 0 ? resolvedDir : Quickshell.env("HOME") + "/Pictures/Wallpapers")
     readonly property string thumbDir: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/lumen-wp-thumbs/"
     readonly property string thumbScript: Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper-thumbs.sh"
     readonly property string setScript: Quickshell.env("HOME") + "/.config/hypr/scripts/wallpaper.sh"
@@ -94,9 +93,7 @@ Singleton {
             queuedOutput = out;
             return;
         }
-        applyProc.command = out.length > 0
-            ? ["bash", root.setScript, "set", path, out]
-            : ["bash", root.setScript, "set", path];
+        applyProc.command = out.length > 0 ? ["bash", root.setScript, "set", path, out] : ["bash", root.setScript, "set", path];
         applyProc.running = true;
     }
 
@@ -104,7 +101,7 @@ Singleton {
         trashProc.command = ["gio", "trash", path];
         trashProc.running = true;
         var kept = [];
-        for (var i = 0; i < entries.length; i++)
+        for (let i = 0; i < entries.length; i++)
             if (entries[i].path !== path)
                 kept.push(entries[i]);
         entries = kept;
@@ -112,7 +109,7 @@ Singleton {
 
     Process {
         id: trashProc
-        onExited: function(exitCode) {
+        onExited: function (exitCode) {
             if (exitCode !== 0)
                 root.refresh();
         }
@@ -131,12 +128,12 @@ Singleton {
             onStreamFinished: {
                 var lines = this.text.split("\n");
                 var out = [];
-                for (var i = 0; i < lines.length; i++) {
-                    var tab = lines[i].indexOf("\t");
+                for (let i = 0; i < lines.length; i++) {
+                    const tab = lines[i].indexOf("\t");
                     if (tab < 1)
                         continue;
-                    var path = lines[i].substring(tab + 1);
-                    var name = path.substring(path.lastIndexOf("/") + 1);
+                    const path = lines[i].substring(tab + 1);
+                    const name = path.substring(path.lastIndexOf("/") + 1);
                     out.push({
                         path: path,
                         name: name,
@@ -168,13 +165,11 @@ Singleton {
         id: applyProc
         onExited: {
             if (root.queuedApply.length) {
-                var next = root.queuedApply;
-                var nextOut = root.queuedOutput;
+                const next = root.queuedApply;
+                const nextOut = root.queuedOutput;
                 root.queuedApply = "";
                 root.queuedOutput = "";
-                applyProc.command = nextOut.length > 0
-                    ? ["bash", root.setScript, "set", next, nextOut]
-                    : ["bash", root.setScript, "set", next];
+                applyProc.command = nextOut.length > 0 ? ["bash", root.setScript, "set", next, nextOut] : ["bash", root.setScript, "set", next];
                 applyProc.running = true;
                 return;
             }

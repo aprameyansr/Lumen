@@ -23,12 +23,11 @@ PillSurface {
 
     implicitHeight: content.implicitHeight
 
-
     ameForm: "off"
 
     readonly property var editingSpace: {
         var sl = Spaces.list;
-        for (var i = 0; i < sl.length; i++)
+        for (let i = 0; i < sl.length; i++)
             if (sl[i] && sl[i].id === Spaces.editing)
                 return sl[i];
         return null;
@@ -38,7 +37,9 @@ PillSurface {
 
     /** Pill.qml folds the picker back when the surface leaves */
     readonly property alias addOpen: picker.addOpen
-    function closeAdd() { picker.closeAdd(); }
+    function closeAdd() {
+        picker.closeAdd();
+    }
 
     function removeAt(i) {
         if (i < 0 || i >= root.entries.length)
@@ -103,7 +104,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 9 * root.s }
+        Item {
+            width: 1
+            height: 9 * root.s
+        }
 
         /** ── list view ── */
 
@@ -156,10 +160,16 @@ PillSurface {
                     color: rowHover.hovered ? Theme.frameBg : "transparent"
                     border.width: 1
                     border.color: rowHover.hovered ? Theme.frameBorder : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
-                HoverHandler { id: rowHover }
+                HoverHandler {
+                    id: rowHover
+                }
 
                 Rectangle {
                     id: tile
@@ -175,7 +185,7 @@ PillSurface {
 
                     Text {
                         anchors.centerIn: parent
-                        visible: !(icon.status === Image.Ready && icon.source != "")
+                        visible: !(icon.status === Image.Ready && icon.source.toString().length > 0)
                         text: erow.title.length > 0 ? erow.title.charAt(0).toUpperCase() : "?"
                         color: Theme.dim
                         font.family: Theme.font
@@ -192,7 +202,7 @@ PillSurface {
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                         smooth: true
-                        visible: status === Image.Ready && source != ""
+                        visible: status === Image.Ready && source.toString().length > 0
                         source: erow.resolved && erow.resolved.icon ? Quickshell.iconPath(erow.resolved.icon, true) : ""
                     }
                 }
@@ -235,7 +245,11 @@ PillSurface {
                     height: 26 * root.s
                     radius: 7 * root.s
                     color: removeArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     GlyphIcon {
                         anchors.centerIn: parent
@@ -257,15 +271,22 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: visible ? 6 * root.s : 0; visible: !picker.addOpen }
+        Item {
+            width: 1
+            height: visible ? 6 * root.s : 0
+            visible: !picker.addOpen
+        }
 
         AppPickerList {
             id: picker
             width: parent.width
             s: root.s
-            onPicked: (entry) => root.addClass(entry.startupClass || entry.id)
+            onPicked: entry => root.addClass(entry.startupClass || entry.id)
         }
 
-        Item { width: 1; height: 4 * root.s }
+        Item {
+            width: 1
+            height: 4 * root.s
+        }
     }
 }

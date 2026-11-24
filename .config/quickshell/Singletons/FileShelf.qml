@@ -23,9 +23,15 @@ Singleton {
         return true;
     }
 
-    function refresh() { run("list", []); }
-    function store(urls) { return run("store", urls); }
-    function remove(id) { return run("remove", [id]); }
+    function refresh() {
+        run("list", []);
+    }
+    function store(urls) {
+        return run("store", urls);
+    }
+    function remove(id) {
+        return run("remove", [id]);
+    }
 
     property string operation: ""
     property var result: null
@@ -38,7 +44,7 @@ Singleton {
             onStreamFinished: {
                 try {
                     root.result = JSON.parse(text);
-                } catch (error) {
+                } catch (_error) {
                     root.result = null;
                 }
             }

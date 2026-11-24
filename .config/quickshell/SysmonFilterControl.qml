@@ -9,10 +9,9 @@ Rectangle {
     required property string label
     required property string icon
     readonly property bool hovered: hover.hovered
-    signal activated()
+    signal activated
 
-    implicitWidth: Math.ceil(labelText.implicitWidth + labelText.anchors.leftMargin
-        + labelText.anchors.rightMargin + symbol.width + symbol.anchors.rightMargin)
+    implicitWidth: Math.ceil(labelText.implicitWidth + labelText.anchors.leftMargin + labelText.anchors.rightMargin + symbol.width + symbol.anchors.rightMargin)
     width: implicitWidth
     height: 29 * button.s
     radius: 8 * button.s
@@ -51,7 +50,10 @@ Rectangle {
         name: button.icon
         color: Theme.iconDim
     }
-    HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+    HoverHandler {
+        id: hover
+        cursorShape: Qt.PointingHandCursor
+    }
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor

@@ -49,8 +49,8 @@ SettingsSurface {
         var seen = {};
         var out = [];
         var all = Theme.fontFamilies;
-        for (var i = 0; i < all.length; i++) {
-            var fam = all[i];
+        for (let i = 0; i < all.length; i++) {
+            let fam = all[i];
             if (!fam || fam.length === 0 || fam.charAt(0) === ".")
                 continue;
             if (fam.indexOf("Noto ") === 0 && root.notoKeep.indexOf(fam) < 0)
@@ -60,12 +60,24 @@ SettingsSurface {
             seen[fam] = true;
             out.push(fam);
         }
-        out.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+        out.sort(function (a, b) {
+            return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
+        });
         var q = root.query.trim().toLowerCase();
-        var rows = [{ family: "", label: root.resetLabel, reset: true }];
-        for (var k = 0; k < out.length; k++) {
+        var rows = [
+            {
+                family: "",
+                label: root.resetLabel,
+                reset: true
+            }
+        ];
+        for (let k = 0; k < out.length; k++) {
             if (q.length === 0 || out[k].toLowerCase().indexOf(q) >= 0)
-                rows.push({ family: out[k], label: out[k], reset: false });
+                rows.push({
+                    family: out[k],
+                    label: out[k],
+                    reset: false
+                });
         }
         return rows;
     }
@@ -112,7 +124,10 @@ SettingsSurface {
             showBack: true
         }
 
-        Item { width: 1; height: 10 * root.s }
+        Item {
+            width: 1
+            height: 10 * root.s
+        }
 
         Item {
             width: parent.width
@@ -152,7 +167,7 @@ SettingsSurface {
                     root.query = text;
                     root.focusIndex = 0;
                 }
-                Keys.onPressed: (e) => {
+                Keys.onPressed: e => {
                     if (e.key === Qt.Key_Down) {
                         root.move(1);
                         e.accepted = true;
@@ -174,11 +189,19 @@ SettingsSurface {
                 height: 1
                 color: Theme.faint
                 opacity: searchField.activeFocus ? 0.7 : 0.18
-                Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
             }
         }
 
-        Item { width: 1; height: 8 * root.s }
+        Item {
+            width: 1
+            height: 8 * root.s
+        }
 
         Item {
             id: listFrame
@@ -198,9 +221,7 @@ SettingsSurface {
                     required property var modelData
 
                     readonly property bool isReset: frow.modelData.reset === true
-                    readonly property bool selected: frow.isReset
-                        ? Flags.uiFont.length === 0
-                        : Flags.uiFont === frow.modelData.family
+                    readonly property bool selected: frow.isReset ? Flags.uiFont.length === 0 : Flags.uiFont === frow.modelData.family
                     readonly property bool focused: root.focusIndex === frow.index
 
                     width: ListView.view.width
@@ -211,7 +232,7 @@ SettingsSurface {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onPositionChanged: (m) => {
+                        onPositionChanged: m => {
                             var g = rowArea.mapToItem(null, m.x, m.y);
                             if (g.x !== root.lastPointer.x || g.y !== root.lastPointer.y) {
                                 root.lastPointer = Qt.point(g.x, g.y);
@@ -226,10 +247,12 @@ SettingsSurface {
                         anchors.topMargin: 2 * root.s
                         anchors.bottomMargin: 2 * root.s
                         radius: 9 * root.s
-                        color: frow.selected
-                            ? Qt.alpha(Theme.vermLit, 0.14)
-                            : (frow.focused ? Theme.frameBg : "transparent")
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        color: frow.selected ? Qt.alpha(Theme.vermLit, 0.14) : (frow.focused ? Theme.frameBg : "transparent")
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     Text {

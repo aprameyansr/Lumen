@@ -34,16 +34,20 @@ PillSurface {
      * connect flip re-sorts, which the raw device list never signals.
      */
     readonly property var devicesSorted: {
-        var tick = Peripherals.connectedCount;
+        void Peripherals.connectedCount;
         function rank(d) {
-            if (!d) return 3;
-            if (d.connected) return 0;
-            if (d.paired) return 1;
+            if (!d)
+                return 3;
+            if (d.connected)
+                return 0;
+            if (d.paired)
+                return 1;
             return (d.name && d.name.length) ? 2 : 3;
         }
-        return devices.slice().sort(function(a, b) {
+        return devices.slice().sort(function (a, b) {
             var r = rank(a) - rank(b);
-            if (r !== 0) return r;
+            if (r !== 0)
+                return r;
             return String((a && a.name) || "").localeCompare(String((b && b.name) || ""));
         });
     }
@@ -56,17 +60,26 @@ PillSurface {
     readonly property var connectedRows: {
         var rows = [];
         var byMac = Peripherals.byMac;
-        for (var i = 0; i < devicesSorted.length; i++) {
-            var d = devicesSorted[i];
-            if (!d || !d.connected) continue;
-            rows.push({ bt: d, up: byMac[String(d.address || "").toUpperCase()] || null });
+        for (let i = 0; i < devicesSorted.length; i++) {
+            const d = devicesSorted[i];
+            if (!d || !d.connected)
+                continue;
+            rows.push({
+                bt: d,
+                up: byMac[String(d.address || "").toUpperCase()] || null
+            });
         }
         var usb = Peripherals.usb;
-        for (var j = 0; j < usb.length; j++)
-            rows.push({ bt: null, up: usb[j] });
+        for (let j = 0; j < usb.length; j++)
+            rows.push({
+                bt: null,
+                up: usb[j]
+            });
         return rows;
     }
-    readonly property var nearbyRows: devicesSorted.filter(function(d) { return d && !d.connected; })
+    readonly property var nearbyRows: devicesSorted.filter(function (d) {
+        return d && !d.connected;
+    })
     readonly property bool discovering: adapter ? adapter.discovering === true : false
 
     property string pairingAddress: ""
@@ -88,36 +101,49 @@ PillSurface {
      */
     function iconFor(d) {
         var ic = (d && d.icon) ? String(d.icon) : "";
-        if (ic.indexOf("audio-") === 0 || ic === "audio-card") return "speaker";
-        if (ic === "input-mouse") return "mouse";
-        if (ic === "input-keyboard") return "keyboard";
-        if (ic === "input-gaming") return "gamepad";
-        if (ic === "video-display" || ic === "computer") return "monitor";
-        if (ic === "multimedia-player") return "music";
+        if (ic.indexOf("audio-") === 0 || ic === "audio-card")
+            return "speaker";
+        if (ic === "input-mouse")
+            return "mouse";
+        if (ic === "input-keyboard")
+            return "keyboard";
+        if (ic === "input-gaming")
+            return "gamepad";
+        if (ic === "video-display" || ic === "computer")
+            return "monitor";
+        if (ic === "multimedia-player")
+            return "music";
         return "bluetooth";
     }
 
     function metaFor(d) {
-        if (!d) return "";
+        if (!d)
+            return "";
         var parts = [];
-        if (d.paired) parts.push("paired");
+        if (d.paired)
+            parts.push("paired");
         if (d.state !== undefined && typeof BluetoothDeviceState !== "undefined") {
-            var st = BluetoothDeviceState.toString(d.state);
-            if (st && st.length > 0 && parts.indexOf(st.toLowerCase()) === -1) parts.push(st.toLowerCase());
+            const st = BluetoothDeviceState.toString(d.state);
+            if (st && st.length > 0 && parts.indexOf(st.toLowerCase()) === -1)
+                parts.push(st.toLowerCase());
         }
-        if (d.address && d.address.length) parts.push(d.address);
+        if (d.address && d.address.length)
+            parts.push(d.address);
         return parts.join(" · ");
     }
 
     function batteryFor(row) {
-        if (row.up) return Peripherals.pct(row.up);
+        if (row.up)
+            return Peripherals.pct(row.up);
         var d = row.bt;
-        if (!d || d.battery === undefined || d.battery === null || d.battery <= 0) return -1;
+        if (!d || d.battery === undefined || d.battery === null || d.battery <= 0)
+            return -1;
         return Math.round(d.battery <= 1 ? d.battery * 100 : d.battery);
     }
 
     function rowName(row) {
-        if (row.bt) return row.bt.deviceName || row.bt.name || "Unknown";
+        if (row.bt)
+            return row.bt.deviceName || row.bt.name || "Unknown";
         return (row.up && row.up.model) ? row.up.model : "Unknown";
     }
 
@@ -130,7 +156,7 @@ PillSurface {
         if (!d)
             return;
         if (d.connected || d.paired) {
-            var addr = d.address || "";
+            const addr = d.address || "";
             expandedAddress = (addr.length && expandedAddress === addr) ? "" : addr;
             return;
         }
@@ -165,9 +191,7 @@ PillSurface {
             return;
         pairingAddress = d.address;
         failedAddress = "";
-        pairProc.command = ["sh", "-c",
-            'timeout 30 bluetoothctl pair "$1" && bluetoothctl trust "$1" && timeout 30 bluetoothctl connect "$1"',
-            "sh", d.address];
+        pairProc.command = ["sh", "-c", 'timeout 30 bluetoothctl pair "$1" && bluetoothctl trust "$1" && timeout 30 bluetoothctl connect "$1"', "sh", d.address];
         pairProc.running = true;
     }
 
@@ -189,7 +213,8 @@ PillSurface {
         id: scanTimer
         interval: 25000
         repeat: false
-        onTriggered: if (root.adapter) root.adapter.discovering = false
+        onTriggered: if (root.adapter)
+            root.adapter.discovering = false
     }
 
     Timer {
@@ -203,7 +228,7 @@ PillSurface {
         id: pairProc
         stdout: StdioCollector {}
         stderr: StdioCollector {}
-        onExited: function(exitCode) {
+        onExited: function (exitCode) {
             var addr = root.pairingAddress;
             root.pairingAddress = "";
             if (exitCode !== 0) {
@@ -280,7 +305,8 @@ PillSurface {
                 s: root.s
                 anchors.verticalCenter: parent.verticalCenter
                 on: root.adapter ? root.adapter.enabled === true : false
-                onToggled: if (root.adapter) root.adapter.enabled = !root.adapter.enabled
+                onToggled: if (root.adapter)
+                    root.adapter.enabled = !root.adapter.enabled
             }
         }
     }
@@ -371,9 +397,7 @@ PillSurface {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: confirm.connected
-                        ? root.disconnectDevice(confirm.dev)
-                        : root.connectDevice(confirm.dev)
+                    onClicked: confirm.connected ? root.disconnectDevice(confirm.dev) : root.connectDevice(confirm.dev)
                 }
             }
 
@@ -382,9 +406,7 @@ PillSurface {
                 width: forgetLabel.implicitWidth + 20 * root.s
                 height: 22 * root.s
                 radius: 7 * root.s
-                color: forgetArea.containsMouse
-                    ? Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.2)
-                    : Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.12)
+                color: forgetArea.containsMouse ? Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.2) : Qt.rgba(Theme.verm.r, Theme.verm.g, Theme.verm.b, 0.12)
                 border.width: 1
                 border.color: Qt.rgba(Theme.vermLit.r, Theme.vermLit.g, Theme.vermLit.b, 0.45)
 
@@ -460,8 +482,7 @@ PillSurface {
                         readonly property bool charging: up ? Peripherals.charging(up) : false
                         readonly property bool low: hasBattery && !charging && battery <= Peripherals.lowAt
                         readonly property bool confirming: addr.length > 0 && root.expandedAddress === addr
-                        readonly property bool busy: (bt && typeof BluetoothDeviceState !== "undefined")
-                            ? bt.state === BluetoothDeviceState.Disconnecting : false
+                        readonly property bool busy: (bt && typeof BluetoothDeviceState !== "undefined") ? bt.state === BluetoothDeviceState.Disconnecting : false
                         width: devCol.width
                         spacing: 2 * root.s
 
@@ -471,7 +492,9 @@ PillSurface {
                             radius: 10 * root.s
                             color: (conHover.hovered && conItem.bt) ? Theme.frameBg : "transparent"
 
-                            HoverHandler { id: conHover }
+                            HoverHandler {
+                                id: conHover
+                            }
 
                             MouseArea {
                                 anchors.fill: parent
@@ -521,7 +544,6 @@ PillSurface {
                                     spacing: 6 * root.s
 
                                     Text {
-                                        id: conName
                                         anchors.verticalCenter: parent.verticalCenter
                                         width: Math.min(implicitWidth, nameRow.width - (usbTag.visible ? usbTag.width + nameRow.spacing : 0))
                                         text: root.rowName(conItem.modelData)
@@ -573,8 +595,18 @@ PillSurface {
                                         SequentialAnimation on opacity {
                                             running: conItem.busy
                                             loops: Animation.Infinite
-                                            NumberAnimation { from: 0.35; to: 1; duration: Motion.pulse; easing.type: Easing.InOutSine }
-                                            NumberAnimation { from: 1; to: 0.35; duration: Motion.pulse; easing.type: Easing.InOutSine }
+                                            NumberAnimation {
+                                                from: 0.35
+                                                to: 1
+                                                duration: Motion.pulse
+                                                easing.type: Easing.InOutSine
+                                            }
+                                            NumberAnimation {
+                                                from: 1
+                                                to: 0.35
+                                                duration: Motion.pulse
+                                                easing.type: Easing.InOutSine
+                                            }
                                         }
                                     }
 
@@ -596,7 +628,9 @@ PillSurface {
                                         font.family: Theme.font
                                         font.pixelSize: 11 * root.s
                                         font.weight: Font.DemiBold
-                                        font.features: { "tnum": 1 }
+                                        font.features: {
+                                            "tnum": 1
+                                        }
                                     }
                                 }
 
@@ -646,8 +680,7 @@ PillSurface {
                         readonly property string addr: (modelData && modelData.address) ? modelData.address : ""
                         readonly property bool pairing: addr.length > 0 && root.pairingAddress === addr
                         readonly property bool failed: addr.length > 0 && root.failedAddress === addr
-                        readonly property bool busy: (modelData && typeof BluetoothDeviceState !== "undefined")
-                            ? modelData.state === BluetoothDeviceState.Connecting : false
+                        readonly property bool busy: (modelData && typeof BluetoothDeviceState !== "undefined") ? modelData.state === BluetoothDeviceState.Connecting : false
                         readonly property bool confirming: addr.length > 0 && root.expandedAddress === addr
                         width: devCol.width
                         spacing: 2 * root.s
@@ -658,7 +691,9 @@ PillSurface {
                             radius: 9 * root.s
                             color: rowHover.hovered ? Theme.frameBg : "transparent"
 
-                            HoverHandler { id: rowHover }
+                            HoverHandler {
+                                id: rowHover
+                            }
 
                             MouseArea {
                                 anchors.fill: parent
@@ -736,8 +771,18 @@ PillSurface {
                                     SequentialAnimation on opacity {
                                         running: devItem.pairing || devItem.busy
                                         loops: Animation.Infinite
-                                        NumberAnimation { from: 0.35; to: 1; duration: Motion.pulse; easing.type: Easing.InOutSine }
-                                        NumberAnimation { from: 1; to: 0.35; duration: Motion.pulse; easing.type: Easing.InOutSine }
+                                        NumberAnimation {
+                                            from: 0.35
+                                            to: 1
+                                            duration: Motion.pulse
+                                            easing.type: Easing.InOutSine
+                                        }
+                                        NumberAnimation {
+                                            from: 1
+                                            to: 0.35
+                                            duration: Motion.pulse
+                                            easing.type: Easing.InOutSine
+                                        }
                                     }
                                 }
 
@@ -750,8 +795,16 @@ PillSurface {
                                     border.color: pairArea.containsMouse ? Theme.vermDim : Theme.border
                                     height: 18 * root.s
                                     width: pairText.implicitWidth + 16 * root.s
-                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
-                                    Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: Motion.fast
+                                        }
+                                    }
+                                    Behavior on border.color {
+                                        ColorAnimation {
+                                            duration: Motion.fast
+                                        }
+                                    }
 
                                     Text {
                                         id: pairText

@@ -32,13 +32,7 @@ Singleton {
      * the visualizer on dead silence. The trade is a fixed gain, tuned so real
      * music fills the bars while silence stays under the activate threshold.
      */
-    readonly property string config: "[general]\n"
-        + "bars = " + bars + "\nframerate = 60\nautosens = 0\nsensitivity = 5500\n"
-        + "[input]\nmethod = pipewire\nsource = auto\n"
-        + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\n"
-        + "ascii_max_range = 1000\nbar_delimiter = 59\nframe_delimiter = 10\n"
-        + "channels = mono\nmono_option = average\n"
-        + "[smoothing]\nnoise_reduction = 0.77\n"
+    readonly property string config: "[general]\n" + "bars = " + bars + "\nframerate = 60\nautosens = 0\nsensitivity = 5500\n" + "[input]\nmethod = pipewire\nsource = auto\n" + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\n" + "ascii_max_range = 1000\nbar_delimiter = 59\nframe_delimiter = 10\n" + "channels = mono\nmono_option = average\n" + "[smoothing]\nnoise_reduction = 0.77\n"
 
     onWantedChanged: cavaProc.running = wanted
     Component.onCompleted: cavaProc.running = wanted
@@ -46,14 +40,14 @@ Singleton {
     Process {
         running: true
         command: ["sh", "-c", "command -v cava >/dev/null 2>&1"]
-        onExited: (code) => root.available = (code === 0)
+        onExited: code => root.available = (code === 0)
     }
 
     Process {
         id: cavaProc
         command: ["sh", "-c", "printf '%s' \"$1\" | cava -p /dev/stdin", "_", root.config]
         stdout: SplitParser {
-            onRead: (line) => {
+            onRead: line => {
                 if (!line)
                     return;
                 const parts = line.split(";");
@@ -80,13 +74,15 @@ Singleton {
             }
         }
         /** A crash while cava is still wanted earns one relaunch after a beat, never a tight respawn loop. */
-        onExited: if (root.wanted) relaunch.restart()
+        onExited: if (root.wanted)
+            relaunch.restart()
     }
 
     Timer {
         id: relaunch
         interval: 1500
-        onTriggered: if (root.wanted) cavaProc.running = true
+        onTriggered: if (root.wanted)
+            cavaProc.running = true
     }
 
     /** Short debounce so inter-track gaps do not snap the morph back to the clock. */

@@ -37,9 +37,7 @@ PillSurface {
         void root.width;
         void root.height;
         void search.input.width;
-        return search.input.mapToItem(root,
-            search.input.cursorRectangle.x + search.input.cursorRectangle.width / 2,
-            search.input.cursorRectangle.y + search.input.cursorRectangle.height / 2);
+        return search.input.mapToItem(root, search.input.cursorRectangle.x + search.input.cursorRectangle.width / 2, search.input.cursorRectangle.y + search.input.cursorRectangle.height / 2);
     }
     readonly property real caretX: caretPoint.x
     readonly property real caretY: caretPoint.y
@@ -53,15 +51,17 @@ PillSurface {
         if (!q.length)
             return all;
         var out = [];
-        for (var i = 0; i < all.length; i++) {
-            var hay = (all[i].isImage ? all[i].label + " " + all[i].sizeLabel : all[i].preview).toLowerCase();
+        for (let i = 0; i < all.length; i++) {
+            const hay = (all[i].isImage ? all[i].label + " " + all[i].sizeLabel : all[i].preview).toLowerCase();
             if (hay.indexOf(q) !== -1)
                 out.push(all[i]);
         }
         return out;
     }
 
-    function focusField() { search.input.forceActiveFocus(); }
+    function focusField() {
+        search.input.forceActiveFocus();
+    }
 
     function move(delta) {
         if (results.length === 0)
@@ -92,7 +92,8 @@ PillSurface {
             Qt.callLater(root.focusField);
         }
     }
-    onResultsChanged: if (selectedIndex >= results.length) selectedIndex = Math.max(0, results.length - 1)
+    onResultsChanged: if (selectedIndex >= results.length)
+        selectedIndex = Math.max(0, results.length - 1)
 
     SearchField {
         id: search
@@ -108,12 +109,11 @@ PillSurface {
             root.query = text;
             root.selectedIndex = 0;
         }
-        onMoved: (d) => root.move(d)
+        onMoved: d => root.move(d)
         onAccepted: root.activate()
         onDismissed: root.requestClose()
-        onKeyPressed: (e) => {
-            if (e.key === Qt.Key_X && (e.modifiers & Qt.ControlModifier)
-                && search.input.selectedText.length === 0) {
+        onKeyPressed: e => {
+            if (e.key === Qt.Key_X && (e.modifiers & Qt.ControlModifier) && search.input.selectedText.length === 0) {
                 root.removeAt(root.selectedIndex);
                 e.accepted = true;
             }
@@ -143,7 +143,11 @@ PillSurface {
                 color: wipeBtn.tone
                 font.family: Theme.fontJp
                 font.pixelSize: 12 * root.s
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
 
             GlyphIcon {
@@ -153,7 +157,11 @@ PillSurface {
                 height: 12 * root.s
                 name: "trash"
                 color: wipeBtn.tone
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
 
             HeatHold {
@@ -191,8 +199,14 @@ PillSurface {
             visible: wipeBtn.holding
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-                GradientStop { position: 1.0; color: Theme.vermLit }
+                GradientStop {
+                    position: 0.0
+                    color: Qt.alpha(Theme.vermLit, 0.15)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Theme.vermLit
+                }
             }
         }
     }
@@ -296,9 +310,7 @@ PillSurface {
                     anchors.right: sizeTag.left
                     anchors.rightMargin: 8 * root.s
                     text: row.entry === undefined ? "" : (row.entry.isImage ? row.entry.label : row.entry.preview)
-                    color: row.entry !== undefined && row.entry.isImage
-                        ? (row.selected ? Theme.dim : Theme.faint)
-                        : (row.selected ? Theme.cream : Theme.subtle)
+                    color: row.entry !== undefined && row.entry.isImage ? (row.selected ? Theme.dim : Theme.faint) : (row.selected ? Theme.cream : Theme.subtle)
                     font.family: Theme.font
                     font.pixelSize: 11.5 * root.s
                     font.weight: row.selected ? Font.DemiBold : Font.Medium
@@ -317,7 +329,9 @@ PillSurface {
                     color: Theme.faint
                     font.family: Theme.font
                     font.pixelSize: 10.5 * root.s
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
 
                 Item {
@@ -336,7 +350,11 @@ PillSurface {
                         color: Theme.vermLit
                         font.family: Theme.font
                         font.pixelSize: 12 * root.s
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     Text {
@@ -347,7 +365,11 @@ PillSurface {
                         text: "✕"
                         color: dismissArea.containsMouse ? Theme.cream : Theme.dim
                         font.pixelSize: 10 * root.s
-                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         MouseArea {
                             id: dismissArea

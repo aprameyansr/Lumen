@@ -69,15 +69,19 @@ PillSurface {
     /** Span end the grid paints: the live hover while arming, else the set end. */
     readonly property string rangeEndKey: pickingEnd && hoverDay > 0 ? dateKey(hoverDay) : selEndDate
     readonly property string rangeLo: {
-        if (selectedDate.length === 0) return "";
+        if (selectedDate.length === 0)
+            return "";
         var b = rangeEndKey;
-        if (b.length === 0) return selectedDate;
+        if (b.length === 0)
+            return selectedDate;
         return selectedDate < b ? selectedDate : b;
     }
     readonly property string rangeHi: {
-        if (selectedDate.length === 0) return "";
+        if (selectedDate.length === 0)
+            return "";
         var b = rangeEndKey;
-        if (b.length === 0) return selectedDate;
+        if (b.length === 0)
+            return selectedDate;
         return selectedDate < b ? b : selectedDate;
     }
     function inRange(key) {
@@ -96,7 +100,7 @@ PillSurface {
         var lp = loKey.split("-");
         var hp = hiKey.split("-");
         if (lp[0] === hp[0] && lp[1] === hp[1]) {
-            var d = new Date(Number(lp[0]), Number(lp[1]) - 1, Number(lp[2]));
+            const d = new Date(Number(lp[0]), Number(lp[1]) - 1, Number(lp[2]));
             return Number(lp[2]) + "–" + Number(hp[2]) + " " + loc.toString(d, "MMM");
         }
         return fmtDay(loKey, false) + " – " + fmtDay(hiKey, false);
@@ -105,14 +109,11 @@ PillSurface {
     readonly property real gridHeight: grid.y + rows * cellH + (rows - 1) * rowGap
 
     /** The weather panel and the editor each add their column plus a divider gutter only when visible. */
-    implicitWidth: gridW
-        + (weatherShown ? weatherW + gutter : 0)
-        + (editorShown ? editorW + gutter : 0)
+    implicitWidth: gridW + (weatherShown ? weatherW + gutter : 0) + (editorShown ? editorW + gutter : 0)
 
     implicitHeight: editorShown ? Math.max(gridHeight, edCol.implicitHeight) : gridHeight
 
-    readonly property bool todayVisible: viewMonth === today.getMonth()
-        && viewYear === today.getFullYear()
+    readonly property bool todayVisible: viewMonth === today.getMonth() && viewYear === today.getFullYear()
 
     /**
      * Ame is the focus cursor: it rings the picked day, or today when this month
@@ -121,12 +122,8 @@ PillSurface {
      * (the calendar's lantern, mirroring Sysmon) rather than floating over a
      * random date cell — which is what read as Ame jumping somewhere random.
      */
-    readonly property bool selectedInView: selectedDate.length > 0
-        && Number(selectedDate.split("-")[1]) === viewMonth + 1
-        && Number(selectedDate.split("-")[0]) === viewYear
-    readonly property int focusDay: selectedInView
-        ? Number(selectedDate.split("-")[2])
-        : (todayVisible ? today.getDate() : 0)
+    readonly property bool selectedInView: selectedDate.length > 0 && Number(selectedDate.split("-")[1]) === viewMonth + 1 && Number(selectedDate.split("-")[0]) === viewYear
+    readonly property int focusDay: selectedInView ? Number(selectedDate.split("-")[2]) : (todayVisible ? today.getDate() : 0)
     readonly property bool focused: focusDay > 0
     readonly property int focusIndex: offset + focusDay - 1
     readonly property real cellW: grid.width / 7
@@ -159,9 +156,7 @@ PillSurface {
     }
 
     function isToday(day) {
-        return day === today.getDate()
-            && viewMonth === today.getMonth()
-            && viewYear === today.getFullYear();
+        return day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
     }
 
     /** "YYYY-MM-DD" for a day number in the viewed month, zero-padded for keys. */
@@ -179,24 +174,26 @@ PillSurface {
      * Returns false when nothing parses.
      */
     function jumpTo(text) {
-        var toks = String(text).toLowerCase().trim().split(/[\s\/\-.,]+/).filter(function (t) { return t.length; });
+        var toks = String(text).toLowerCase().trim().split(/[\s\/\-.,]+/).filter(function (t) {
+            return t.length;
+        });
         var month = -1, year = -1, nums = [];
-        for (var i = 0; i < toks.length; i++) {
-            var t = toks[i];
+        for (let i = 0; i < toks.length; i++) {
+            const t = toks[i];
             if (/^\d+$/.test(t)) {
                 nums.push(t);
                 continue;
             }
-            for (var m = 0; m < 12 && month < 0; m++) {
-                var name = root.loc.standaloneMonthName(m, Locale.LongFormat).toLowerCase();
+            for (let m = 0; m < 12 && month < 0; m++) {
+                const name = root.loc.standaloneMonthName(m, Locale.LongFormat).toLowerCase();
                 if (t.length >= 3 && name.indexOf(t) === 0)
                     month = m;
             }
             if (month < 0)
                 return false;
         }
-        for (var j = 0; j < nums.length; j++) {
-            var n = parseInt(nums[j], 10);
+        for (let j = 0; j < nums.length; j++) {
+            const n = parseInt(nums[j], 10);
             if (nums[j].length === 4 && year < 0)
                 year = n;
             else if (month < 0 && n >= 1 && n <= 12)
@@ -218,8 +215,14 @@ PillSurface {
     function shiftMonth(delta) {
         var m = viewMonth + delta;
         var y = viewYear;
-        while (m < 0) { m += 12; y -= 1; }
-        while (m > 11) { m -= 12; y += 1; }
+        while (m < 0) {
+            m += 12;
+            y -= 1;
+        }
+        while (m > 11) {
+            m -= 12;
+            y += 1;
+        }
         viewMonth = m;
         viewYear = y;
         hoverDay = 0;
@@ -267,7 +270,8 @@ PillSurface {
         selEndDate = "";
     }
 
-    onActiveChanged: if (active) resetToday()
+    onActiveChanged: if (active)
+        resetToday()
 
     Item {
         id: weather
@@ -278,7 +282,12 @@ PillSurface {
         clip: true
         visible: width > 1
         opacity: root.weatherShown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         Column {
             id: wxCol
@@ -308,7 +317,9 @@ PillSurface {
                         font.family: Theme.font
                         font.pixelSize: 26 * root.s
                         font.weight: Font.DemiBold
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                     Text {
                         text: Weather.labelFor(Weather.codeNow)
@@ -325,7 +336,9 @@ PillSurface {
                         font.family: Theme.font
                         font.pixelSize: 8.5 * root.s
                         font.weight: Font.Medium
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                 }
             }
@@ -349,7 +362,6 @@ PillSurface {
                     property bool editing: false
 
                     Text {
-                        id: cityText
                         visible: !cityBox.editing
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -400,7 +412,8 @@ PillSurface {
                             cityBox.editing = false;
                         }
                         Keys.onEscapePressed: cityBox.editing = false
-                        onActiveFocusChanged: if (!activeFocus) cityBox.editing = false
+                        onActiveFocusChanged: if (!activeFocus)
+                            cityBox.editing = false
                     }
                 }
                 Row {
@@ -423,7 +436,9 @@ PillSurface {
                         font.family: Theme.font
                         font.pixelSize: 9.5 * root.s
                         font.weight: Font.Medium
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                 }
             }
@@ -471,7 +486,9 @@ PillSurface {
                             font.family: Theme.font
                             font.pixelSize: 11 * root.s
                             font.weight: Font.Medium
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                         }
                         Row {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -492,7 +509,9 @@ PillSurface {
                                 font.family: Theme.font
                                 font.pixelSize: 8.5 * root.s
                                 font.weight: Font.Medium
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                         }
                     }
@@ -502,7 +521,6 @@ PillSurface {
     }
 
     Rectangle {
-        id: weatherSeam
         anchors.left: weather.right
         anchors.leftMargin: root.gutter / 2
         anchors.top: parent.top
@@ -560,8 +578,7 @@ PillSurface {
                         id: monthLabel
                         visible: !monthBox.editing
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.loc.standaloneMonthName(root.viewMonth, Locale.LongFormat)
-                            + " " + root.viewYear
+                        text: root.loc.standaloneMonthName(root.viewMonth, Locale.LongFormat) + " " + root.viewYear
                         color: monthArea.containsMouse ? Theme.cream : Theme.subtle
                         font.family: Theme.font
                         font.pixelSize: 11 * root.s
@@ -610,7 +627,8 @@ PillSurface {
                                 monthBox.bad = true;
                         }
                         Keys.onEscapePressed: monthBox.editing = false
-                        onActiveFocusChanged: if (!activeFocus) monthBox.editing = false
+                        onActiveFocusChanged: if (!activeFocus)
+                            monthBox.editing = false
                     }
                 }
             }
@@ -748,19 +766,15 @@ PillSurface {
                     readonly property string dayKey: inMonth ? root.dateKey(dayNum) : ""
                     readonly property bool hasEvent: inMonth && Events.hasEvents(cell.dayKey)
                     readonly property bool sel: inMonth && root.inRange(cell.dayKey)
-                    readonly property bool selEdge: cell.sel
-                        && (cell.dayKey === root.rangeLo || cell.dayKey === root.rangeHi)
-                    readonly property int ghostNum: dayNum < 1
-                        ? root.daysInMonth(root.viewYear, root.viewMonth - 1) + dayNum
-                        : dayNum - root.monthLen
+                    readonly property bool selEdge: cell.sel && (cell.dayKey === root.rangeLo || cell.dayKey === root.rangeHi)
+                    readonly property int ghostNum: dayNum < 1 ? root.daysInMonth(root.viewYear, root.viewMonth - 1) + dayNum : dayNum - root.monthLen
 
                     Rectangle {
                         anchors.centerIn: parent
                         width: 22 * root.s
                         height: 22 * root.s
                         radius: Motion.rSmall * root.s
-                        color: cellArea.containsMouse && cell.inMonth && !cell.current
-                            ? Qt.rgba(0.94, 0.88, 0.84, 0.04) : "transparent"
+                        color: cellArea.containsMouse && cell.inMonth && !cell.current ? Qt.rgba(0.94, 0.88, 0.84, 0.04) : "transparent"
                     }
 
                     Rectangle {
@@ -771,23 +785,20 @@ PillSurface {
                         visible: cell.current || cell.sel
                         color: cell.sel && !cell.current ? Qt.alpha(Theme.vermLit, 0.12) : Theme.frameBg
                         border.width: 1
-                        border.color: cell.selEdge ? Qt.alpha(Theme.vermLit, 0.55)
-                            : (cell.sel ? Qt.alpha(Theme.vermLit, 0.22) : Theme.frameBorder)
+                        border.color: cell.selEdge ? Qt.alpha(Theme.vermLit, 0.55) : (cell.sel ? Qt.alpha(Theme.vermLit, 0.22) : Theme.frameBorder)
                     }
 
                     Text {
                         anchors.centerIn: parent
                         text: cell.inMonth ? cell.dayNum : cell.ghostNum
-                        color: cell.inMonth
-                            ? (cell.current ? Theme.todayWarm
-                                : (cell.hasEvent ? Theme.flameGlow
-                                    : (cell.weekend ? Theme.subtle : Theme.cream)))
-                            : Theme.ghost
+                        color: cell.inMonth ? (cell.current ? Theme.todayWarm : (cell.hasEvent ? Theme.flameGlow : (cell.weekend ? Theme.subtle : Theme.cream))) : Theme.ghost
                         opacity: cell.inMonth && !cell.current && !cell.weekend && !cell.hasEvent ? 0.85 : 1.0
                         font.family: Theme.font
                         font.pixelSize: 11 * root.s
                         font.weight: cell.current || cell.hasEvent ? Font.DemiBold : Font.Normal
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
 
                     Rectangle {
@@ -807,7 +818,8 @@ PillSurface {
                         hoverEnabled: true
                         enabled: cell.inMonth
                         cursorShape: cell.inMonth ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: if (cell.inMonth) root.selectDay(cell.dayNum)
+                        onClicked: if (cell.inMonth)
+                            root.selectDay(cell.dayNum)
                         onContainsMouseChanged: if (root.pickingEnd && cell.inMonth && containsMouse)
                             root.hoverDay = cell.dayNum
                     }
@@ -843,7 +855,6 @@ PillSurface {
     }
 
     Rectangle {
-        id: editorSeam
         anchors.left: gridPane.right
         anchors.leftMargin: root.gutter / 2
         anchors.top: parent.top
@@ -864,11 +875,15 @@ PillSurface {
         clip: true
         visible: width > 1
         opacity: root.editorShown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         /** Events covering the picked day (a span's start), empty until a day is picked. */
-        readonly property var dayEvents: root.selectedDate.length > 0
-            ? Events.forDate(root.selectedDate) : []
+        readonly property var dayEvents: root.selectedDate.length > 0 ? Events.forDate(root.selectedDate) : []
 
         /** Single day reads "Mon 9 Jun"; a span reads its range. */
         readonly property string heading: {
@@ -879,9 +894,7 @@ PillSurface {
             return root.fmtSpan(root.rangeLo, root.rangeHi);
         }
 
-        readonly property string spanLabel: root.selEndDate.length === 0
-            ? root.fmtDay(root.selectedDate, false)
-            : root.fmtSpan(root.rangeLo, root.rangeHi)
+        readonly property string spanLabel: root.selEndDate.length === 0 ? root.fmtDay(root.selectedDate, false) : root.fmtSpan(root.rangeLo, root.rangeHi)
 
         /** "allday" (default) hides the time fields; "timed" reveals start/end. */
         property string mode: "allday"
@@ -926,13 +939,15 @@ PillSurface {
                 return;
             var t = editor.mode === "timed" ? editor.cleanTime(startVal) : "";
             var e = editor.mode === "timed" ? editor.cleanTime(endVal) : "";
-            Events.add(root.selectedDate, editor.recur !== "" ? "" : root.selEndDate,
-                       t, e, titleVal.trim(), editor.recur);
+            Events.add(root.selectedDate, editor.recur !== "" ? "" : root.selEndDate, t, e, titleVal.trim(), editor.recur);
             clearForm();
             titleField.forceActiveFocus();
         }
 
-        onWidthChanged: if (width < 1) { clearForm(); mode = "allday"; }
+        onWidthChanged: if (width < 1) {
+            clearForm();
+            mode = "allday";
+        }
 
         Column {
             id: edCol
@@ -1006,16 +1021,19 @@ PillSurface {
                                         datePart = root.fmtSpan(evRow.modelData.date, evRow.modelData.endDate);
                                     var t = evRow.modelData.time || "";
                                     var e = evRow.modelData.endTime || "";
-                                    var timePart = t.length === 0 ? "all day"
-                                        : (e.length > 0 ? t + "–" + e : t);
+                                    var timePart = t.length === 0 ? "all day" : (e.length > 0 ? t + "–" + e : t);
                                     var base = datePart.length > 0 ? datePart + " · " + timePart : timePart;
                                     var r = evRow.modelData.recur;
-                                    if (r === "year") return "every year · " + base;
-                                    if (r === "month") return "every month · " + base;
+                                    if (r === "year")
+                                        return "every year · " + base;
+                                    if (r === "month")
+                                        return "every month · " + base;
                                     return base;
                                 }
 
-                                HoverHandler { id: evArea }
+                                HoverHandler {
+                                    id: evArea
+                                }
 
                                 Column {
                                     id: evBody
@@ -1045,7 +1063,9 @@ PillSurface {
                                         font.family: Theme.font
                                         font.pixelSize: 9 * root.s
                                         font.weight: Font.DemiBold
-                                        font.features: { "tnum": 1 }
+                                        font.features: {
+                                            "tnum": 1
+                                        }
                                         wrapMode: Text.Wrap
                                         elide: Text.ElideRight
                                     }
@@ -1060,7 +1080,11 @@ PillSurface {
                                     width: 16 * root.s
                                     height: 16 * root.s
                                     opacity: evArea.hovered ? 1 : 0.32
-                                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                                    Behavior on opacity {
+                                        NumberAnimation {
+                                            duration: Motion.fast
+                                        }
+                                    }
 
                                     GlyphIcon {
                                         anchors.fill: parent
@@ -1118,7 +1142,10 @@ PillSurface {
                         placeholderTextColor: Theme.faint
                         selectByMouse: true
                         selectionColor: Theme.verm
-                        onTextChanged: { editor.titleVal = text; editor.autoRecur(); }
+                        onTextChanged: {
+                            editor.titleVal = text;
+                            editor.autoRecur();
+                        }
                         Keys.onReturnPressed: editor.commit()
                     }
                     Rectangle {
@@ -1128,7 +1155,12 @@ PillSurface {
                         height: 1
                         color: Theme.faint
                         opacity: titleField.activeFocus ? 0.7 : 0.2
-                        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Motion.easeStandard
+                            }
+                        }
                     }
                 }
 
@@ -1139,11 +1171,14 @@ PillSurface {
                     height: 28 * root.s
                     radius: Motion.rSmall * root.s
                     readonly property bool armed: editor.titleVal.trim().length > 0
-                    color: addArea.containsMouse && armed ? Qt.alpha(Theme.vermLit, 0.22)
-                        : (armed ? Qt.alpha(Theme.vermLit, 0.12) : Theme.frameBg)
+                    color: addArea.containsMouse && armed ? Qt.alpha(Theme.vermLit, 0.22) : (armed ? Qt.alpha(Theme.vermLit, 0.12) : Theme.frameBg)
                     border.width: 1
                     border.color: armed ? Qt.alpha(Theme.vermLit, 0.5) : Theme.frameBorder
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -1167,11 +1202,17 @@ PillSurface {
             SettingsSeg {
                 s: root.s
                 options: [
-                    { label: "All day", value: "allday" },
-                    { label: "Timed", value: "timed" }
+                    {
+                        label: "All day",
+                        value: "allday"
+                    },
+                    {
+                        label: "Timed",
+                        value: "timed"
+                    }
                 ]
                 value: editor.mode
-                onPicked: (v) => editor.mode = v
+                onPicked: v => editor.mode = v
             }
 
             Row {
@@ -1193,7 +1234,9 @@ PillSurface {
                         color: Theme.cream
                         font.family: Theme.font
                         font.pixelSize: 13 * root.s
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                         placeholderText: "09:00"
                         placeholderTextColor: Theme.faint
                         inputMethodHints: Qt.ImhPreferNumbers
@@ -1209,7 +1252,12 @@ PillSurface {
                         height: 1
                         color: Theme.faint
                         opacity: startField.activeFocus ? 0.7 : 0.2
-                        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Motion.easeStandard
+                            }
+                        }
                     }
                 }
 
@@ -1227,7 +1275,9 @@ PillSurface {
                         color: Theme.cream
                         font.family: Theme.font
                         font.pixelSize: 13 * root.s
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                         placeholderText: "until"
                         placeholderTextColor: Theme.faint
                         inputMethodHints: Qt.ImhPreferNumbers
@@ -1243,7 +1293,12 @@ PillSurface {
                         height: 1
                         color: Theme.faint
                         opacity: endField.activeFocus ? 0.7 : 0.2
-                        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Motion.easeStandard
+                            }
+                        }
                     }
                 }
             }
@@ -1251,12 +1306,21 @@ PillSurface {
             SettingsSeg {
                 s: root.s
                 options: [
-                    { label: "Once", value: "" },
-                    { label: "Monthly", value: "month" },
-                    { label: "Yearly", value: "year" }
+                    {
+                        label: "Once",
+                        value: ""
+                    },
+                    {
+                        label: "Monthly",
+                        value: "month"
+                    },
+                    {
+                        label: "Yearly",
+                        value: "year"
+                    }
                 ]
                 value: editor.recur
-                onPicked: (v) => {
+                onPicked: v => {
                     editor.recurManual = true;
                     editor.recur = v;
                     if (v !== "") {
@@ -1278,7 +1342,6 @@ PillSurface {
                 visible: editor.recur === ""
 
                 Rectangle {
-                    id: spanChip
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - extendBtn.width - clearSpan.width - 16 * root.s
                     height: 28 * root.s
@@ -1307,7 +1370,9 @@ PillSurface {
                             font.family: Theme.font
                             font.pixelSize: 11 * root.s
                             font.weight: Font.Medium
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                         }
                     }
                 }
@@ -1322,7 +1387,11 @@ PillSurface {
                     color: armed ? Qt.alpha(Theme.vermLit, 0.14) : Theme.frameBg
                     border.width: 1
                     border.color: armed ? Qt.alpha(Theme.vermLit, 0.5) : Theme.frameBorder
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         id: extendLabel

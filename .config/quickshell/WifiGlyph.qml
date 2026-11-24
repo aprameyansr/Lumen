@@ -35,12 +35,8 @@ Item {
 
     readonly property real u: Math.min(width, height) / 24
 
-    readonly property real glyphX: arcs.boundingRect.width > 0
-        ? root.width / 2 - (arcs.boundingRect.x + arcs.boundingRect.width / 2) * root.u
-        : (root.width - 24 * root.u) / 2
-    readonly property real glyphY: arcs.boundingRect.height > 0
-        ? root.height / 2 - (arcs.boundingRect.y + arcs.boundingRect.height / 2) * root.u
-        : (root.height - 24 * root.u) / 2
+    readonly property real glyphX: arcs.boundingRect.width > 0 ? root.width / 2 - (arcs.boundingRect.x + arcs.boundingRect.width / 2) * root.u : (root.width - 24 * root.u) / 2
+    readonly property real glyphY: arcs.boundingRect.height > 0 ? root.height / 2 - (arcs.boundingRect.y + arcs.boundingRect.height / 2) * root.u : (root.height - 24 * root.u) / 2
 
     Shape {
         id: arcs
@@ -59,26 +55,34 @@ Item {
             fillColor: "transparent"
             strokeWidth: root.arcStroke
             capStyle: ShapePath.RoundCap
-            PathSvg { path: "M9.17 13.17 A4 4 0 0 1 14.83 13.17" }
+            PathSvg {
+                path: "M9.17 13.17 A4 4 0 0 1 14.83 13.17"
+            }
         }
         ShapePath {
             strokeColor: root.litCount >= 2 ? Theme.iconDim : root.offColor
             fillColor: "transparent"
             strokeWidth: root.arcStroke
             capStyle: ShapePath.RoundCap
-            PathSvg { path: "M6.34 10.34 A8 8 0 0 1 17.66 10.34" }
+            PathSvg {
+                path: "M6.34 10.34 A8 8 0 0 1 17.66 10.34"
+            }
         }
         ShapePath {
             strokeColor: root.litCount >= 3 ? Theme.iconDim : root.offColor
             fillColor: "transparent"
             strokeWidth: root.arcStroke
             capStyle: ShapePath.RoundCap
-            PathSvg { path: "M3.5 7.5 A12 12 0 0 1 20.5 7.5" }
+            PathSvg {
+                path: "M3.5 7.5 A12 12 0 0 1 20.5 7.5"
+            }
         }
         ShapePath {
             strokeColor: "transparent"
             fillColor: root.litCount >= 1 ? Theme.iconDim : root.offColor
-            PathSvg { path: "M12 14.1 A1.5 1.5 0 0 1 12 17.1 A1.5 1.5 0 0 1 12 14.1z" }
+            PathSvg {
+                path: "M12 14.1 A1.5 1.5 0 0 1 12 17.1 A1.5 1.5 0 0 1 12 14.1z"
+            }
         }
     }
 
@@ -100,7 +104,9 @@ Item {
             fillColor: "transparent"
             strokeWidth: root.stroke > 0 ? root.stroke : (1.7 / root.u) * root.s
             capStyle: ShapePath.RoundCap
-            PathSvg { path: "M4 3 L20 19" }
+            PathSvg {
+                path: "M4 3 L20 19"
+            }
         }
     }
 }

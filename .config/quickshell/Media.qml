@@ -40,7 +40,8 @@ PillSurface {
     }
     /** Latched on first decode so the fallback glyph doesn't flash back while a track change reloads behind the retained cover. */
     property bool everReady: false
-    onCoverSourceChanged: if (coverSource.length === 0) everReady = false
+    onCoverSourceChanged: if (coverSource.length === 0)
+        everReady = false
 
     readonly property real lengthSec: Players.lengthSec
     readonly property real positionSec: hasPlayer ? player.position : 0
@@ -52,9 +53,12 @@ PillSurface {
     /** Source picker is open; only reachable when more than one player runs. */
     property bool picking: false
     readonly property bool canPick: Players.pickable.length > 1
-    onActiveChanged: if (!active) picking = false
-    onCanPickChanged: if (!canPick) picking = false
-    onPickingChanged: if (picking) pickFlick.contentX = 0
+    onActiveChanged: if (!active)
+        picking = false
+    onCanPickChanged: if (!canPick)
+        picking = false
+    onPickingChanged: if (picking)
+        pickFlick.contentX = 0
 
     readonly property real textX: 134 * s
     readonly property real edgePad: 18 * s
@@ -88,19 +92,33 @@ PillSurface {
         return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1);
     }
 
-    onTitleChanged: if (playing && active) pulseAnim.restart()
+    onTitleChanged: if (playing && active)
+        pulseAnim.restart()
 
     Timer {
         interval: 500
         running: root.active && root.playing
         repeat: true
-        onTriggered: if (root.player) root.player.positionChanged();
+        onTriggered: if (root.player)
+            root.player.positionChanged()
     }
 
     SequentialAnimation {
         id: pulseAnim
-        NumberAnimation { target: root; property: "sealPulse"; to: 1; duration: Motion.fast; easing.type: Motion.easeStandard }
-        NumberAnimation { target: root; property: "sealPulse"; to: 0; duration: Motion.standard; easing.type: Motion.easeStandard }
+        NumberAnimation {
+            target: root
+            property: "sealPulse"
+            to: 1
+            duration: Motion.fast
+            easing.type: Motion.easeStandard
+        }
+        NumberAnimation {
+            target: root
+            property: "sealPulse"
+            to: 0
+            duration: Motion.standard
+            easing.type: Motion.easeStandard
+        }
     }
 
     component KanjiSkip: Item {
@@ -109,23 +127,30 @@ PillSurface {
         property bool can: false
         property string kanjiText: ""
         property string icon: ""
-        signal activated()
+        signal activated
 
         anchors.verticalCenter: parent.verticalCenter
         implicitWidth: 15 * root.s
         implicitHeight: 15 * root.s
         opacity: skip.can ? 1 : 0.4
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.fast
+            }
+        }
 
         Text {
-            id: kanjiLabel
             visible: false
             anchors.centerIn: parent
             text: skip.kanjiText
             font.family: Theme.fontJp
             font.pixelSize: 13 * root.s
             color: skipArea.containsMouse ? Theme.cream : Theme.dim
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         GlyphIcon {
@@ -135,7 +160,11 @@ PillSurface {
             height: 15 * root.s
             name: skip.icon
             color: skipArea.containsMouse ? Theme.cream : Theme.dim
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -195,8 +224,14 @@ PillSurface {
         Rectangle {
             anchors.fill: parent
             gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, 0.88) }
-                GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, 0.93) }
+                GradientStop {
+                    position: 0.0
+                    color: Qt.alpha(Theme.cardTop, 0.88)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Qt.alpha(Theme.cardBot, 0.93)
+                }
             }
         }
 
@@ -223,7 +258,8 @@ PillSurface {
                 asynchronous: true
                 retainWhileLoading: true
                 cache: String(source).indexOf("file:") !== 0
-                onStatusChanged: if (status === Image.Ready) root.everReady = true
+                onStatusChanged: if (status === Image.Ready)
+                    root.everReady = true
             }
 
             GlyphIcon {
@@ -244,9 +280,18 @@ PillSurface {
             width: 56 * root.s
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Qt.alpha(root.washMid, 0) }
-                GradientStop { position: 0.7; color: Qt.alpha(root.washMid, 0.8) }
-                GradientStop { position: 1.0; color: root.washMid }
+                GradientStop {
+                    position: 0.0
+                    color: Qt.alpha(root.washMid, 0)
+                }
+                GradientStop {
+                    position: 0.7
+                    color: Qt.alpha(root.washMid, 0.8)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root.washMid
+                }
             }
         }
     }
@@ -313,17 +358,17 @@ PillSurface {
         anchors.bottomMargin: 36 * root.s
         height: 34 * root.s
 
-        readonly property string tail: root.live
-            ? " - Live"
-            : " / " + root.fmt(root.dragging ? root.dragFrac * root.lengthSec : root.positionSec)
-                + " - " + root.fmt(root.lengthSec)
+        readonly property string tail: root.live ? " - Live" : " / " + root.fmt(root.dragging ? root.dragFrac * root.lengthSec : root.positionSec) + " - " + root.fmt(root.lengthSec)
 
         Item {
-            id: infoRow
             anchors.fill: parent
             visible: opacity > 0.01
             opacity: root.picking ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
 
             Text {
                 id: plainSource
@@ -352,8 +397,16 @@ PillSurface {
                 SequentialAnimation on glow {
                     running: srcBubble.visible && !root.picking
                     loops: Animation.Infinite
-                    NumberAnimation { to: 1; duration: 1300; easing.type: Easing.InOutSine }
-                    NumberAnimation { to: 0; duration: 1300; easing.type: Easing.InOutSine }
+                    NumberAnimation {
+                        to: 1
+                        duration: 1300
+                        easing.type: Easing.InOutSine
+                    }
+                    NumberAnimation {
+                        to: 0
+                        duration: 1300
+                        easing.type: Easing.InOutSine
+                    }
                 }
 
                 Row {
@@ -401,7 +454,9 @@ PillSurface {
                 color: Theme.dim
                 font.family: Theme.font
                 font.pixelSize: 9.5 * root.s
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
         }
 
@@ -411,7 +466,11 @@ PillSurface {
             clip: true
             visible: opacity > 0.01
             opacity: root.picking ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
             contentWidth: pickRow.width
             contentHeight: height
             flickableDirection: Flickable.HorizontalFlick
@@ -419,7 +478,7 @@ PillSurface {
 
             WheelHandler {
                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                onWheel: (e) => {
+                onWheel: e => {
                     var step = e.angleDelta.y !== 0 ? e.angleDelta.y : e.angleDelta.x;
                     var max = Math.max(0, pickFlick.contentWidth - pickFlick.width);
                     pickFlick.contentX = Math.max(0, Math.min(max, pickFlick.contentX - step));
@@ -500,13 +559,18 @@ PillSurface {
         spacing: 14 * root.s
         opacity: root.picking ? 0 : 1
         enabled: !root.picking
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.fast
+            }
+        }
 
         KanjiSkip {
             kanjiText: "前"
             icon: "prev"
             can: root.hasPlayer && root.player.canGoPrevious
-            onActivated: if (root.player) root.player.previous()
+            onActivated: if (root.player)
+                root.player.previous()
         }
 
         Rectangle {
@@ -519,16 +583,31 @@ PillSurface {
             scale: 1 + 0.08 * root.sealPulse
 
             property real sat: root.playing ? 1 : 0
-            Behavior on sat { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+            Behavior on sat {
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Motion.easeStandard
+                }
+            }
 
             opacity: (sealArea.enabled ? 1 : 0.4) * (0.75 + 0.25 * sat)
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
 
             border.width: 1
             border.color: Qt.alpha(Theme.vermLit, 0.4 + 0.4 * root.sealPulse)
             gradient: Gradient {
-                GradientStop { position: 0.0; color: root.mix(Theme.verm, Theme.tileBg, 0.55 - 0.27 * seal.sat) }
-                GradientStop { position: 1.0; color: root.mix(Theme.vermDeep, Theme.tileBg, 0.55 - 0.27 * seal.sat) }
+                GradientStop {
+                    position: 0.0
+                    color: root.mix(Theme.verm, Theme.tileBg, 0.55 - 0.27 * seal.sat)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root.mix(Theme.vermDeep, Theme.tileBg, 0.55 - 0.27 * seal.sat)
+                }
             }
 
             Text {
@@ -557,7 +636,8 @@ PillSurface {
                 hoverEnabled: true
                 enabled: root.hasPlayer && root.player.canTogglePlaying
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (root.player) root.player.togglePlaying()
+                onClicked: if (root.player)
+                    root.player.togglePlaying()
             }
         }
 
@@ -565,7 +645,8 @@ PillSurface {
             kanjiText: "次"
             icon: "next"
             can: root.hasPlayer && root.player.canGoNext
-            onActivated: if (root.player) root.player.next()
+            onActivated: if (root.player)
+                root.player.next()
         }
     }
 
@@ -589,13 +670,19 @@ PillSurface {
 
         Behavior on drawF {
             enabled: Math.abs(root.frac - stroke.lastFrac) < 0.02
-            NumberAnimation { duration: Math.round(500 * Motion.mult); easing.type: Easing.Linear }
+            NumberAnimation {
+                duration: Math.round(500 * Motion.mult)
+                easing.type: Easing.Linear
+            }
         }
-        onTargetFChanged: Qt.callLater(() => { stroke.lastFrac = root.frac; })
+        onTargetFChanged: Qt.callLater(() => {
+            stroke.lastFrac = root.frac;
+        })
 
         onDrawFChanged: requestPaint()
         onWidthChanged: requestPaint()
-        onVisibleChanged: if (visible) requestPaint()
+        onVisibleChanged: if (visible)
+            requestPaint()
 
         function waveY(u) {
             return height / 2 - 2.6 * Math.sin(3 * Math.PI * u) * Math.exp(-2.5 * u) * root.s;
@@ -639,7 +726,6 @@ PillSurface {
         }
 
         MouseArea {
-            id: seekArea
             anchors.fill: parent
             anchors.margins: -8 * root.s
             enabled: root.hasPlayer && root.player.canSeek && root.player.positionSupported && root.lengthSec > 0 && !root.live
@@ -647,11 +733,14 @@ PillSurface {
             function fracAt(mx) {
                 return Math.max(0, Math.min(1, (mx - 8 * root.s - stroke.inset) / stroke.usable));
             }
-            onPressed: (e) => {
+            onPressed: e => {
                 root.dragFrac = fracAt(e.x);
                 root.dragging = true;
             }
-            onPositionChanged: (e) => { if (pressed) root.dragFrac = fracAt(e.x); }
+            onPositionChanged: e => {
+                if (pressed)
+                    root.dragFrac = fracAt(e.x);
+            }
             onReleased: {
                 if (root.player)
                     root.player.position = root.dragFrac * root.lengthSec;

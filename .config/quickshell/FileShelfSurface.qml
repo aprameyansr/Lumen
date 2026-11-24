@@ -15,8 +15,7 @@ PillSurface {
     property string hoveredId: ""
     property bool dragging: false
     readonly property real rowHeight: 37 * s
-    implicitHeight: shelfHeader.height + 10 * s + Math.min(7, Math.max(1, FileShelf.entries.length)) * rowHeight
-        + shelfFooter.height
+    implicitHeight: shelfHeader.height + 10 * s + Math.min(7, Math.max(1, FileShelf.entries.length)) * rowHeight + shelfFooter.height
 
     ameForm: !open ? "off" : hoveredId || selectedId ? "rowseam" : "soul"
     amePoint: {
@@ -26,8 +25,7 @@ PillSurface {
         const id = hoveredId || selectedId;
         const index = FileShelf.entries.findIndex(entry => entry.id === id);
         const item = index >= 0 ? files.itemAtIndex(index) : null;
-        return item && item.y >= files.contentY && item.y + item.height <= files.contentY + files.height
-            ? item.mapToItem(root, 4 * s, item.height / 2) : shelfHeader.soulPoint;
+        return item && item.y >= files.contentY && item.y + item.height <= files.contentY + files.height ? item.mapToItem(root, 4 * s, item.height / 2) : shelfHeader.soulPoint;
     }
 
     function move(direction) {
@@ -35,8 +33,7 @@ PillSurface {
         if (!entries.length)
             return false;
         const current = entries.findIndex(entry => entry.id === selectedId);
-        const next = current < 0 ? (direction > 0 ? 0 : entries.length - 1)
-            : Math.max(0, Math.min(entries.length - 1, current + direction));
+        const next = current < 0 ? (direction > 0 ? 0 : entries.length - 1) : Math.max(0, Math.min(entries.length - 1, current + direction));
         hoveredId = "";
         selectedId = entries[next].id;
         files.positionViewAtIndex(next, ListView.Contain);
@@ -90,8 +87,7 @@ PillSurface {
                 anchors.fill: parent
                 anchors.margins: 2 * root.s
                 radius: 7 * root.s
-                color: root.selectedId === row.modelData.id || root.hoveredId === row.modelData.id
-                    ? Theme.frameBg : "transparent"
+                color: root.selectedId === row.modelData.id || root.hoveredId === row.modelData.id ? Theme.frameBg : "transparent"
             }
             Rectangle {
                 width: parent.width
@@ -106,15 +102,22 @@ PillSurface {
                     visible: removeHeat.holding
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-                        GradientStop { position: 1.0; color: Theme.vermLit }
+                        GradientStop {
+                            position: 0.0
+                            color: Qt.alpha(Theme.vermLit, 0.15)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Theme.vermLit
+                        }
                     }
                 }
             }
 
             HeatHold {
                 id: removeHeat
-                onConfirmed: if (remove.enabled) FileShelf.remove(row.modelData.id)
+                onConfirmed: if (remove.enabled)
+                    FileShelf.remove(row.modelData.id)
             }
 
             Item {
@@ -128,7 +131,9 @@ PillSurface {
                 Drag.dragType: Drag.Automatic
                 Drag.supportedActions: Qt.CopyAction
                 Drag.proposedAction: Qt.CopyAction
-                Drag.mimeData: ({ "text/uri-list": row.modelData.url + "\r\n" })
+                Drag.mimeData: ({
+                        "text/uri-list": row.modelData.url + "\r\n"
+                    })
                 Drag.onDragStarted: {
                     root.selectedId = row.modelData.id;
                     root.dragging = true;
@@ -150,7 +155,9 @@ PillSurface {
                             root.hoveredId = "";
                     }
                 }
-                TapHandler { onTapped: root.selectedId = row.modelData.id }
+                TapHandler {
+                    onTapped: root.selectedId = row.modelData.id
+                }
 
                 GlyphIcon {
                     id: fileIcon
@@ -185,7 +192,9 @@ PillSurface {
                     color: Theme.subtle
                     font.family: Theme.font
                     font.pixelSize: 10 * root.s
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
             }
 
@@ -204,7 +213,8 @@ PillSurface {
                 onPressed: removeHeat.press()
                 onReleased: removeHeat.release()
                 onCanceled: removeHeat.cancel()
-                onEnabledChanged: if (!enabled) removeHeat.cancel()
+                onEnabledChanged: if (!enabled)
+                    removeHeat.cancel()
                 onEntered: root.hoveredId = row.modelData.id
                 onExited: {
                     removeHeat.cancel();
@@ -213,16 +223,16 @@ PillSurface {
                 }
 
                 Tooltip {
-                    id: removeHint
                     parent: root
                     s: root.s
                     title: "Hold to remove"
-                    show: (remove.containsMouse || removeHeat.holding)
-                        && controlPoint.y >= files.y && controlPoint.y <= files.y + files.height
+                    show: (remove.containsMouse || removeHeat.holding) && controlPoint.y >= files.y && controlPoint.y <= files.y + files.height
 
                     readonly property point controlPoint: {
-                        void root.width;
-                        void root.height;
+                        // mapToItem does not track layout or scroll changes.
+                        void remove.x;
+                        void remove.y;
+                        void files.y;
                         void files.contentY;
                         void row.y;
                         return remove.mapToItem(root, remove.width / 2, remove.height / 2);
@@ -232,11 +242,8 @@ PillSurface {
                     anchors.top: undefined
                     anchors.bottom: undefined
                     x: Math.max(0, Math.min(root.width - width, controlPoint.x - width / 2))
-                    placement: controlPoint.y - remove.height / 2 >= height + gap ? "above" : "below"
-                    y: Math.max(0, Math.min(root.height - height,
-                        below ? controlPoint.y + remove.height / 2 + gap
-                        : controlPoint.y - remove.height / 2 - height - gap))
-                    pointerOffset: Math.max(14 * s, Math.min(width - 14 * s, controlPoint.x - x)) - width / 2
+                    y: Math.max(0, controlPoint.y - remove.height / 2 - height - gap)
+                    pointerOffset: Math.max(12 * s, Math.min(width - 12 * s, controlPoint.x - x)) - width / 2
                 }
 
                 GlyphIcon {
@@ -244,15 +251,22 @@ PillSurface {
                     width: 13 * root.s
                     height: width
                     name: "close"
-                    color: removeHeat.holding ? Theme.vermLit
-                        : remove.containsMouse ? Theme.cream : Theme.faint
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    color: removeHeat.holding ? Theme.vermLit : remove.containsMouse ? Theme.cream : Theme.faint
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
             }
         }
     }
 
-    WheelScroller { anchors.fill: files; s: root.s; flick: files }
+    WheelScroller {
+        anchors.fill: files
+        s: root.s
+        flick: files
+    }
 
     Text {
         anchors.centerIn: files

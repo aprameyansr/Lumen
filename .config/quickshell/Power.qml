@@ -49,11 +49,51 @@ PillSurface {
     amePoint: Qt.point(heatX, heatY)
 
     readonly property var actions: [
-        { key: "lock",     hotkey: "w", glyph: "lock",     label: "Lock",     confirm: false, dispatch: "",             argv: ["loginctl", "lock-session"] },
-        { key: "logout",   hotkey: "l", glyph: "logout",   label: "Logout",   confirm: true,  dispatch: "hl.dsp.exit()", argv: [] },
-        { key: "suspend",  hotkey: "s", glyph: "suspend",  label: "Sleep",    confirm: false, dispatch: "",             argv: ["systemctl", "suspend"] },
-        { key: "reboot",   hotkey: "r", glyph: "reboot",   label: "Restart",  confirm: true,  dispatch: "",             argv: ["systemctl", "reboot"] },
-        { key: "shutdown", hotkey: "u", glyph: "shutdown", label: "Shutdown", confirm: true,  dispatch: "",             argv: ["systemctl", "poweroff"] }
+        {
+            key: "lock",
+            hotkey: "w",
+            glyph: "lock",
+            label: "Lock",
+            confirm: false,
+            dispatch: "",
+            argv: ["loginctl", "lock-session"]
+        },
+        {
+            key: "logout",
+            hotkey: "l",
+            glyph: "logout",
+            label: "Logout",
+            confirm: true,
+            dispatch: "hl.dsp.exit()",
+            argv: []
+        },
+        {
+            key: "suspend",
+            hotkey: "s",
+            glyph: "suspend",
+            label: "Sleep",
+            confirm: false,
+            dispatch: "",
+            argv: ["systemctl", "suspend"]
+        },
+        {
+            key: "reboot",
+            hotkey: "r",
+            glyph: "reboot",
+            label: "Restart",
+            confirm: true,
+            dispatch: "",
+            argv: ["systemctl", "reboot"]
+        },
+        {
+            key: "shutdown",
+            hotkey: "u",
+            glyph: "shutdown",
+            label: "Shutdown",
+            confirm: true,
+            dispatch: "",
+            argv: ["systemctl", "poweroff"]
+        }
     ]
 
     readonly property int splitAfter: 2
@@ -100,7 +140,7 @@ PillSurface {
      * Returns true when the letter belongs to a tile.
      */
     function pressHotkey(text) {
-        for (var i = 0; i < actions.length; i++)
+        for (let i = 0; i < actions.length; i++)
             if (actions[i].hotkey === text.toLowerCase()) {
                 keyHeld = false;
                 focusIndex = i;
@@ -236,7 +276,11 @@ PillSurface {
                         color: tile.isHover ? Theme.frameBg : "transparent"
                         border.width: 1
                         border.color: tile.isHover ? Theme.frameBorder : Theme.border
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     /**
@@ -259,8 +303,14 @@ PillSurface {
                             height: tile.height * tile.hold
                             visible: tile.holding
                             gradient: Gradient {
-                                GradientStop { position: 0.0; color: Qt.alpha(Theme.verm, 0.7) }
-                                GradientStop { position: 1.0; color: Qt.alpha(Theme.vermLit, 0.15) }
+                                GradientStop {
+                                    position: 0.0
+                                    color: Qt.alpha(Theme.verm, 0.7)
+                                }
+                                GradientStop {
+                                    position: 1.0
+                                    color: Qt.alpha(Theme.vermLit, 0.15)
+                                }
                             }
                         }
                     }
@@ -296,8 +346,10 @@ PillSurface {
                             if (cell.modelData.confirm)
                                 heat.cancel();
                         }
-                        onPressed: if (cell.modelData.confirm) heat.press()
-                        onReleased: if (cell.modelData.confirm) heat.release()
+                        onPressed: if (cell.modelData.confirm)
+                            heat.press()
+                        onReleased: if (cell.modelData.confirm)
+                            heat.release()
                         onClicked: {
                             if (!cell.modelData.confirm)
                                 root.run(cell.modelData);
@@ -313,10 +365,9 @@ PillSurface {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: tiles.bottom
         anchors.topMargin: 12 * root.s
-        readonly property string focusKey: root.holdingIndex >= 0
-            ? root.actions[root.holdingIndex].key : root.hovered
+        readonly property string focusKey: root.holdingIndex >= 0 ? root.actions[root.holdingIndex].key : root.hovered
         readonly property var act: {
-            for (var i = 0; i < root.actions.length; i++)
+            for (let i = 0; i < root.actions.length; i++)
                 if (root.actions[i].key === label.focusKey)
                     return root.actions[i];
             return null;
@@ -328,6 +379,10 @@ PillSurface {
         font.weight: Font.Medium
         font.letterSpacing: 0.4 * root.s
         opacity: text.length > 0 ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 }

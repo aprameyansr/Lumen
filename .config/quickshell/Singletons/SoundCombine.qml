@@ -1,4 +1,5 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
@@ -62,25 +63,7 @@ Singleton {
 
     function confFor(c) {
         const rules = c.members.map(m => '{ media.class = "Audio/Sink" node.name = ' + JSON.stringify(m.match) + ' }').join(" ");
-        return "context.properties = { log.level = 0 }\n"
-            + "context.spa-libs = {\n    audio.convert.* = audioconvert/libspa-audioconvert\n    support.* = support/libspa-support\n}\n"
-            + "context.modules = [\n"
-            + "    { name = libpipewire-module-rt args = { } flags = [ ifexists nofail ] }\n"
-            + "    { name = libpipewire-module-protocol-native }\n"
-            + "    { name = libpipewire-module-client-node }\n"
-            + "    { name = libpipewire-module-adapter }\n"
-            + "    { name = libpipewire-module-combine-stream\n"
-            + "      args = {\n"
-            + "        combine.mode = sink\n"
-            + "        node.name = " + JSON.stringify(root.nodeName(c.id)) + "\n"
-            + "        node.description = " + JSON.stringify(c.name) + "\n"
-            + "        combine.latency-compensate = true\n"
-            + "        combine.props = { audio.position = [ FL FR ] }\n"
-            + "        stream.props = { }\n"
-            + "        stream.rules = [ { matches = [ " + rules + " ] actions = { create-stream = { } } } ]\n"
-            + "      }\n"
-            + "    }\n"
-            + "]\n";
+        return "context.properties = { log.level = 0 }\n" + "context.spa-libs = {\n    audio.convert.* = audioconvert/libspa-audioconvert\n    support.* = support/libspa-support\n}\n" + "context.modules = [\n" + "    { name = libpipewire-module-rt args = { } flags = [ ifexists nofail ] }\n" + "    { name = libpipewire-module-protocol-native }\n" + "    { name = libpipewire-module-client-node }\n" + "    { name = libpipewire-module-adapter }\n" + "    { name = libpipewire-module-combine-stream\n" + "      args = {\n" + "        combine.mode = sink\n" + "        node.name = " + JSON.stringify(root.nodeName(c.id)) + "\n" + "        node.description = " + JSON.stringify(c.name) + "\n" + "        combine.latency-compensate = true\n" + "        combine.props = { audio.position = [ FL FR ] }\n" + "        stream.props = { }\n" + "        stream.rules = [ { matches = [ " + rules + " ] actions = { create-stream = { } } } ]\n" + "      }\n" + "    }\n" + "]\n";
     }
 
     /**
@@ -96,7 +79,10 @@ Singleton {
             if (hit)
                 hit.n++;
             else
-                counts.push({ w: w, n: 1 });
+                counts.push({
+                    w: w,
+                    n: 1
+                });
         }
         const parts = counts.map(c => c.n > 1 ? c.w + " ×" + c.n : c.w);
         return parts.length > 3 ? parts.slice(0, 3).join(" + ") + " +" + (parts.length - 3) : parts.join(" + ");
@@ -140,11 +126,16 @@ Singleton {
         if (cur && !root.isCombined(cur))
             root.prevDefault = cur.name;
         const id = Date.now().toString(36);
-        root.combos = root.combos.concat([{
-            id: id,
-            name: root.shortName(picked.map(n => n.description || n.nickname || n.name)),
-            members: picked.map(n => ({ match: root.matchFor(n), label: n.description || n.nickname || n.name }))
-        }]);
+        root.combos = root.combos.concat([
+            {
+                id: id,
+                name: root.shortName(picked.map(n => n.description || n.nickname || n.name)),
+                members: picked.map(n => ({
+                            match: root.matchFor(n),
+                            label: n.description || n.nickname || n.name
+                        }))
+            }
+        ]);
         root.pendingDefault = id;
     }
 
@@ -160,8 +151,7 @@ Singleton {
 
     /** Make a new combined output the default as soon as it appears. */
     property string pendingDefault: ""
-    readonly property var pendingNode: root.pendingDefault.length
-        ? (root.nodes.find(n => n && n.name === root.nodeName(root.pendingDefault)) || null) : null
+    readonly property var pendingNode: root.pendingDefault.length ? (root.nodes.find(n => n && n.name === root.nodeName(root.pendingDefault)) || null) : null
     onPendingNodeChanged: {
         if (root.pendingNode) {
             Pipewire.preferredDefaultAudioSink = root.pendingNode;
@@ -176,8 +166,7 @@ Singleton {
             required property var modelData
             readonly property string conf: root.runDir + "/" + modelData.id + ".conf"
             running: true
-            command: ["sh", "-c", "mkdir -p \"$1\" && printf '%s' \"$2\" > \"$3\" && exec pipewire -c \"$3\"",
-                "_", root.runDir, root.confFor(modelData), conf]
+            command: ["sh", "-c", "mkdir -p \"$1\" && printf '%s' \"$2\" > \"$3\" && exec pipewire -c \"$3\"", "_", root.runDir, root.confFor(modelData), conf]
             Component.onDestruction: running = false
         }
     }

@@ -1,18 +1,10 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Effects
 import "Singletons"
 
-/**
- * Washi hint bubble for pill controls. Anchored to its parent control and
- * centred on it; `placement` decides whether the bubble floats above (pointer
- * down) or below (pointer up) so chips near the pill edge never clip off-screen.
- * The host sets `show` from the control's own HoverHandler; the bubble arms
- * after a hover delay, fades in slowly and out fast.
- *
- * Non-interactive by design: no MouseArea or HoverHandler lives here, so it
- * never steals pointer events from the controls or the mixer's hover tracker.
- * It is `visible: false` whenever fully faded, for the same reason.
- */
+// Delayed hover hint. The control owns pointer input and supplies the show state.
 Item {
     id: root
 
@@ -41,7 +33,11 @@ Item {
 
     visible: armed || opacity > 0.01
     opacity: armed ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: root.armed ? Motion.standard : Motion.fast } }
+    Behavior on opacity {
+        NumberAnimation {
+            duration: root.armed ? Motion.standard : Motion.fast
+        }
+    }
 
     Timer {
         id: delay
@@ -68,8 +64,14 @@ Item {
         border.width: 1
         border.color: Theme.frameBorder
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.cardTop }
-            GradientStop { position: 1.0; color: Theme.cardBot }
+            GradientStop {
+                position: 0.0
+                color: Theme.cardTop
+            }
+            GradientStop {
+                position: 1.0
+                color: Theme.cardBot
+            }
         }
 
         layer.enabled: true
@@ -114,7 +116,7 @@ Item {
         anchors.top: root.below ? parent.top : undefined
         anchors.bottom: root.below ? undefined : parent.bottom
         onPaint: {
-            var ctx = getContext("2d");
+            const ctx = getContext("2d");
             ctx.reset();
             ctx.fillStyle = Theme.cardBot;
             ctx.beginPath();

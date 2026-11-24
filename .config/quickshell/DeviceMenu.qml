@@ -47,8 +47,14 @@ Item {
         clip: true
         radius: 9 * menu.s
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.cardTop }
-            GradientStop { position: 1.0; color: Theme.cardBot }
+            GradientStop {
+                position: 0.0
+                color: Theme.cardTop
+            }
+            GradientStop {
+                position: 1.0
+                color: Theme.cardBot
+            }
         }
         border.width: 1
         border.color: Theme.frameBorder
@@ -68,10 +74,11 @@ Item {
                 width: ListView.view.width
                 height: 24 * menu.s
                 radius: 7 * menu.s
-                color: devRowHover.hovered ? Theme.frameBg
-                    : (devRow.current ? Qt.alpha(Theme.onGlow, 0.16) : "transparent")
+                color: devRowHover.hovered ? Theme.frameBg : (devRow.current ? Qt.alpha(Theme.onGlow, 0.16) : "transparent")
 
-                HoverHandler { id: devRowHover }
+                HoverHandler {
+                    id: devRowHover
+                }
 
                 Text {
                     anchors.left: parent.left

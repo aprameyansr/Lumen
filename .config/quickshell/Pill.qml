@@ -11,16 +11,7 @@ import Quickshell.Hyprland
 import Quickshell.Services.Notifications
 import "Singletons"
 
-/**
- * The pill body. One element carries every state. Width/height driven by `state`
- * (rest, hover/pinned, mixer, calendar) with a no-overshoot easing so surfaces
- * grow out of the pill in place. Surfaces are stacked absolutely and cross-fade.
- *
- * Hover comes from a passive HoverHandler, pin from a passive TapHandler, so
- * neither swallows pointer events from the surfaces stacked above: workspace
- * dots, the clock target, tray icons and the mixer faders get their own clicks
- * and drags.
- */
+// The pill morphs in place. Its surfaces cross-fade over the resting and hover rows.
 Item {
     id: pill
 
@@ -38,7 +29,10 @@ Item {
     property real swipeFade: 1
     Behavior on swipeFade {
         enabled: !toastLoader.active
-        NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+        NumberAnimation {
+            duration: Motion.standard
+            easing.type: Motion.easeStandard
+        }
     }
     /**
      * When the last toast leaves, a hover that began on the toast (not on the
@@ -89,10 +83,9 @@ Item {
     readonly property bool recorderOpen: surface === "recorder"
     readonly property bool sysmonOpen: surface === "sysmon"
     readonly property bool fileShelfOpen: surface === "file-shelf"
-    readonly property bool shelfDragging: fileShelfOpen && !!ldFileShelf.item?.dragging
+    readonly property bool shelfDragging: fileShelfOpen && !!ldFileShelf.page?.dragging
     readonly property var sysmonPages: ["cpu", "gpu", "mem", "net", "disk", "swap"]
-    readonly property bool sysmonDetailOpen: surface.startsWith("sysmon-")
-        && (sysmonPages.includes(surface.slice("sysmon-".length)) || surface === "sysmon-apps")
+    readonly property bool sysmonDetailOpen: surface.startsWith("sysmon-") && (sysmonPages.includes(surface.slice("sysmon-".length)) || surface === "sysmon-apps")
     readonly property bool appearanceOpen: surface === "appearance"
     readonly property bool displayOpen: surface === "display"
     readonly property bool inputOpen: surface === "input"
@@ -103,15 +96,18 @@ Item {
     readonly property bool fontpickerOpen: surface === "fontpicker"
     readonly property bool vocabOpen: surface === "vocab"
     readonly property bool dictationOpen: surface === "dictation"
-    readonly property bool settingsLike: settingsOpen || appearanceOpen
-        || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || timeOpen || fontpickerOpen || awakeOpen || vocabOpen || dictationOpen
+    readonly property bool settingsLike: settingsOpen || appearanceOpen || lookOpen || inputOpen || displayOpen || animationOpen || notificationsOpen || timeOpen || fontpickerOpen || awakeOpen || vocabOpen || dictationOpen
     readonly property bool hasMedia: Players.list.length > 0
 
     readonly property var netDevices: (typeof Networking !== "undefined" && Networking && Networking.devices) ? Networking.devices.values : []
-    readonly property var wifiDev: netDevices.find(function(d) { return d && d.type === DeviceType.Wifi }) || null
+    readonly property var wifiDev: netDevices.find(function (d) {
+        return d && d.type === DeviceType.Wifi;
+    }) || null
     readonly property bool wifiOn: (typeof Networking !== "undefined" && Networking) ? Networking.wifiEnabled : false
     readonly property var wifiNets: (wifiDev && wifiDev.networks) ? wifiDev.networks.values : []
-    readonly property var wifiActive: wifiNets.find(function(n) { return n && n.connected }) || null
+    readonly property var wifiActive: wifiNets.find(function (n) {
+        return n && n.connected;
+    }) || null
     readonly property real wifiLevel: (wifiActive && wifiActive.signalStrength) || 0
     readonly property var btAdapter: (typeof Bluetooth !== "undefined" && Bluetooth) ? Bluetooth.defaultAdapter : null
     readonly property bool btOn: btAdapter ? btAdapter.enabled === true : false
@@ -142,19 +138,22 @@ Item {
      */
     readonly property string specialView: {
         var ms = Hyprland.monitors.values;
-        for (var i = 0; i < ms.length; i++) {
+        for (let i = 0; i < ms.length; i++) {
             if (ms[i] && ms[i].name === pill.screenName) {
-                var o = ms[i].lastIpcObject;
-                var sw = (o && o.specialWorkspace) ? o.specialWorkspace.name : "";
+                const o = ms[i].lastIpcObject;
+                const sw = (o && o.specialWorkspace) ? o.specialWorkspace.name : "";
                 if (sw && sw.indexOf("special:") === 0) {
-                    var id = sw.slice("special:".length);
-                    var sl = Spaces.list;
-                    for (var j = 0; j < sl.length; j++)
+                    const id = sw.slice("special:".length);
+                    const sl = Spaces.list;
+                    for (let j = 0; j < sl.length; j++)
                         if (sl[j] && sl[j].id === id)
                             return sl[j].name;
-                    if (id === "minimized") return "Minimized";
-                    if (id === "private") return "Private";
-                    if (id === "stash") return "Stash";
+                    if (id === "minimized")
+                        return "Minimized";
+                    if (id === "private")
+                        return "Private";
+                    if (id === "stash")
+                        return "Stash";
                     return id.charAt(0).toUpperCase() + id.slice(1);
                 }
                 return "";
@@ -163,7 +162,6 @@ Item {
         return "";
     }
     readonly property bool toastActive: Notifs.popups.length > 0
-    /** A critical notification is the one thing allowed to take over an open page or the hover row. */
     /**
      * Whether the pill is held against interruptions: an open page, pinned, or
      * a hover that began on the plain pill. A hover that began on a toast or a
@@ -179,7 +177,9 @@ Item {
      * flashes and toasts wait until the take is done.
      */
     readonly property bool dictateHere: Dictate.active && Dictate.mon === screenName
-    readonly property bool criticalToast: Notifs.popups.some(function (p) { return p && p.urgency === NotificationUrgency.Critical; })
+    readonly property bool criticalToast: Notifs.popups.some(function (p) {
+        return p && p.urgency === NotificationUrgency.Critical;
+    })
     readonly property bool osdActive: osd.flashing
 
     /**
@@ -200,42 +200,6 @@ Item {
     readonly property real hoverPad: 20 * s
     readonly property real hoverW: hoverRow.implicitWidth + 2 * hoverPad
     readonly property real hoverH: restH * 58 / 38
-    readonly property real mixerH: 214 * s
-    readonly property real launcherW: 360 * s
-    readonly property real launcherH: 332 * s
-    readonly property real emojiW: 360 * s
-    readonly property real emojiH: 332 * s
-    readonly property real clipboardW: 360 * s
-    readonly property real clipboardH: 332 * s
-    readonly property real wallpaperW: 720 * s
-    readonly property real wallpaperH: 172 * s
-    readonly property real powerW: 330 * s
-    readonly property real powerH: 150 * s
-    readonly property real mediaW: (Players.pickable.length > 1 ? 460 : 390) * s
-    readonly property real mediaH: 150 * s
-    readonly property real batteryW: 316 * s
-    readonly property real wifiW: 272 * s
-    readonly property real btW: 286 * s
-    readonly property real soundW: 400 * s
-    readonly property real awakeW: 392 * s
-    readonly property real clockW: 380 * s
-    readonly property real settingsW: 392 * s
-    readonly property real keybindsW: 460 * s
-    readonly property real workspacesW: 392 * s
-    readonly property real stashW: 392 * s
-    readonly property real spaceappsW: 392 * s
-    readonly property real recorderW: 384 * s
-    readonly property real sysmonW: 392 * s
-    readonly property real appearanceW: 392 * s
-    readonly property real displayW: 392 * s
-    readonly property real inputW: 392 * s
-    readonly property real lookW: 392 * s
-    readonly property real animationW: 392 * s
-    readonly property real notificationsW: 392 * s
-    readonly property real timeW: 392 * s
-    readonly property real fontpickerW: 360 * s
-    readonly property real vocabW: 392 * s
-    readonly property real dictationW: 392 * s
     readonly property real toastW: 342 * s
     readonly property real quickChooseW: 344 * s
     readonly property real quickChooseH: 76 * s
@@ -246,99 +210,86 @@ Item {
     readonly property real restCorner: Math.max(0, Math.min(Flags.pillRounding, baseH / 2)) * s
     readonly property real openCorner: restCorner * 22 / 18
 
-    /**
-     * Latch-once lazy load. Every surface sleeps in an inactive Loader until its
-     * first open; the size and ame thunks below resolve items through here. The
-     * ordering is the trick: flip `active` before any read of the loader, so the
-     * calling binding never has the loader registered as a dep when the flip
-     * fires mid-evaluation (that read-then-write would be a binding loop). The
-     * write is idempotent and the Loader loads synchronously, so a first open
-     * reads the real implicitHeight in the same evaluation and the morph target
-     * is exact. unloadIdle drops it again two minutes after the pill closes.
-     */
-    function surfaceItem(ld) {
-        ld.active = true;
-        return ld.item;
+    readonly property var surfaces: ({
+            calendar: ldCalendar,
+            launcher: ldLauncher,
+            emoji: ldEmoji,
+            clipboard: ldClip,
+            wallpaper: ldWall,
+            power: ldPower,
+            media: ldMedia,
+            sound: ldSound,
+            mixer: ldMixer,
+            link: ldLink,
+            wifi: ldWifi,
+            bt: ldBt,
+            clock: ldClock,
+            awake: ldAwake,
+            battery: ldBattery,
+            settings: ldSettings,
+            keybinds: ldKeybinds,
+            workspaces: ldWorkspaces,
+            stash: ldStash,
+            spaceapps: ldSpaceapps,
+            recorder: ldRecorder,
+            "file-shelf": ldFileShelf,
+            sysmon: ldSysmon,
+            "sysmon-apps": ldSysmonApps,
+            appearance: ldAppearance,
+            display: ldDisplay,
+            input: ldInput,
+            look: ldLook,
+            animation: ldAnimation,
+            time: ldTime,
+            notifications: ldNotifications,
+            fontpicker: ldFontpicker,
+            vocab: ldVocab,
+            dictation: ldDictation
+        })
+
+    function pageLoader(name) {
+        if (Object.prototype.hasOwnProperty.call(surfaces, name))
+            return surfaces[name];
+        if (!name.startsWith("sysmon-"))
+            return null;
+        const index = sysmonPages.indexOf(name.slice("sysmon-".length));
+        return index < 0 ? null : sysmonDetails.itemAt(index);
     }
 
-    /**
-     * Single source of truth for every morphing surface, keyed by its `surface`
-     * string. Each entry owns the surface's target size (a thunk so the geometry
-     * it reads registers as a live dep of targetSize) and a thunk resolving the
-     * surface item Ame anchors to while it is open (null = Ame falls back to the
-     * pill's own hover or wake anchor). `mode`, `targetSize` and `ameSurface` all
-     * derive from this, so adding a surface is one entry here plus its Loader —
-     * no parallel ternary chains to keep in lockstep.
-     */
-    readonly property var surfaces: Object.assign({
-        calendar:  { size: () => { const it = surfaceItem(ldCalendar); return Qt.size((it.implicitWidth > 0 ? it.implicitWidth : 282 * s) + 36 * s, it.implicitHeight + 32 * s); }, ame: () => surfaceItem(ldCalendar) },
-        launcher:  { size: () => { surfaceItem(ldLauncher); return Qt.size(launcherW, launcherH); }, ame: () => surfaceItem(ldLauncher) },
-        emoji: { size: () => { surfaceItem(ldEmoji); return Qt.size(emojiW, emojiH); }, ame: () => surfaceItem(ldEmoji)},
-        clipboard: { size: () => { surfaceItem(ldClip); return Qt.size(clipboardW, clipboardH); }, ame: () => surfaceItem(ldClip) },
-        wallpaper: { size: () => { surfaceItem(ldWall); return Qt.size(wallpaperW, wallpaperH); }, ame: () => null },
-        power:     { size: () => { surfaceItem(ldPower); return Qt.size(powerW, powerH); }, ame: () => surfaceItem(ldPower) },
-        media:     { size: () => { surfaceItem(ldMedia); return Qt.size(mediaW, mediaH); }, ame: () => surfaceItem(ldMedia) },
-        sound:     { size: () => Qt.size(soundW, surfaceItem(ldSound).implicitHeight + 34 * s), ame: () => surfaceItem(ldSound) },
-        mixer:     { size: () => Qt.size(93 * Math.max(4, surfaceItem(ldMixer).faderCount) * s, mixerH), ame: () => surfaceItem(ldMixer) },
-        link:      { size: () => { const it = surfaceItem(ldLink); return Qt.size(it.desiredW, it.implicitHeight + 26 * s); }, ame: () => surfaceItem(ldLink) },
-        wifi:      { size: () => Qt.size(wifiW, surfaceItem(ldWifi).implicitHeight + 26 * s), ame: () => surfaceItem(ldWifi) },
-        bt:        { size: () => Qt.size(btW, surfaceItem(ldBt).implicitHeight + 26 * s), ame: () => surfaceItem(ldBt) },
-        clock:     { size: () => Qt.size(clockW, surfaceItem(ldClock).implicitHeight + 29 * s), ame: () => surfaceItem(ldClock) },
-        awake:     { size: () => Qt.size(awakeW, surfaceItem(ldAwake).implicitHeight + 29 * s), ame: () => surfaceItem(ldAwake) },
-        battery:   { size: () => Qt.size(batteryW, surfaceItem(ldBattery).implicitHeight + 26 * s), ame: () => surfaceItem(ldBattery) },
-        settings:  { size: () => Qt.size(settingsW, surfaceItem(ldSettings).implicitHeight + 29 * s), ame: () => surfaceItem(ldSettings) },
-        keybinds:  { size: () => Qt.size(keybindsW, surfaceItem(ldKeybinds).implicitHeight + 29 * s), ame: () => surfaceItem(ldKeybinds) },
-        workspaces: { size: () => Qt.size(workspacesW, surfaceItem(ldWorkspaces).implicitHeight + 29 * s), ame: () => surfaceItem(ldWorkspaces) },
-        stash:     { size: () => Qt.size(stashW, surfaceItem(ldStash).implicitHeight + 29 * s), ame: () => surfaceItem(ldStash) },
-        spaceapps: { size: () => Qt.size(spaceappsW, surfaceItem(ldSpaceapps).implicitHeight + 29 * s), ame: () => surfaceItem(ldSpaceapps) },
-        recorder:  { size: () => Qt.size(recorderW, surfaceItem(ldRecorder).implicitHeight + 33 * s), ame: () => surfaceItem(ldRecorder) },
-        "file-shelf": { size: () => Qt.size(352 * s, surfaceItem(ldFileShelf).implicitHeight + 30 * s), ame: () => surfaceItem(ldFileShelf) },
-        sysmon:    { size: () => Qt.size(sysmonW, surfaceItem(ldSysmon).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmon) },
-        "sysmon-apps": { size: () => Qt.size(536 * s, surfaceItem(ldSysmonApps).implicitHeight + 33 * s), ame: () => surfaceItem(ldSysmonApps) },
-        appearance: { size: () => Qt.size(appearanceW, surfaceItem(ldAppearance).implicitHeight + 29 * s), ame: () => surfaceItem(ldAppearance) },
-        display:    { size: () => Qt.size(displayW, surfaceItem(ldDisplay).implicitHeight + 29 * s), ame: () => surfaceItem(ldDisplay) },
-        input:      { size: () => Qt.size(inputW, surfaceItem(ldInput).implicitHeight + 29 * s), ame: () => surfaceItem(ldInput) },
-        look:       { size: () => Qt.size(lookW, surfaceItem(ldLook).implicitHeight + 29 * s), ame: () => surfaceItem(ldLook) },
-        animation:  { size: () => Qt.size(animationW, surfaceItem(ldAnimation).implicitHeight + 29 * s), ame: () => surfaceItem(ldAnimation) },
-        time: { size: () => Qt.size(timeW, surfaceItem(ldTime).implicitHeight + 29 * s), ame: () => surfaceItem(ldTime) },
-        notifications: { size: () => Qt.size(notificationsW, surfaceItem(ldNotifications).implicitHeight + 29 * s), ame: () => surfaceItem(ldNotifications) },
-        fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) },
-        vocab: { size: () => Qt.size(vocabW, surfaceItem(ldVocab).implicitHeight + 29 * s), ame: () => surfaceItem(ldVocab) },
-        dictation: { size: () => Qt.size(dictationW, surfaceItem(ldDictation).implicitHeight + 29 * s), ame: () => surfaceItem(ldDictation) }
-    }, sysmonSurfaceEntries())
-
-    function sysmonSurfaceEntries() {
-        const entries = {};
-        for (let index = 0; index < sysmonPages.length; index++) {
-            const load = () => surfaceItem(sysmonDetails.itemAt(index));
-            entries["sysmon-" + sysmonPages[index]] = {
-                size: () => Qt.size(sysmonW, load().implicitHeight + 33 * s),
-                ame: load
-            };
-        }
-        return entries;
+    function pageAnchor(name) {
+        const loader = pageLoader(name);
+        if (!loader || !loader.showAme)
+            return null;
+        loader.active = true;
+        return loader.item;
     }
 
-    /**
-     * Anything expanded (an open page, pinned, or the hover row) holds the pill:
-     * notifications and volume/brightness flashes wait instead of morphing it
-     * out from under you. Only a critical notification breaks through.
-     */
-    readonly property string mode: dragActive ? "dragOver"
-        : (criticalToast && !(osdActive && !holding) ? "toast"
-        : (surfaceOpen && surfaces[surface] !== undefined ? surface
-        : (dictateHere ? "rest"
-        : (quickChoosing ? "quickChoose"
-        : (quickCounting ? "quickCount"
-        : (osdActive && !holding ? "osd"
-        : (toastActive && !holding ? "toast"
-        : (expanded ? "hover" : "rest"))))))))
+    // Order matters when a drag, an alert and an open page overlap.
+    readonly property string mode: {
+        if (dragActive)
+            return "dragOver";
+        if (criticalToast && !(osdActive && !holding))
+            return "toast";
+        if (pageLoader(surface))
+            return surface;
+        if (dictateHere)
+            return "rest";
+        if (quickChoosing)
+            return "quickChoose";
+        if (quickCounting)
+            return "quickCount";
+        if (osdActive && !holding)
+            return "osd";
+        if (toastActive && !holding)
+            return "toast";
+        return expanded ? "hover" : "rest";
+    }
 
     /** Incoming file drop surface and the current transfer status. */
-    property bool dragActive: false
     property string dragName: ""
     property string dragStage: ""
-    property string shelfDropAction: ""
+    readonly property bool dragActive: dragStage.length > 0
+    property bool overInstallTarget: false
     property bool installDropAvailable: false
     property string installDropLabel: ""
     readonly property bool appImageDrop: installDropAvailable && installDropLabel.startsWith("Install AppImage")
@@ -355,19 +306,19 @@ Item {
     /** A page replacing another holds back a beat (PillSurface.arrive) so the two never cross-fade. */
     property string lastSurface: ""
     onSurfaceChanged: {
-        var it = (surface.length > 0 && surfaces[surface] !== undefined) ? surfaces[surface].ame() : null;
-        if (it && typeof it.arrive === "function")
-            it.arrive(lastSurface.length > 0);
+        const item = pageAnchor(surface);
+        if (item && typeof item.arrive === "function")
+            item.arrive(lastSurface.length > 0);
         lastSurface = surface;
     }
-    signal requestClose()
+    signal requestClose
 
     /**
      * Forward an arrow-key nudge to the open mixer's targeted fader. Returns true
      * when the mixer is open and a fader consumed the step.
      */
     function mixerStep(deltaPct) {
-        return (pill.mixerOpen && ldMixer.item) ? ldMixer.item.stepFocused(deltaPct) : false;
+        return (pill.mixerOpen && ldMixer.page) ? ldMixer.page.stepFocused(deltaPct) : false;
     }
 
     /**
@@ -375,8 +326,8 @@ Item {
      * (right) or -1 (left). No-op unless the mixer is open.
      */
     function mixerFocusMove(dir) {
-        if (pill.mixerOpen && ldMixer.item)
-            ldMixer.item.moveFocus(dir);
+        if (pill.mixerOpen && ldMixer.page)
+            ldMixer.page.moveFocus(dir);
     }
 
     /**
@@ -384,40 +335,11 @@ Item {
      * Returns true when the recorder is open and a revealed fader consumed it.
      */
     function recorderStep(deltaPct) {
-        return (pill.recorderOpen && ldRecorder.item) ? ldRecorder.item.stepFocused(deltaPct) : false;
+        return (pill.recorderOpen && ldRecorder.page) ? ldRecorder.page.stepFocused(deltaPct) : false;
     }
 
-    /**
-     * Resolve which settings-family surface owns keyboard row navigation right
-     * now: the category index or one of its morphing sub-surfaces. Returns null
-     * when none of them is open.
-     */
     function rowNavSurface() {
-        if (pill.settingsOpen)
-            return ldSettings.item;
-        if (pill.appearanceOpen)
-            return ldAppearance.item;
-        if (pill.lookOpen)
-            return ldLook.item;
-        if (pill.inputOpen)
-            return ldInput.item;
-        if (pill.displayOpen)
-            return ldDisplay.item;
-        if (pill.animationOpen)
-            return ldAnimation.item;
-        if (pill.notificationsOpen)
-            return ldNotifications.item;
-        if (pill.timeOpen)
-            return ldTime.item;
-        if (pill.fontpickerOpen)
-            return ldFontpicker.item;
-        if (pill.awakeOpen)
-            return ldAwake.item;
-        if (pill.vocabOpen)
-            return ldVocab.item;
-        if (pill.dictationOpen)
-            return ldDictation.item;
-        return null;
+        return settingsLike ? pageLoader(surface)?.item : null;
     }
 
     /**
@@ -461,8 +383,8 @@ Item {
      * carrying the soul seam. No-op unless the keybinds surface is open.
      */
     function keybindsMove(dir) {
-        if (pill.keybindsOpen && ldKeybinds.item)
-            ldKeybinds.item.move(dir);
+        if (pill.keybindsOpen && ldKeybinds.page)
+            ldKeybinds.page.move(dir);
     }
 
     /**
@@ -470,11 +392,11 @@ Item {
      * No-op unless the keybinds surface is open.
      */
     function keybindsActivate() {
-        if (pill.keybindsOpen && ldKeybinds.item)
-            ldKeybinds.item.activate();
+        if (pill.keybindsOpen && ldKeybinds.page)
+            ldKeybinds.page.activate();
     }
 
-    readonly property bool keybindsListening: pill.keybindsOpen && ldKeybinds.item !== null && ldKeybinds.item.listening
+    readonly property bool keybindsListening: pill.keybindsOpen && ldKeybinds.page !== null && ldKeybinds.page.listening
 
     /**
      * A tile was picked in the standalone quick-record chooser. Screen with several
@@ -511,7 +433,7 @@ Item {
         if (sysmonBack())
             return;
         if (pill.vocabOpen) {
-            if (!(ldVocab.item && ldVocab.item.back()))
+            if (!(ldVocab.page && ldVocab.page.back()))
                 pill.requestSurface("dictation");
             return;
         }
@@ -519,13 +441,13 @@ Item {
             pill.requestSurface("settings");
             return;
         }
-        if (pill.awakeOpen && ldAwake.item && ldAwake.item.formOpen) {
-            ldAwake.item.closeForm();
+        if (pill.awakeOpen && ldAwake.page && ldAwake.page.formOpen) {
+            ldAwake.page.closeForm();
             return;
         }
         if (pill.keybindsOpen) {
-            if (ldKeybinds.item && ldKeybinds.item.formOpen)
-                ldKeybinds.item.closeForm();
+            if (ldKeybinds.page && ldKeybinds.page.formOpen)
+                ldKeybinds.page.closeForm();
             else
                 pill.requestSurface("settings");
             return;
@@ -535,21 +457,21 @@ Item {
             return;
         }
         if (pill.stashOpen) {
-            if (ldStash.item && ldStash.item.addOpen)
-                ldStash.item.closeAdd();
+            if (ldStash.page && ldStash.page.addOpen)
+                ldStash.page.closeAdd();
             else
                 pill.requestSurface("workspaces");
             return;
         }
         if (pill.spaceappsOpen) {
-            if (ldSpaceapps.item && ldSpaceapps.item.addOpen)
-                ldSpaceapps.item.closeAdd();
+            if (ldSpaceapps.page && ldSpaceapps.page.addOpen)
+                ldSpaceapps.page.closeAdd();
             else
                 pill.requestSurface("workspaces");
             return;
         }
-        if (pill.workspacesOpen && ldWorkspaces.item && ldWorkspaces.item.formOpen) {
-            ldWorkspaces.item.closeForm();
+        if (pill.workspacesOpen && ldWorkspaces.page && ldWorkspaces.page.formOpen) {
+            ldWorkspaces.page.closeForm();
             return;
         }
         if (pill.appearanceOpen || pill.displayOpen || pill.inputOpen || pill.lookOpen || pill.animationOpen || pill.notificationsOpen || pill.timeOpen || pill.workspacesOpen) {
@@ -559,37 +481,33 @@ Item {
         pill.requestClose();
     }
 
-    /**
-     * Pop the open keybinds editor form back to the bind list. Returns true when a
-     * form was open and dismissed, false otherwise so Escape closes the surface.
-     */
     /** Route a key to the open clock page; true when it used it. */
     function clockKey(k, mods) {
-        return (pill.clockOpen && ldClock.item) ? ldClock.item.key(k, mods) : false;
+        return (pill.clockOpen && ldClock.page) ? ldClock.page.key(k, mods) : false;
     }
 
     /** Held Delete on the keep-awake surface: hold-to-wipe the keyboard-focused preset. */
     function awakeDelete() {
-        if (pill.awakeOpen && ldAwake.item && !ldAwake.item.formOpen)
-            ldAwake.item.deletePress();
+        if (pill.awakeOpen && ldAwake.page && !ldAwake.page.formOpen)
+            ldAwake.page.deletePress();
     }
     function awakeDeleteRelease() {
-        if (pill.awakeOpen && ldAwake.item)
-            ldAwake.item.deleteRelease();
+        if (pill.awakeOpen && ldAwake.page)
+            ldAwake.page.deleteRelease();
     }
 
     function fileShelfMove(direction) {
-        return fileShelfOpen && ldFileShelf.item ? ldFileShelf.item.move(direction) : false;
+        return fileShelfOpen && ldFileShelf.page ? ldFileShelf.page.move(direction) : false;
     }
 
     function sysmonMove(dx, dy) {
         if (surface === "sysmon-apps")
-            return dy !== 0 && ldSysmonApps.item && ldSysmonApps.item.move(dy);
-        return (pill.sysmonOpen && ldSysmon.item) ? ldSysmon.item.move(dx, dy) : false;
+            return dy !== 0 && ldSysmonApps.page && ldSysmonApps.page.move(dy);
+        return (pill.sysmonOpen && ldSysmon.page) ? ldSysmon.page.move(dx, dy) : false;
     }
 
     function sysmonActivate() {
-        return (pill.sysmonOpen && ldSysmon.item) ? ldSysmon.item.activate() : false;
+        return (pill.sysmonOpen && ldSysmon.page) ? ldSysmon.page.activate() : false;
     }
 
     function sysmonEscape() {
@@ -612,55 +530,58 @@ Item {
 
     /** Esc on the vocabulary page folds an add or teach view back to the list; false on the list itself. */
     function vocabBack() {
-        return (pill.vocabOpen && ldVocab.item) ? ldVocab.item.back() : false;
+        return (pill.vocabOpen && ldVocab.page) ? ldVocab.page.back() : false;
     }
 
     /** Held Shift+Delete on dictation or vocabulary: start / drop the clear-all heat. */
     function wipePress() {
-        const it = pill.dictationOpen ? ldDictation.item : (pill.vocabOpen ? ldVocab.item : null);
-        if (it)
-            it.wipePress();
+        if (pill.dictationOpen)
+            ldDictation.page?.wipePress();
+        else if (pill.vocabOpen)
+            ldVocab.page?.wipePress();
     }
+
     function wipeRelease() {
-        const it = pill.dictationOpen ? ldDictation.item : (pill.vocabOpen ? ldVocab.item : null);
-        if (it)
-            it.wipeRelease();
+        if (pill.dictationOpen)
+            ldDictation.page?.wipeRelease();
+        else if (pill.vocabOpen)
+            ldVocab.page?.wipeRelease();
     }
 
     /** Delete on the dictation page: drop the focused history entry. */
     function dictationDelete() {
-        if (pill.dictationOpen && ldDictation.item)
-            ldDictation.item.deleteFocused();
+        if (pill.dictationOpen && ldDictation.page)
+            ldDictation.page.deleteFocused();
     }
 
     /** Delete on the vocabulary list: drop the focused word. */
     function vocabDelete() {
-        if (pill.vocabOpen && ldVocab.item)
-            ldVocab.item.deleteFocused();
+        if (pill.vocabOpen && ldVocab.page)
+            ldVocab.page.deleteFocused();
     }
 
     /** Enter while teaching saves what has been heard so far; true when it did. */
     function vocabEnter() {
-        if (pill.vocabOpen && ldVocab.item && ldVocab.item.view === "teach") {
-            ldVocab.item.saveTeach();
+        if (pill.vocabOpen && ldVocab.page && ldVocab.page.view === "teach") {
+            ldVocab.page.saveTeach();
             return true;
         }
         return false;
     }
 
-    readonly property bool vocabTyping: pill.vocabOpen && ldVocab.item !== null && ldVocab.item.typing
+    readonly property bool vocabTyping: pill.vocabOpen && ldVocab.page !== null && ldVocab.page.typing
 
     /** A printable key on the vocabulary list starts a search with it; true when it did. */
     function vocabType(ch) {
-        if (!pill.vocabOpen || !ldVocab.item || ldVocab.item.view !== "list" || ldVocab.item.typing)
+        if (!pill.vocabOpen || !ldVocab.page || ldVocab.page.view !== "list" || ldVocab.page.typing)
             return false;
-        ldVocab.item.startSearch(ch);
+        ldVocab.page.startSearch(ch);
         return true;
     }
 
     function keybindsBack() {
-        if (pill.keybindsOpen && ldKeybinds.item && ldKeybinds.item.formOpen) {
-            ldKeybinds.item.closeForm();
+        if (pill.keybindsOpen && ldKeybinds.page && ldKeybinds.page.formOpen) {
+            ldKeybinds.page.closeForm();
             return true;
         }
         return false;
@@ -671,8 +592,8 @@ Item {
      * and -1 is left (newer). No-op unless the wallpaper surface is open.
      */
     function wallpaperMove(dir) {
-        if (pill.wallpaperOpen && ldWall.item)
-            ldWall.item.move(dir);
+        if (pill.wallpaperOpen && ldWall.page)
+            ldWall.page.move(dir);
     }
 
     /**
@@ -681,11 +602,11 @@ Item {
      * wallpaper surface is open.
      */
     function wallpaperActivate() {
-        if (pill.wallpaperOpen && ldWall.item)
-            ldWall.item.activate();
+        if (pill.wallpaperOpen && ldWall.page)
+            ldWall.page.activate();
     }
 
-    readonly property bool wallpaperSearching: pill.wallpaperOpen && ldWall.item !== null && ldWall.item.searching
+    readonly property bool wallpaperSearching: pill.wallpaperOpen && ldWall.page !== null && ldWall.page.searching
 
     /**
      * Route the first printable keystroke over the open wallpaper strip into a
@@ -693,8 +614,8 @@ Item {
      * surface is open.
      */
     function wallpaperType(ch) {
-        if (pill.wallpaperOpen && ldWall.item)
-            ldWall.item.startSearch(ch);
+        if (pill.wallpaperOpen && ldWall.page)
+            ldWall.page.startSearch(ch);
     }
 
     /**
@@ -702,8 +623,8 @@ Item {
      * and -1 is left. No-op unless the power surface is open.
      */
     function powerMove(dir) {
-        if (pill.powerOpen && ldPower.item)
-            ldPower.item.move(dir);
+        if (pill.powerOpen && ldPower.page)
+            ldPower.page.move(dir);
     }
 
     /**
@@ -712,7 +633,7 @@ Item {
      * consumed the key. No-op (false) unless the power surface is open.
      */
     function powerPress() {
-        return (pill.powerOpen && ldPower.item) ? ldPower.item.pressFocused() : false;
+        return (pill.powerOpen && ldPower.page) ? ldPower.page.pressFocused() : false;
     }
 
     /**
@@ -720,12 +641,12 @@ Item {
      * hold so a key let go before the fill completes never confirms.
      */
     function powerHotkey(text) {
-        return (pill.powerOpen && ldPower.item) ? ldPower.item.pressHotkey(text) : false;
+        return (pill.powerOpen && ldPower.page) ? ldPower.page.pressHotkey(text) : false;
     }
 
     function powerRelease() {
-        if (pill.powerOpen && ldPower.item)
-            ldPower.item.releaseFocused();
+        if (pill.powerOpen && ldPower.page)
+            ldPower.page.releaseFocused();
     }
 
     onSurfaceOpenChanged: if (surfaceOpen) {
@@ -739,34 +660,25 @@ Item {
         unloadIdle.restart();
     }
 
-    /**
-     * Closed pages unload after two idle minutes to give back memory; they
-     * rebuild on the next open (their state lives in the singletons). The
-     * preloaded trio (mixer, media, inbox) and a busy page stay.
-     */
+    // Unload idle pages after two minutes. Keep preloaded and busy pages.
     Timer {
         id: unloadIdle
         interval: 120000
         onTriggered: {
-            const cold = [ldSound, ldCalendar, ldClock, ldLauncher, ldEmoji, ldClip, ldWall, ldPower, ldWifi, ldBt,
-                          ldAwake, ldBattery, ldSettings, ldKeybinds, ldWorkspaces, ldStash, ldSpaceapps,
-                          ldRecorder, ldSysmon, ldSysmonApps, ldFileShelf, ldAppearance, ldDisplay, ldInput, ldLook, ldAnimation,
-                          ldTime, ldNotifications, ldFontpicker, ldVocab, ldDictation];
-            for (let i = 0; i < sysmonDetails.count; i++)
-                cold.push(sysmonDetails.itemAt(i));
-            for (const ld of cold)
-                if (ld.active && !(ld.item && ld.item.busy === true))
-                    ld.active = false;
+            const loaders = Object.values(pill.surfaces);
+            for (let index = 0; index < sysmonDetails.count; index++)
+                loaders.push(sysmonDetails.itemAt(index));
+            for (const loader of loaders) {
+                if (loader?.active && !loader.preload && loader.item?.busy !== true)
+                    loader.active = false;
+            }
         }
     }
 
     QtObject {
         id: clock
-        readonly property var loc: Qt.locale("en_US")
         readonly property var now: sysClock.date
-        readonly property string timeFormat: (Flags.time12h ? "h:mm" : "HH:mm")
-            + (Flags.clockSeconds ? ":ss" : "")
-            + (Flags.time12h ? " AP" : "")
+        readonly property string timeFormat: (Flags.time12h ? "h:mm" : "HH:mm") + (Flags.clockSeconds ? ":ss" : "") + (Flags.time12h ? " AP" : "")
         readonly property string hhmm: Qt.formatTime(now, timeFormat)
         readonly property string date: Clocks.dateFor(Flags.dateStyle, Flags.dateLang, now)
     }
@@ -779,27 +691,29 @@ Item {
     readonly property real targetRadius: (mode === "rest" || mode === "hover") ? restCorner : openCorner
     readonly property real morphRadius: springR.value
 
-    /**
-     * Target geometry for the non-surface morph modes. Surface sizes come from
-     * the `surfaces` descriptor; these three are the pill's own modes that have no
-     * surface item. Thunks so the properties they read register as live deps of
-     * targetSize.
-     */
-    readonly property var modeSize: ({
-        osd:   () => Qt.size(osd.desiredW, osd.desiredH),
-        toast: () => Qt.size(toastW, toastLoader.item ? toastLoader.item.implicitHeight + 24 * s : restH),
-        hover: () => Qt.size(hoverW, hoverH),
-        quickChoose: () => Qt.size(quickChooseW, quickChooseH),
-        quickCount:  () => Qt.size(quickCountW, quickCountH),
-        dragOver:    () => Qt.size(dragOverW, dragOverH)
-    })
-
     readonly property size targetSize: {
-        const sf = surfaces[mode];
-        if (sf)
-            return sf.size();
-        const f = modeSize[mode];
-        return f ? f() : Qt.size(Math.max(restW, restRow.implicitWidth + 36 * s), restH);
+        const loader = pageLoader(mode);
+        if (loader) {
+            // Activate the synchronous loader before reading its geometry binding.
+            loader.active = true;
+            return loader.morphSize;
+        }
+        switch (mode) {
+        case "osd":
+            return Qt.size(osd.desiredW, osd.desiredH);
+        case "toast":
+            return Qt.size(toastW, toastLoader.item ? (toastLoader.item as Item).implicitHeight + 24 * s : restH);
+        case "hover":
+            return Qt.size(hoverW, hoverH);
+        case "quickChoose":
+            return Qt.size(quickChooseW, quickChooseH);
+        case "quickCount":
+            return Qt.size(quickCountW, quickCountH);
+        case "dragOver":
+            return Qt.size(dragOverW, dragOverH);
+        default:
+            return Qt.size(Math.max(restW, restRow.implicitWidth + 36 * s), restH);
+        }
     }
     readonly property real targetW: targetSize.width
     readonly property real targetH: targetSize.height
@@ -809,9 +723,17 @@ Item {
      * when the target moves, so an interrupted morph bends toward the new shape
      * instead of restarting a curve. Rest <-> hover uses the quicker hop tuning.
      */
-    readonly property var feel: Flags.springFeel === "snappy"
-        ? ({ hop: 0.19, shrink: 0.25, grow: 0.29, growDamping: 0.9 })
-        : ({ hop: 0.26, shrink: 0.34, grow: 0.4, growDamping: 0.82 })
+    readonly property var feel: Flags.springFeel === "snappy" ? ({
+            hop: 0.19,
+            shrink: 0.25,
+            grow: 0.29,
+            growDamping: 0.9
+        }) : ({
+            hop: 0.26,
+            shrink: 0.34,
+            grow: 0.4,
+            growDamping: 0.82
+        })
 
     Spring {
         id: springW
@@ -860,7 +782,8 @@ Item {
      */
     property bool hoverSoulGate: false
     readonly property bool hoverArrived: mode === "hover" && morphCloseness > 0.55
-    onHoverArrivedChanged: if (hoverArrived) hoverSoulGate = true
+    onHoverArrivedChanged: if (hoverArrived)
+        hoverSoulGate = true
 
     /**
      * Rest and hover sit a few dozen pixels apart, so the 420ms morph is nearly
@@ -880,7 +803,8 @@ Item {
             soulWsIndex = -1;
         }
     }
-    onHoverSoulGateChanged: if (hoverSoulGate) kanjiFlashAnim.restart()
+    onHoverSoulGateChanged: if (hoverSoulGate)
+        kanjiFlashAnim.restart()
 
     property string soulTarget: ""
     property int soulWsIndex: -1
@@ -889,10 +813,21 @@ Item {
 
     SequentialAnimation {
         id: kanjiFlashAnim
-        NumberAnimation { target: pill; property: "kanjiFlash"; to: 1; duration: 90; easing.type: Easing.OutCubic }
-        NumberAnimation { target: pill; property: "kanjiFlash"; to: 0; duration: 320; easing.type: Easing.OutCubic }
+        NumberAnimation {
+            target: pill
+            property: "kanjiFlash"
+            to: 1
+            duration: 90
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: pill
+            property: "kanjiFlash"
+            to: 0
+            duration: 320
+            easing.type: Easing.OutCubic
+        }
     }
-
 
     /**
      * True while any morph axis animates. The body's effect layer (live drop
@@ -916,11 +851,26 @@ Item {
         border.width: 1
         border.color: Theme.border
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
-            GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
+            GradientStop {
+                position: 0.0
+                color: Qt.alpha(Theme.cardTop, Flags.pillOpacity)
+            }
+            GradientStop {
+                position: 1.0
+                color: Qt.alpha(Theme.cardBot, Flags.pillOpacity)
+            }
         }
-        Behavior on budR { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
-        Behavior on opacity { NumberAnimation { duration: Motion.standard } }
+        Behavior on budR {
+            NumberAnimation {
+                duration: Motion.fast
+                easing.type: Motion.easeStandard
+            }
+        }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+            }
+        }
 
         Canvas {
             id: budBead
@@ -968,8 +918,14 @@ Item {
         border.width: Flags.pillBorder ? 1 : 0
         border.color: Theme.border
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
-            GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
+            GradientStop {
+                position: 0.0
+                color: Qt.alpha(Theme.cardTop, Flags.pillOpacity)
+            }
+            GradientStop {
+                position: 1.0
+                color: Qt.alpha(Theme.cardBot, Flags.pillOpacity)
+            }
         }
 
         layer.enabled: !pill.morphing && Flags.pillShadow
@@ -1062,23 +1018,17 @@ Item {
      * descriptor and maps it. Null = nothing open (or a surface with no anchor,
      * e.g. wallpaper), so Ame falls back to the pill's own hover/wake anchor.
      */
-    readonly property var ameSurface: (shownSurface.length > 0 && surfaces[shownSurface] !== undefined)
-        ? surfaces[shownSurface].ame() : null
+    readonly property var ameSurface: pageAnchor(shownSurface)
 
     Ame {
         id: ame
         anchors.fill: parent
         s: pill.s
-        heat: (pill.powerOpen && ldPower.item) ? ldPower.item.holdProgress : 0
+        heat: (pill.powerOpen && ldPower.page) ? ldPower.page.holdProgress : 0
         wake: pill.wakePoint
         wickDir: pill.powerOpen ? 1 : -1
-        form: pill.ameSurface ? pill.ameSurface.ameForm
-            : ((pill.dragStage === "hover" && pill.appImageDrop) || (pill.mode === "hover" && pill.hoverSoulGate) ? "soul" : "off")
-        point: pill.ameSurface
-            ? Qt.point(pill.ameSurface.x + pill.ameSurface.amePoint.x,
-                       pill.ameSurface.y + pill.ameSurface.amePoint.y)
-            : (pill.dragStage === "hover" && pill.appImageDrop ? dragOverView.dropPoint
-            : pill.mode === "hover" ? pill.soulPoint : pill.wakePoint)
+        form: pill.ameSurface ? pill.ameSurface.ameForm : ((pill.dragStage === "hover" && pill.appImageDrop) || (pill.mode === "hover" && pill.hoverSoulGate) ? "soul" : "off")
+        point: pill.ameSurface ? Qt.point(pill.ameSurface.x + pill.ameSurface.amePoint.x, pill.ameSurface.y + pill.ameSurface.amePoint.y) : (pill.dragStage === "hover" && pill.appImageDrop ? dragOverView.dropPoint : pill.mode === "hover" ? pill.soulPoint : pill.wakePoint)
     }
 
     /**
@@ -1111,7 +1061,8 @@ Item {
     Timer {
         id: openTimer
         interval: Math.max(0, Flags.openDelay)
-        onTriggered: if (pill.hovered) pill.hoverLatch = true
+        onTriggered: if (pill.hovered)
+            pill.hoverLatch = true
     }
 
     Timer {
@@ -1139,15 +1090,15 @@ Item {
         s = s.replace(/^file:\/\/(?:localhost)?(?=\/)/i, "");
         try {
             return decodeURIComponent(s);
-        } catch (error) {
+        } catch (_error) {
             return s;
         }
     }
 
     readonly property var dropExt: /\.(appimage|deb|rpm|flatpakref|zip|tgz|txz|tbz2|ttf|otf|png|jpe?g|webp)$|\.(pkg\.)?tar\.(gz|xz|bz2|zst)$/i
 
-    function droppablePaths(urls) {
-        return localFileUrls(urls).map(url => pill.localPath(url)).filter(path => pill.dropExt.test(path));
+    function installablePaths(localUrls) {
+        return localUrls.map(url => pill.localPath(url)).filter(path => pill.dropExt.test(path));
     }
 
     function localFileUrls(urls) {
@@ -1188,7 +1139,7 @@ Item {
     Process {
         id: installProc
         stdout: SplitParser {
-            onRead: (data) => {
+            onRead: data => {
                 var seg = data.split("\r").pop().replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").trim();
                 if (seg.length === 0)
                     return;
@@ -1196,16 +1147,16 @@ Item {
                     pill.installProto = seg;
                 } else {
                     pill.installLine = seg;
-                    var pct = seg.match(/(\d{1,3})\s*%/);
+                    const pct = seg.match(/(\d{1,3})\s*%/);
                     if (pct && Number(pct[1]) <= 100)
                         pill.installPct = pct[1] + "%";
                 }
             }
         }
-        onExited: (exitCode) => {
+        onExited: exitCode => {
             if (exitCode === 0 && pill.installProto.length > 0) {
                 pill.installedAny = true;
-                var parts = pill.installProto.split("\t");
+                const parts = pill.installProto.split("\t");
                 pill.installKind = parts[0];
                 pill.installAction = parts[2];
                 if (parts[0] === "app" || parts[0] === "native")
@@ -1233,14 +1184,14 @@ Item {
      */
     FontLoader {
         id: droppedFont
-        onStatusChanged: if (status === FontLoader.Ready) Theme.refreshFonts()
+        onStatusChanged: if (status === FontLoader.Ready)
+            Theme.refreshFonts()
     }
 
     Timer {
         id: dropDoneTimer
         interval: 1100
         onTriggered: {
-            pill.dragActive = false;
             pill.dragStage = "";
             if (pill.shelfStoredCount > 0) {
                 pill.shelfStoredCount = 0;
@@ -1255,7 +1206,6 @@ Item {
         id: dropBadTimer
         interval: 1300
         onTriggered: {
-            pill.dragActive = false;
             pill.dragStage = "";
         }
     }
@@ -1284,8 +1234,7 @@ Item {
             if (running || request === pill.shelfDropRequest || pill.dragStage !== "hover")
                 return;
             request = pill.shelfDropRequest;
-            command = ["python3", "-B", Quickshell.shellDir + "/lib/file_shelf.py", "inspect"]
-                .concat(pill.shelfDropUrls);
+            command = ["python3", "-B", Quickshell.shellDir + "/lib/file_shelf.py", "inspect"].concat(pill.shelfDropUrls);
             running = true;
         }
 
@@ -1299,7 +1248,7 @@ Item {
                     pill.installDropAvailable = pill.installDropCandidate && info.files === pill.shelfDropUrls.length;
                     if (pill.shelfDropUrls.length > 1 && pill.shelfDropSummary)
                         pill.dragName = pill.shelfDropSummary;
-                } catch (error) {}
+                } catch (_error) {}
             }
         }
         onExited: Qt.callLater(shelfInspect.inspectLatest)
@@ -1325,52 +1274,42 @@ Item {
         enabled: !pill.surfaceOpen && !["installing", "storing", "done", "stored"].includes(pill.dragStage)
         keys: ["text/uri-list"]
         onEntered: drag => {
-            if (!(drag.supportedActions & Qt.CopyAction) || !pill.localFileUrls(drag.urls).length) {
+            const files = pill.localFileUrls(drag.urls);
+            if (!(drag.supportedActions & Qt.CopyAction) || files.length === 0) {
                 drag.accepted = false;
                 return;
             }
             drag.accept(Qt.CopyAction);
             dropBadTimer.stop();
             dropDoneTimer.stop();
-            const files = pill.localFileUrls(drag.urls);
-            const paths = pill.droppablePaths(files);
-            pill.dragActive = true;
-            pill.dragStage = "hover";
+            const paths = pill.installablePaths(files);
             pill.installDropAvailable = false;
             pill.installDropCandidate = paths.length === drag.urls.length;
             pill.shelfDropSummary = "";
             pill.shelfDropUrls = files;
             pill.shelfDropRequest++;
-            pill.installDropLabel = paths.every(path => /\.appimage$/i.test(path))
-                ? (paths.length === 1 ? "Install AppImage" : "Install AppImages")
-                : paths.every(path => /\.(png|jpe?g|webp)$/i.test(path)) ? "Set wallpaper"
-                : "Install";
-            pill.shelfDropAction = "store";
-            pill.dragName = files.length === 1 ? pill.localPath(files[0]).replace(/\/+$/, "").split("/").pop()
-                : files.length + " items";
+            pill.installDropLabel = paths.every(path => /\.appimage$/i.test(path)) ? (paths.length === 1 ? "Install AppImage" : "Install AppImages") : paths.every(path => /\.(png|jpe?g|webp)$/i.test(path)) ? "Set wallpaper" : "Install";
+            pill.overInstallTarget = false;
+            pill.dragName = files.length === 1 ? pill.localPath(files[0]).replace(/\/+$/, "").split("/").pop() : files.length + " items";
+            pill.dragStage = "hover";
             shelfInspect.inspectLatest();
         }
         onPositionChanged: drag => {
             if (pill.dragStage === "hover")
-                pill.shelfDropAction = pill.installDropAt(drag.x, drag.y) ? "install" : "store";
+                pill.overInstallTarget = pill.installDropAt(drag.x, drag.y);
         }
-        onExited: {
-            if (pill.dragStage === "hover") {
-                pill.dragActive = false;
-                pill.dragStage = "";
-            }
-        }
+        onExited: if (pill.dragStage === "hover")
+            pill.dragStage = ""
         onDropped: drop => {
             if (pill.dragStage !== "hover")
                 return;
             const urls = pill.localFileUrls(drop.urls);
-            const paths = pill.droppablePaths(urls);
+            const paths = pill.installablePaths(urls);
             drop.accept(Qt.CopyAction);
             pill.installedApp = false;
             pill.shelfStoredCount = 0;
             pill.shelfFailedCount = 0;
-            if (!(pill.shelfDropAction === "install" && paths.length === drop.urls.length
-                  && pill.installDropAt(drop.x, drop.y))) {
+            if (!(pill.overInstallTarget && paths.length === drop.urls.length && pill.installDropAt(drop.x, drop.y))) {
                 pill.dragStage = "storing";
                 if (!FileShelf.store(urls)) {
                     pill.dragStage = "store-failed";
@@ -1398,7 +1337,12 @@ Item {
         opacity: pill.mode === "dragOver" ? Math.pow(pill.morphCloseness, 1.2) : 0
         visible: opacity > 0.01
 
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         readonly property color accent: (pill.dragStage === "store-failed" || pill.dragStage === "fail") ? "#e0533f" : Theme.vermLit
         readonly property real brLen: 15 * pill.s
@@ -1448,12 +1392,12 @@ Item {
             height: 27 * pill.s
             radius: 7 * pill.s
             visible: pill.dragStage === "hover" && !pill.appImageDrop && pill.installDropAvailable
-            color: pill.shelfDropAction === "install" ? Qt.alpha(Theme.onGlow, 0.19) : Theme.frameBg
+            color: pill.overInstallTarget ? Qt.alpha(Theme.onGlow, 0.19) : Theme.frameBg
 
             Text {
                 anchors.centerIn: parent
                 text: pill.installDropLabel
-                color: pill.shelfDropAction === "install" ? Theme.cream : Theme.subtle
+                color: pill.overInstallTarget ? Theme.cream : Theme.subtle
                 font.family: Theme.font
                 font.pixelSize: 11 * pill.s
                 font.weight: Font.DemiBold
@@ -1463,7 +1407,7 @@ Item {
         readonly property point dropPoint: {
             void pill.width;
             void pill.height;
-            const card = pill.shelfDropAction === "install" ? shelfInstallTarget : shelfStoreTarget;
+            const card = pill.overInstallTarget ? shelfInstallTarget : shelfStoreTarget;
             return card.mapToItem(pill, card.width / 2, card.height + 5 * pill.s);
         }
 
@@ -1499,7 +1443,7 @@ Item {
                     title: "Store on shelf"
                     detail: "Temporary copy"
                     icon: "shelf"
-                    current: pill.shelfDropAction === "store"
+                    current: !pill.overInstallTarget
                 }
                 FileDropCard {
                     id: shelfInstallTarget
@@ -1509,7 +1453,7 @@ Item {
                     title: pill.installDropLabel
                     detail: "Add to launcher"
                     icon: "download"
-                    current: pill.shelfDropAction === "install"
+                    current: pill.overInstallTarget
                 }
             }
         }
@@ -1527,13 +1471,10 @@ Item {
                 height: 26 * pill.s
 
                 GlyphIcon {
-                    id: dragGlyph
                     anchors.fill: parent
                     stroke: 2
                     color: dragOverView.accent
-                    name: (pill.dragStage === "store-failed" || pill.dragStage === "fail") ? "close"
-                        : (pill.dragStage === "installing" || pill.dragStage === "storing" ? "reboot"
-                        : (pill.dragStage === "done" || pill.dragStage === "stored" ? "check" : "shelf"))
+                    name: (pill.dragStage === "store-failed" || pill.dragStage === "fail") ? "close" : (pill.dragStage === "installing" || pill.dragStage === "storing" ? "reboot" : (pill.dragStage === "done" || pill.dragStage === "stored" ? "check" : "shelf"))
 
                     RotationAnimation on rotation {
                         running: pill.dragStage === "installing" || pill.dragStage === "storing"
@@ -1542,25 +1483,48 @@ Item {
                         to: 360
                         duration: 900
                     }
-                    onNameChanged: if (name !== "reboot") rotation = 0
+                    onNameChanged: if (name !== "reboot")
+                        rotation = 0
                 }
             }
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: pill.dragStage === "storing" ? "Storing " + (pill.shelfDropSummary || "items") + "…"
-                    : pill.dragStage === "stored" ? "Stored " + pill.shelfStoredSummary
-                    : pill.dragStage === "store-failed" ? "Couldn’t store files"
-                    : (pill.dragStage === "fail" ? "Install failed"
-                    : (pill.dragStage === "installing" ? ("Installing"
-                        + (pill.installPct.length > 0 ? " " + pill.installPct : "")
-                        + (pill.installSeconds >= 3 ? "  " + Math.floor(pill.installSeconds / 60) + ":" + String(pill.installSeconds % 60).padStart(2, "0") : ""))
-                    : (pill.dragStage === "done" ? (pill.installFailed ? "Installed, some failed"
-                        : (!pill.installedApp && pill.installKind === "wallpaper" ? "Wallpaper set"
-                        : (!pill.installedApp && pill.installKind === "font" ? "Font installed"
-                        : (pill.installAction === "updated" ? "Updated"
-                        : (pill.installAction === "reinstalled" ? "Reinstalled" : "Installed")))))
-                    : "Store " + (pill.shelfDropSummary || "items"))))
+                text: {
+                    switch (pill.dragStage) {
+                    case "storing":
+                        return "Storing " + (pill.shelfDropSummary || "items") + "…";
+                    case "stored":
+                        return "Stored " + pill.shelfStoredSummary;
+                    case "store-failed":
+                        return "Couldn’t store files";
+                    case "fail":
+                        return "Install failed";
+                    case "installing":
+                        {
+                            const progress = pill.installPct ? " " + pill.installPct : "";
+                            if (pill.installSeconds < 3)
+                                return "Installing" + progress;
+                            const minutes = Math.floor(pill.installSeconds / 60);
+                            const seconds = String(pill.installSeconds % 60).padStart(2, "0");
+                            return "Installing" + progress + "  " + minutes + ":" + seconds;
+                        }
+                    case "done":
+                        if (pill.installFailed)
+                            return "Installed, some failed";
+                        if (!pill.installedApp && pill.installKind === "wallpaper")
+                            return "Wallpaper set";
+                        if (!pill.installedApp && pill.installKind === "font")
+                            return "Font installed";
+                        if (pill.installAction === "updated")
+                            return "Updated";
+                        if (pill.installAction === "reinstalled")
+                            return "Reinstalled";
+                        return "Installed";
+                    default:
+                        return "Store " + (pill.shelfDropSummary || "items");
+                    }
+                }
                 color: Theme.cream
                 font.family: Theme.font
                 font.pixelSize: 13 * pill.s
@@ -1571,10 +1535,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: (pill.dragStage === "store-failed" || (pill.dragStage === "stored" && pill.shelfFailedCount > 0))
-                      && FileShelf.error ? FileShelf.error
-                    : pill.dragStage === "stored" && pill.shelfDropUrls.length > 1 ? ""
-                    : pill.dragStage === "installing" && pill.installLine.length > 0 ? pill.installLine : pill.dragName
+                text: (pill.dragStage === "store-failed" || (pill.dragStage === "stored" && pill.shelfFailedCount > 0)) && FileShelf.error ? FileShelf.error : pill.dragStage === "stored" && pill.shelfDropUrls.length > 1 ? "" : pill.dragStage === "installing" && pill.installLine.length > 0 ? pill.installLine : pill.dragName
                 textFormat: Text.PlainText
                 color: Theme.subtle
                 font.family: Theme.font
@@ -1590,7 +1551,11 @@ Item {
         anchors.fill: parent
         opacity: ((pill.expanded && !(pill.dictateHere && pill.mode === "rest")) || pill.dragActive || pill.mode === "toast" || pill.mode === "osd" || pill.mode === "quickChoose" || pill.mode === "quickCount") ? 0 : Math.pow(pill.morphCloseness, 1.5)
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: pill.mode === "rest" ? Motion.fast : Math.round(260 * Motion.mult) } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: pill.mode === "rest" ? Motion.fast : Math.round(260 * Motion.mult)
+            }
+        }
 
         DictateBars {
             anchors.centerIn: restRow
@@ -1599,7 +1564,12 @@ Item {
             s: pill.s
             visible: pill.dictateHere || opacity > 0.01
             opacity: pill.dictateHere ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.standard
+                    easing.type: Motion.easeStandard
+                }
+            }
         }
 
         Row {
@@ -1608,8 +1578,18 @@ Item {
             spacing: 9 * pill.s
             opacity: pill.dictateHere ? 0 : 1
             scale: pill.dictateHere ? 0.92 : 1
-            Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-            Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.standard
+                    easing.type: Motion.easeStandard
+                }
+            }
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Motion.standard
+                    easing.type: Motion.easeStandard
+                }
+            }
             Item {
                 id: restKanji
                 visible: pill.specialView === ""
@@ -1627,9 +1607,13 @@ Item {
                     color: "transparent"
                     font: kanjiFill.font
                     style: Text.Outline
-                    styleColor: Qt.alpha(Theme.vermLit,
-                        Math.min(1, (pill.mode === "rest" || !pill.hoverSoulGate ? 0.5 : 0) + pill.kanjiFlash))
-                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    styleColor: Qt.alpha(Theme.vermLit, Math.min(1, (pill.mode === "rest" || !pill.hoverSoulGate ? 0.5 : 0) + pill.kanjiFlash))
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
                 }
 
                 Text {
@@ -1640,7 +1624,12 @@ Item {
                     font.family: Theme.fontJp
                     font.weight: Font.Medium
                     font.pixelSize: 15 * pill.s
-                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
                 }
 
                 GlyphIcon {
@@ -1651,18 +1640,32 @@ Item {
                     name: "clock"
                     color: Theme.cream
                     stroke: 1.7
-                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
                 }
 
                 MusicBars {
-                    id: musicBars
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: kanjiFill.baseline
                     s: pill.s
                     opacity: restKanji.barsOn ? 1 : 0
                     scale: restKanji.barsOn ? 1 : 0.7
-                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-                    Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
                 }
             }
             Text {
@@ -1673,7 +1676,9 @@ Item {
                 font.family: Theme.font
                 font.pixelSize: 16 * pill.s
                 font.weight: Font.DemiBold
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
             Text {
                 visible: pill.specialView !== ""
@@ -1692,7 +1697,11 @@ Item {
         anchors.fill: parent
         opacity: pill.mode === "hover" ? Math.pow(pill.morphCloseness, 1.2) : 0
         visible: true
-        Behavior on opacity { NumberAnimation { duration: pill.mode === "hover" ? Motion.fast : 40 } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: pill.mode === "hover" ? Motion.fast : 40
+            }
+        }
 
         readonly property bool live: pill.mode === "hover"
 
@@ -1741,7 +1750,9 @@ Item {
                         font.family: Theme.font
                         font.pixelSize: 18 * pill.s
                         font.weight: Font.DemiBold
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -1773,7 +1784,6 @@ Item {
             }
 
             Row {
-                id: statusRow
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 12 * pill.s
 
@@ -1786,7 +1796,8 @@ Item {
                     HoverHandler {
                         cursorShape: Qt.PointingHandCursor
                         enabled: hover.live
-                        onHoveredChanged: if (hovered) pill.soulTarget = "weather"
+                        onHoveredChanged: if (hovered)
+                            pill.soulTarget = "weather"
                     }
                     TapHandler {
                         enabled: hover.live
@@ -1809,7 +1820,9 @@ Item {
                         font.family: Theme.font
                         font.pixelSize: 12.5 * pill.s
                         font.weight: Font.Medium
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                 }
 
@@ -1852,12 +1865,8 @@ Item {
                         height: 16
                         scale: pill.s
                         transformOrigin: Item.TopLeft
-                        x: dndShape.boundingRect.width > 0
-                           ? dndIcon.width / 2 - (dndShape.boundingRect.x + dndShape.boundingRect.width / 2) * pill.s
-                           : (dndIcon.width - 16 * pill.s) / 2
-                        y: dndShape.boundingRect.height > 0
-                           ? dndIcon.height / 2 - (dndShape.boundingRect.y + dndShape.boundingRect.height / 2) * pill.s
-                           : (dndIcon.height - 16 * pill.s) / 2
+                        x: dndShape.boundingRect.width > 0 ? dndIcon.width / 2 - (dndShape.boundingRect.x + dndShape.boundingRect.width / 2) * pill.s : (dndIcon.width - 16 * pill.s) / 2
+                        y: dndShape.boundingRect.height > 0 ? dndIcon.height / 2 - (dndShape.boundingRect.y + dndShape.boundingRect.height / 2) * pill.s : (dndIcon.height - 16 * pill.s) / 2
                         preferredRendererType: Shape.CurveRenderer
 
                         ShapePath {
@@ -1866,13 +1875,23 @@ Item {
                             fillColor: "transparent"
                             capStyle: ShapePath.RoundCap
                             joinStyle: ShapePath.RoundJoin
-                            startX: 5.2; startY: 12.2
-                            PathLine { x: 12.2; y: 12.2 }
-                            PathLine { x: 12.2; y: 7.2 }
+                            startX: 5.2
+                            startY: 12.2
+                            PathLine {
+                                x: 12.2
+                                y: 12.2
+                            }
+                            PathLine {
+                                x: 12.2
+                                y: 7.2
+                            }
                             PathCubic {
-                                control1X: 12.2; control1Y: 5.4
-                                control2X: 11.2; control2Y: 4.0
-                                x: 9.5; y: 3.5
+                                control1X: 12.2
+                                control1Y: 5.4
+                                control2X: 11.2
+                                control2Y: 4.0
+                                x: 9.5
+                                y: 3.5
                             }
                         }
                         ShapePath {
@@ -1880,23 +1899,30 @@ Item {
                             strokeWidth: 1.5
                             fillColor: "transparent"
                             capStyle: ShapePath.RoundCap
-                            startX: 6.8; startY: 13.6
-                            PathLine { x: 9.2; y: 13.6 }
+                            startX: 6.8
+                            startY: 13.6
+                            PathLine {
+                                x: 9.2
+                                y: 13.6
+                            }
                         }
                         ShapePath {
                             strokeColor: Theme.vermLit
                             strokeWidth: 1.6
                             fillColor: "transparent"
                             capStyle: ShapePath.RoundCap
-                            startX: 3.2; startY: 2.8
-                            PathLine { x: 13.0; y: 13.4 }
+                            startX: 3.2
+                            startY: 2.8
+                            PathLine {
+                                x: 13.0
+                                y: 13.4
+                            }
                         }
                     }
                 }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: pill.wifiDev !== null || pill.btAdapter !== null || Battery.present
                     spacing: 12 * pill.s
 
                     Item {
@@ -1915,14 +1941,13 @@ Item {
                         }
 
                         MouseArea {
-                            id: wifiArea
                             anchors.fill: parent
                             anchors.margins: -6 * pill.s
                             hoverEnabled: true
                             enabled: hover.live
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: (e) => {
+                            onClicked: e => {
                                 if (e.button === Qt.RightButton) {
                                     if (typeof Networking !== "undefined" && Networking)
                                         Networking.wifiEnabled = !Networking.wifiEnabled;
@@ -1930,7 +1955,8 @@ Item {
                                 }
                                 pill.requestSurface("wifi");
                             }
-                            onContainsMouseChanged: if (containsMouse) pill.soulTarget = "wifi"
+                            onContainsMouseChanged: if (containsMouse)
+                                pill.soulTarget = "wifi"
                         }
                     }
 
@@ -1947,9 +1973,7 @@ Item {
                             width: 15 * pill.s
                             height: 15 * pill.s
                             name: "bluetooth"
-                            color: btArea.containsMouse ? Theme.cream
-                                : (Peripherals.connectedCount > 0 ? Theme.vermLit
-                                : (pill.btOn ? Theme.iconDim : Qt.alpha(Theme.iconDim, 0.4)))
+                            color: btArea.containsMouse ? Theme.cream : (Peripherals.connectedCount > 0 ? Theme.vermLit : (pill.btOn ? Theme.iconDim : Qt.alpha(Theme.iconDim, 0.4)))
                             stroke: 1.7
                         }
 
@@ -1963,7 +1987,9 @@ Item {
                             font.family: Theme.font
                             font.pixelSize: 11 * pill.s
                             font.weight: Font.DemiBold
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                         }
 
                         MouseArea {
@@ -1974,7 +2000,7 @@ Item {
                             enabled: hover.live
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: (e) => {
+                            onClicked: e => {
                                 if (e.button === Qt.RightButton) {
                                     if (pill.btAdapter)
                                         pill.btAdapter.enabled = !pill.btAdapter.enabled;
@@ -1982,40 +2008,39 @@ Item {
                                 }
                                 pill.requestSurface("bt");
                             }
-                            onContainsMouseChanged: if (containsMouse) pill.soulTarget = "bt"
+                            onContainsMouseChanged: if (containsMouse)
+                                pill.soulTarget = "bt"
                         }
                     }
 
                     Item {
-                        id: awakeIcon
+                        id: fileShelfIcon
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 16 * pill.s
-                        height: 16 * pill.s
+                        width: 17 * pill.s
+                        height: width
 
                         GlyphIcon {
                             anchors.fill: parent
-                            name: "awake"
-                            color: awakeArea.containsMouse ? Theme.cream
-                                : (Awake.on ? Theme.vermLit : Theme.iconDim)
+                            name: "shelf"
+                            color: shelfArea.containsMouse ? Theme.cream : FileShelf.entries.length ? Theme.vermLit : Theme.iconDim
                             stroke: 1.7
                         }
-
                         MouseArea {
-                            id: awakeArea
+                            id: shelfArea
                             anchors.fill: parent
-                            anchors.margins: -6 * pill.s
+                            anchors.margins: -5 * pill.s
                             hoverEnabled: true
                             enabled: hover.live
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: (e) => {
-                                if (e.button === Qt.RightButton) {
-                                    Awake.toggle();
-                                    return;
-                                }
-                                pill.requestSurface("awake");
-                            }
-                            onContainsMouseChanged: if (containsMouse) pill.soulTarget = "awake"
+                            onClicked: pill.requestSurface("file-shelf")
+                            onContainsMouseChanged: if (containsMouse)
+                                pill.soulTarget = "file-shelf"
+                        }
+                        Tooltip {
+                            s: pill.s
+                            placement: "below"
+                            title: "File shelf"
+                            show: shelfArea.containsMouse
                         }
                     }
 
@@ -2034,18 +2059,20 @@ Item {
                             font.family: Theme.font
                             font.pixelSize: 13 * pill.s
                             font.weight: Battery.charging ? Font.DemiBold : Font.Medium
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                         }
 
                         MouseArea {
-                            id: batteryArea
                             anchors.fill: parent
                             anchors.margins: -6 * pill.s
                             hoverEnabled: true
                             enabled: hover.live
                             cursorShape: Qt.PointingHandCursor
                             onClicked: pill.requestSurface("battery")
-                            onContainsMouseChanged: if (containsMouse) pill.soulTarget = "battery"
+                            onContainsMouseChanged: if (containsMouse)
+                                pill.soulTarget = "battery"
                         }
                     }
                 }
@@ -2083,7 +2110,8 @@ Item {
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.requestSurface("link")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "inbox"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "inbox"
                     }
                 }
 
@@ -2108,7 +2136,8 @@ Item {
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.requestSurface("mixer")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "mixer"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "mixer"
                     }
                 }
 
@@ -2133,38 +2162,41 @@ Item {
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.requestSurface("sound")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "sound"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "sound"
                     }
                 }
 
                 Item {
-                    id: fileShelfIcon
+                    id: awakeIcon
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 17 * pill.s
-                    height: width
+                    width: 16 * pill.s
+                    height: 16 * pill.s
 
                     GlyphIcon {
                         anchors.fill: parent
-                        name: "shelf"
-                        color: shelfArea.containsMouse ? Theme.cream
-                            : FileShelf.entries.length ? Theme.vermLit : Theme.iconDim
+                        name: "awake"
+                        color: awakeArea.containsMouse ? Theme.cream : (Awake.on ? Theme.vermLit : Theme.iconDim)
                         stroke: 1.7
                     }
+
                     MouseArea {
-                        id: shelfArea
+                        id: awakeArea
                         anchors.fill: parent
-                        anchors.margins: -5 * pill.s
+                        anchors.margins: -6 * pill.s
                         hoverEnabled: true
                         enabled: hover.live
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: pill.requestSurface("file-shelf")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "file-shelf"
-                    }
-                    Tooltip {
-                        s: pill.s
-                        placement: "below"
-                        title: "File shelf"
-                        show: shelfArea.containsMouse
+                        onClicked: e => {
+                            if (e.button === Qt.RightButton) {
+                                Awake.toggle();
+                                return;
+                            }
+                            pill.requestSurface("awake");
+                        }
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "awake"
                     }
                 }
 
@@ -2189,7 +2221,8 @@ Item {
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.requestSurface("sysmon")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "sysmon"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "sysmon"
                     }
                 }
 
@@ -2217,8 +2250,16 @@ Item {
                         SequentialAnimation on opacity {
                             running: ScreenRec.recording
                             loops: Animation.Infinite
-                            NumberAnimation { to: 0.4; duration: 500; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1; duration: 500; easing.type: Easing.InOutSine }
+                            NumberAnimation {
+                                to: 0.4
+                                duration: 500
+                                easing.type: Easing.InOutSine
+                            }
+                            NumberAnimation {
+                                to: 1
+                                duration: 500
+                                easing.type: Easing.InOutSine
+                            }
                         }
                     }
 
@@ -2230,7 +2271,7 @@ Item {
                         enabled: hover.live
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: (e) => {
+                        onClicked: e => {
                             if (e.button === Qt.RightButton) {
                                 if (ScreenRec.recording)
                                     ScreenRec.stop();
@@ -2238,11 +2279,12 @@ Item {
                             }
                             pill.requestSurface("recorder");
                         }
-                        onDoubleClicked: (e) => {
+                        onDoubleClicked: e => {
                             if (e.button === Qt.LeftButton && ScreenRec.recording)
                                 ScreenRec.stop();
                         }
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "recorder"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "recorder"
                     }
                 }
 
@@ -2267,7 +2309,8 @@ Item {
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.requestSurface("settings")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "settings"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "settings"
                     }
                 }
 
@@ -2292,38 +2335,33 @@ Item {
                         enabled: hover.live
                         cursorShape: Qt.PointingHandCursor
                         onClicked: pill.requestSurface("power")
-                        onContainsMouseChanged: if (containsMouse) pill.soulTarget = "power"
+                        onContainsMouseChanged: if (containsMouse)
+                            pill.soulTarget = "power"
                     }
                 }
             }
         }
     }
 
-    /**
-     * Morphing surfaces, one latch-once Loader each (see surfaceItem). Eager,
-     * they dominated startup and per-monitor RAM; now a surface is built
-     * synchronously on its first open and kept. Each loader fills the pill so
-     * the PillSurface inside anchors exactly as it did as a direct child.
-     *
-     * The hot trio preloads shortly after startup: the mixer needs its Pipewire
-     * trackers bound before it looks right, so a cold first open visibly popped
-     * faders in. Startup itself stays light.
-     */
+    // Give the mixer time to discover PipeWire devices before the first open.
     Timer {
         interval: 2500
         running: true
         onTriggered: {
-            ldMixer.active = true;
-            ldMedia.active = true;
-            ldLink.active = true;
+            for (const loader of Object.values(pill.surfaces)) {
+                if (loader.preload)
+                    loader.active = true;
+            }
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldMixer
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Mixer page: item as Mixer
+        preload: true
+        morphSize: Qt.size(93 * Math.max(4, page?.faderCount ?? 0) * pill.s, 214 * pill.s)
+
         sourceComponent: Mixer {
             s: pill.s
             open: pill.mixerOpen
@@ -2331,38 +2369,41 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldCalendar
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Calendar page: item as Calendar
+        pageWidth: ((page?.implicitWidth ?? 0) > 0 ? page.implicitWidth : 282 * pill.s) + 36 * pill.s
+        heightPadding: 32 * pill.s
+
         sourceComponent: Calendar {
             s: pill.s
             open: pill.calendarOpen
             morphCloseness: pill.morphCloseness
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldClock
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property ClockSurface page: item as ClockSurface
+        pageWidth: 380 * pill.s
+
         sourceComponent: ClockSurface {
             s: pill.s
             open: pill.clockOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldLauncher
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        morphSize: Qt.size(360 * pill.s, 332 * pill.s)
+
         sourceComponent: Launcher {
             s: pill.s
             open: pill.launcherOpen
@@ -2371,11 +2412,11 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldEmoji
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        morphSize: Qt.size(360 * pill.s, 332 * pill.s)
+
         sourceComponent: EmojiPicker {
             s: pill.s
             open: pill.emojiOpen
@@ -2383,11 +2424,11 @@ Item {
             onRequestClose: pill.requestClose()
         }
     }
-    Loader {
+    PillPageLoader {
         id: ldClip
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        morphSize: Qt.size(360 * pill.s, 332 * pill.s)
+
         sourceComponent: Clipboard {
             s: pill.s
             open: pill.clipboardOpen
@@ -2396,11 +2437,13 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldWall
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Wallpaper page: item as Wallpaper
+        morphSize: Qt.size(720 * pill.s, 172 * pill.s)
+        showAme: false
+
         sourceComponent: Wallpaper {
             s: pill.s
             open: pill.wallpaperOpen
@@ -2409,11 +2452,12 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldPower
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Power page: item as Power
+        morphSize: Qt.size(330 * pill.s, 150 * pill.s)
+
         sourceComponent: Power {
             s: pill.s
             open: pill.powerOpen
@@ -2422,25 +2466,29 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldMedia
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        preload: true
+        morphSize: Qt.size((Players.pickable.length > 1 ? 460 : 390) * pill.s, 150 * pill.s)
+
         sourceComponent: Media {
             s: pill.s
             open: pill.mediaOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldLink
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Link page: item as Link
+        preload: true
+        pageWidth: page?.desiredW ?? 0
+        heightPadding: 26 * pill.s
+
         sourceComponent: Link {
             s: pill.s
             open: pill.linkOpen
@@ -2449,11 +2497,12 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldWifi
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        pageWidth: 272 * pill.s
+        heightPadding: 26 * pill.s
+
         sourceComponent: WifiSurface {
             s: pill.s
             open: pill.wifiOpen
@@ -2462,11 +2511,12 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldBt
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        pageWidth: 286 * pill.s
+        heightPadding: 26 * pill.s
+
         sourceComponent: BtSurface {
             s: pill.s
             open: pill.btOpen
@@ -2475,11 +2525,11 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldAwake
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property AwakeSurface page: item as AwakeSurface
+
         sourceComponent: AwakeSurface {
             s: pill.s
             open: pill.awakeOpen
@@ -2488,25 +2538,27 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldSound
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        pageWidth: 400 * pill.s
+        heightPadding: 34 * pill.s
+
         sourceComponent: SoundSurface {
             s: pill.s
             open: pill.soundOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldBattery
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        pageWidth: 316 * pill.s
+        heightPadding: 26 * pill.s
+
         sourceComponent: BatterySurface {
             s: pill.s
             open: pill.batteryOpen
@@ -2515,25 +2567,25 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldSettings
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: Settings {
             s: pill.s
             open: pill.settingsOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldKeybinds
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Keybinds page: item as Keybinds
+        pageWidth: 460 * pill.s
+
         sourceComponent: Keybinds {
             s: pill.s
             open: pill.keybindsOpen
@@ -2542,25 +2594,25 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldWorkspaces
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property WorkspacesSurface page: item as WorkspacesSurface
+
         sourceComponent: WorkspacesSurface {
             s: pill.s
             open: pill.workspacesOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldStash
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Stash page: item as Stash
+
         sourceComponent: Stash {
             s: pill.s
             open: pill.stashOpen
@@ -2569,11 +2621,11 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldSpaceapps
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property SpaceApps page: item as SpaceApps
+
         sourceComponent: SpaceApps {
             s: pill.s
             open: pill.spaceappsOpen
@@ -2582,11 +2634,13 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldRecorder
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Recorder page: item as Recorder
+        pageWidth: 384 * pill.s
+        heightPadding: 33 * pill.s
+
         sourceComponent: Recorder {
             s: pill.s
             screenName: pill.screenName
@@ -2596,11 +2650,12 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldSysmon
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property SysmonSurface page: item as SysmonSurface
+        heightPadding: 33 * pill.s
+
         sourceComponent: SysmonSurface {
             s: pill.s
             open: pill.sysmonOpen
@@ -2610,11 +2665,13 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldFileShelf
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property FileShelfSurface page: item as FileShelfSurface
+        pageWidth: 352 * pill.s
+        heightPadding: 30 * pill.s
+
         sourceComponent: FileShelfSurface {
             s: pill.s
             open: pill.fileShelfOpen
@@ -2622,11 +2679,13 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldSysmonApps
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property SysmonApps page: item as SysmonApps
+        pageWidth: 536 * pill.s
+        heightPadding: 33 * pill.s
+
         sourceComponent: SysmonApps {
             s: pill.s
             open: pill.surface === "sysmon-apps"
@@ -2639,13 +2698,13 @@ Item {
         id: sysmonDetails
         model: pill.sysmonPages
 
-        Loader {
+        PillPageLoader {
             id: detailLoader
+            host: pill
             required property string modelData
 
-            active: false
-            visible: !pill.criticalToast
-            anchors.fill: parent
+            heightPadding: 33 * pill.s
+
             sourceComponent: SysmonDetail {
                 s: pill.s
                 page: detailLoader.modelData
@@ -2656,137 +2715,130 @@ Item {
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldAppearance
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: Appearance {
             s: pill.s
             open: pill.appearanceOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldDisplay
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: Display {
             s: pill.s
             open: pill.displayOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldInput
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: Input {
             s: pill.s
             open: pill.inputOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldLook
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: Look {
             s: pill.s
             open: pill.lookOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldAnimation
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: AnimationSurface {
             s: pill.s
             open: pill.animationOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldTime
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: TimeSurface {
             s: pill.s
             open: pill.timeOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldNotifications
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+
         sourceComponent: NotificationsSurface {
             s: pill.s
             open: pill.notificationsOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldDictation
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Dictation page: item as Dictation
+
         sourceComponent: Dictation {
             s: pill.s
             open: pill.dictationOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldVocab
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        readonly property Vocab page: item as Vocab
+
         sourceComponent: Vocab {
             s: pill.s
             open: pill.vocabOpen
             morphCloseness: pill.morphCloseness
             onRequestClose: pill.requestClose()
-            onRequestSurface: (name) => pill.requestSurface(name)
+            onRequestSurface: name => pill.requestSurface(name)
         }
     }
 
-    Loader {
+    PillPageLoader {
         id: ldFontpicker
-        active: false
-        visible: !pill.criticalToast
-        anchors.fill: parent
+        host: pill
+        pageWidth: 360 * pill.s
+
         sourceComponent: FontPicker {
             s: pill.s
             open: pill.fontpickerOpen
@@ -2815,7 +2867,10 @@ Item {
         opacity: pill.mode === "osd" ? Math.pow(pill.morphCloseness, 1.3) : 0
         visible: opacity > 0.01
         Behavior on opacity {
-            NumberAnimation { duration: pill.mode === "osd" ? 60 : 240; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: pill.mode === "osd" ? 60 : 240
+                easing.type: Easing.OutCubic
+            }
         }
     }
 
@@ -2831,7 +2886,10 @@ Item {
         opacity: pill.mode === "toast" ? 1 : 0
         visible: opacity > 0.01
         Behavior on opacity {
-            NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
         }
 
         sourceComponent: Item {
@@ -2870,14 +2928,16 @@ Item {
      * → targetReady → the central countdown, then closes.
      */
     Item {
-        id: quickChooser
         anchors.fill: parent
         anchors.margins: 6 * pill.s
         enabled: pill.mode === "quickChoose"
         opacity: pill.mode === "quickChoose" ? Math.pow(pill.morphCloseness, 1.3) : 0
         visible: opacity > 0.01
         Behavior on opacity {
-            NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
         }
 
         Row {
@@ -2888,8 +2948,16 @@ Item {
 
             Repeater {
                 model: [
-                    { kind: "screen", label: "Screen", glyph: "monitor" },
-                    { kind: "window", label: "Window / Region", glyph: "video" }
+                    {
+                        kind: "screen",
+                        label: "Screen",
+                        glyph: "monitor"
+                    },
+                    {
+                        kind: "window",
+                        label: "Window / Region",
+                        glyph: "video"
+                    }
                 ]
 
                 Rectangle {
@@ -2901,7 +2969,11 @@ Item {
                     color: qSrcArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : Theme.tileBg
                     border.width: 1
                     border.color: qSrcArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.5) : Theme.border
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Row {
                         anchors.centerIn: parent
@@ -2956,7 +3028,11 @@ Item {
                 color: qMonArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : Theme.tileBg
                 border.width: 1
                 border.color: qMonArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.5) : Theme.border
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
                 Column {
                     anchors.centerIn: parent
@@ -2976,7 +3052,9 @@ Item {
                         color: Theme.subtle
                         font.family: Theme.font
                         font.pixelSize: 9.5 * pill.s
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                 }
 
@@ -3032,7 +3110,10 @@ Item {
         opacity: pill.mode === "quickCount" ? Math.pow(pill.morphCloseness, 1.3) : 0
         visible: opacity > 0.01
         Behavior on opacity {
-            NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
         }
 
         Column {
@@ -3046,7 +3127,9 @@ Item {
                 font.family: Theme.font
                 font.pixelSize: 28 * pill.s
                 font.weight: Font.ExtraBold
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -3066,5 +3149,4 @@ Item {
             onClicked: ScreenRec.cancel()
         }
     }
-
 }

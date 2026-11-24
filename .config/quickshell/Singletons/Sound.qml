@@ -39,7 +39,11 @@ Singleton {
                     if (!chunk.trim())
                         continue;
                     let list;
-                    try { list = JSON.parse(chunk); } catch (e) { continue; }
+                    try {
+                        list = JSON.parse(chunk);
+                    } catch (e) {
+                        continue;
+                    }
                     for (const n of list) {
                         const ap = n.active_port;
                         const port = (n.ports || []).find(p => p.name === ap);
@@ -60,7 +64,7 @@ Singleton {
         running: true
         command: ["pactl", "subscribe"]
         stdout: SplitParser {
-            onRead: (line) => {
+            onRead: line => {
                 if (/ on (card|sink|source) /.test(line))
                     portsDebounce.restart();
             }
@@ -70,7 +74,9 @@ Singleton {
     Timer {
         id: portsRelaunch
         interval: 2000
-        onTriggered: { portsProc.running = true; }
+        onTriggered: {
+            portsProc.running = true;
+        }
     }
     Timer {
         id: portsDebounce
@@ -81,11 +87,41 @@ Singleton {
     readonly property var freqs: [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
     readonly property real range: 12
     readonly property var builtins: [
-        { name: "Flat", bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], bass: 0, treble: 0, widen: 0 },
-        { name: "Bass", bands: [5, 4, 3, 1, 0, 0, 0, 0, 0, 0], bass: 0, treble: 0, widen: 0 },
-        { name: "Vocal", bands: [-2, -2, -1, 0, 2, 3, 3, 2, 0, -1], bass: 0, treble: 0, widen: 0 },
-        { name: "HD", bands: [2, 1, 0, 0, -1, 0, 1, 2, 3, 3], bass: 2, treble: 2, widen: 25 },
-        { name: "Cinema", bands: [4, 3, 1, 0, -1, 0, 1, 1, 2, 2], bass: 3, treble: 1, widen: 40 }
+        {
+            name: "Flat",
+            bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            bass: 0,
+            treble: 0,
+            widen: 0
+        },
+        {
+            name: "Bass",
+            bands: [5, 4, 3, 1, 0, 0, 0, 0, 0, 0],
+            bass: 0,
+            treble: 0,
+            widen: 0
+        },
+        {
+            name: "Vocal",
+            bands: [-2, -2, -1, 0, 2, 3, 3, 2, 0, -1],
+            bass: 0,
+            treble: 0,
+            widen: 0
+        },
+        {
+            name: "HD",
+            bands: [2, 1, 0, 0, -1, 0, 1, 2, 3, 3],
+            bass: 2,
+            treble: 2,
+            widen: 25
+        },
+        {
+            name: "Cinema",
+            bands: [4, 3, 1, 0, -1, 0, 1, 1, 2, 2],
+            bass: 3,
+            treble: 1,
+            widen: 40
+        }
     ]
 
     readonly property string conf: Quickshell.env("HOME") + "/.config/hypr/sound/eq.conf"
@@ -138,11 +174,23 @@ Singleton {
     readonly property bool dirty: !root.currentMode || !root.sameSound(root.current, root.currentMode)
 
     function copyMode(m) {
-        return { name: m.name, bands: m.bands.slice(), bass: m.bass, treble: m.treble, widen: m.widen };
+        return {
+            name: m.name,
+            bands: m.bands.slice(),
+            bass: m.bass,
+            treble: m.treble,
+            widen: m.widen
+        };
     }
 
     function fromMode(m) {
-        return { mode: m.name, bands: m.bands.slice(), bass: m.bass, treble: m.treble, widen: m.widen };
+        return {
+            mode: m.name,
+            bands: m.bands.slice(),
+            bass: m.bass,
+            treble: m.treble,
+            widen: m.widen
+        };
     }
 
     function findMode(name) {
@@ -175,12 +223,22 @@ Singleton {
         }
         root.undoKey = key;
         undoCoalesce.restart();
-        root.undoStack = root.undoStack.concat([{ label: label, restore: restore }]).slice(-30);
+        root.undoStack = root.undoStack.concat([
+            {
+                label: label,
+                restore: restore
+            }
+        ]).slice(-30);
     }
 
     /** Snapshot every persisted sound setting plus the output volume before a change, restored as one step. */
     function snapshot(key, label) {
-        const snap = JSON.stringify({ eq: root.eq, denoise: root.denoise, modes: root.modes, devices: root.devices });
+        const snap = JSON.stringify({
+            eq: root.eq,
+            denoise: root.denoise,
+            modes: root.modes,
+            devices: root.devices
+        });
         const sink = root.sink;
         const vol = sink && sink.audio ? sink.audio.volume : -1;
         root.remember(key, label, () => {
@@ -226,7 +284,9 @@ Singleton {
         const c = root.current;
         const bands = c.bands.slice();
         bands[i] = db;
-        root.setCurrent(Object.assign({}, c, { bands: bands }));
+        root.setCurrent(Object.assign({}, c, {
+            bands: bands
+        }));
     }
 
     function setValue(key, v) {
@@ -251,8 +311,13 @@ Singleton {
     function save() {
         root.snapshot("", "Save mode");
         const c = root.current;
-        root.modes = root.modes.map(m => m.name === c.mode
-            ? { name: m.name, bands: c.bands.slice(), bass: c.bass, treble: c.treble, widen: c.widen } : m);
+        root.modes = root.modes.map(m => m.name === c.mode ? {
+                name: m.name,
+                bands: c.bands.slice(),
+                bass: c.bass,
+                treble: c.treble,
+                widen: c.widen
+            } : m);
         root.persist();
     }
 
@@ -264,8 +329,18 @@ Singleton {
             n++;
         const c = root.current;
         const name = "Custom " + n;
-        root.modes = root.modes.concat([{ name: name, bands: c.bands.slice(), bass: c.bass, treble: c.treble, widen: c.widen }]);
-        root.setCurrent(Object.assign({}, c, { mode: name }));
+        root.modes = root.modes.concat([
+            {
+                name: name,
+                bands: c.bands.slice(),
+                bass: c.bass,
+                treble: c.treble,
+                widen: c.widen
+            }
+        ]);
+        root.setCurrent(Object.assign({}, c, {
+            mode: name
+        }));
         root.persist();
     }
 
@@ -281,10 +356,14 @@ Singleton {
         if (!to || to === from || root.findMode(to))
             return false;
         root.snapshot("", "Rename mode");
-        root.modes = root.modes.map(m => m.name === from ? Object.assign({}, m, { name: to }) : m);
+        root.modes = root.modes.map(m => m.name === from ? Object.assign({}, m, {
+                name: to
+            }) : m);
         const d = {};
         for (const k in root.devices)
-            d[k] = root.devices[k].mode === from ? Object.assign({}, root.devices[k], { mode: to }) : root.devices[k];
+            d[k] = root.devices[k].mode === from ? Object.assign({}, root.devices[k], {
+                mode: to
+            }) : root.devices[k];
         root.devices = d;
         root.persist();
         return true;
@@ -329,9 +408,7 @@ Singleton {
     }
 
     function applyRoute(stream, node) {
-        routeProc.command = node && node !== root.sink
-            ? ["pw-metadata", String(stream.id), "target.object", node.name]
-            : ["pw-metadata", "-d", String(stream.id), "target.object"];
+        routeProc.command = node && node !== root.sink ? ["pw-metadata", String(stream.id), "target.object", node.name] : ["pw-metadata", "-d", String(stream.id), "target.object"];
         routeProc.running = true;
     }
 
@@ -344,7 +421,10 @@ Singleton {
         if (!node || !node.audio)
             return;
         const old = node.audio.volume;
-        root.remember(key, label, () => { if (node && node.audio) node.audio.volume = old; });
+        root.remember(key, label, () => {
+            if (node && node.audio)
+                node.audio.volume = old;
+        });
         node.audio.volume = v;
     }
 
@@ -352,7 +432,10 @@ Singleton {
         if (!node || !node.audio)
             return;
         const old = node.audio.muted;
-        root.remember("", "Mute", () => { if (node && node.audio) node.audio.muted = old; });
+        root.remember("", "Mute", () => {
+            if (node && node.audio)
+                node.audio.muted = old;
+        });
         node.audio.muted = m;
     }
 
@@ -379,11 +462,9 @@ Singleton {
         const sq = 2 * Math.sqrt(A) * al;
         let k;
         if (f.t === "LSC")
-            k = [A * ((A + 1) - (A - 1) * c + sq), 2 * A * ((A - 1) - (A + 1) * c), A * ((A + 1) - (A - 1) * c - sq),
-                (A + 1) + (A - 1) * c + sq, -2 * ((A - 1) + (A + 1) * c), (A + 1) + (A - 1) * c - sq];
+            k = [A * ((A + 1) - (A - 1) * c + sq), 2 * A * ((A - 1) - (A + 1) * c), A * ((A + 1) - (A - 1) * c - sq), (A + 1) + (A - 1) * c + sq, -2 * ((A - 1) + (A + 1) * c), (A + 1) + (A - 1) * c - sq];
         else if (f.t === "HSC")
-            k = [A * ((A + 1) + (A - 1) * c + sq), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - sq),
-                (A + 1) - (A - 1) * c + sq, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - sq];
+            k = [A * ((A + 1) + (A - 1) * c + sq), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - sq), (A + 1) - (A - 1) * c + sq, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - sq];
         else
             k = [1 + al * A, -2 * c, 1 - al * A, 1 + al / A, -2 * c, 1 - al / A];
         return [k[0] / k[3], k[1] / k[3], k[2] / k[3], 1, k[4] / k[3], k[5] / k[3]];
@@ -436,7 +517,7 @@ Singleton {
             if (words.every(w => n.indexOf(w) >= 0))
                 out.push(e);
         }
-        const rank = (e) => e.by === "oratory1990" ? 0 : (e.by === "crinacle" ? 1 : 2);
+        const rank = e => e.by === "oratory1990" ? 0 : (e.by === "crinacle" ? 1 : 2);
         return out.sort((a, b) => a.name.length - b.name.length || rank(a) - rank(b)).slice(0, 7);
     }
 
@@ -446,8 +527,7 @@ Singleton {
         const seg = entry.path.split("/").pop();
         root.aeqPending = entry;
         root.aeqError = "";
-        aeqFetch.command = ["curl", "-fsSL", "--max-time", "15",
-            "https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/" + entry.path.slice(2) + "/" + seg + "%20ParametricEQ.txt"];
+        aeqFetch.command = ["curl", "-fsSL", "--max-time", "15", "https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/" + entry.path.slice(2) + "/" + seg + "%20ParametricEQ.txt"];
         aeqFetch.running = true;
     }
 
@@ -465,10 +545,7 @@ Singleton {
 
     Process {
         id: aeqIndexProc
-        command: ["sh", "-c", 'd="${XDG_CACHE_HOME:-$HOME/.cache}/lumen/autoeq"; f="$d/INDEX.md"; mkdir -p "$d"; '
-            + 'if [ ! -s "$f" ] || [ -n "$(find "$f" -mtime +30)" ]; then '
-            + 'curl -fsSL --max-time 20 -o "$f.tmp" https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/INDEX.md && mv "$f.tmp" "$f"; fi; '
-            + 'cat "$f"']
+        command: ["sh", "-c", 'd="${XDG_CACHE_HOME:-$HOME/.cache}/lumen/autoeq"; f="$d/INDEX.md"; mkdir -p "$d"; ' + 'if [ ! -s "$f" ] || [ -n "$(find "$f" -mtime +30)" ]; then ' + 'curl -fsSL --max-time 20 -o "$f.tmp" https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results/INDEX.md && mv "$f.tmp" "$f"; fi; ' + 'cat "$f"']
         stdout: StdioCollector {
             onStreamFinished: {
                 const out = [];
@@ -476,7 +553,11 @@ Singleton {
                 for (let i = 0; i < lines.length; i++) {
                     const m = /^- \[(.*)\]\((\.\/.*)\) by (.*)$/.exec(lines[i]);
                     if (m)
-                        out.push({ name: m[1], path: m[2], by: m[3].replace(/ on .*/, "") });
+                        out.push({
+                            name: m[1],
+                            path: m[2],
+                            by: m[3].replace(/ on .*/, "")
+                        });
                 }
                 root.aeqIndex = out;
                 root.aeqLoading = false;
@@ -499,7 +580,12 @@ Singleton {
                         preamp = Number(pre[1]);
                     const m = /Filter \d+: ON (PK|LSC|HSC) Fc ([\d.]+) Hz Gain ([-\d.]+) dB Q ([\d.]+)/.exec(lines[i]);
                     if (m && filters.length < 10)
-                        filters.push({ t: m[1], f: Number(m[2]), g: Number(m[3]), q: Number(m[4]) });
+                        filters.push({
+                            t: m[1],
+                            f: Number(m[2]),
+                            g: Number(m[3]),
+                            q: Number(m[4])
+                        });
                 }
                 const e = root.aeqPending;
                 root.aeqPending = null;
@@ -508,7 +594,12 @@ Singleton {
                     return;
                 }
                 root.snapshot("", "AutoEQ");
-                root.assign("autoeq", { name: e.name, by: e.by, preamp: preamp, filters: filters });
+                root.assign("autoeq", {
+                    name: e.name,
+                    by: e.by,
+                    preamp: preamp,
+                    filters: filters
+                });
                 root.persist();
             }
         }
@@ -552,15 +643,7 @@ Singleton {
     /** Start or stop the EQ and mic filter units to match the toggles; each runs as its own pipewire -c process. */
     function engine() {
         engineProc.running = false;
-        engineProc.command = ["sh", "-c",
-            'run() { u="$1"; c="$2"; '
-            + 'if [ "$3" = 1 ]; then '
-            + '  if command -v systemd-run >/dev/null 2>&1; then '
-            + '    systemctl --user is-active --quiet "$u" || systemd-run --user --unit="$u" --collect --quiet pipewire -c "$c"; '
-            + '  else pgrep -f "pipewire -c $c" >/dev/null || setsid -f pipewire -c "$c"; fi; '
-            + 'else systemctl --user stop "$u" 2>/dev/null; pkill -f "pipewire -c $c" 2>/dev/null; fi; }; '
-            + 'run lumen-eq "$1" "$2"; run lumen-mic "$3" "$4"; true',
-            "sh", root.conf, root.eq ? "1" : "0", root.micConf, root.denoise && root.denoiseAvailable ? "1" : "0"];
+        engineProc.command = ["sh", "-c", 'run() { u="$1"; c="$2"; ' + 'if [ "$3" = 1 ]; then ' + '  if command -v systemd-run >/dev/null 2>&1; then ' + '    systemctl --user is-active --quiet "$u" || systemd-run --user --unit="$u" --collect --quiet pipewire -c "$c"; ' + '  else pgrep -f "pipewire -c $c" >/dev/null || setsid -f pipewire -c "$c"; fi; ' + 'else systemctl --user stop "$u" 2>/dev/null; pkill -f "pipewire -c $c" 2>/dev/null; fi; }; ' + 'run lumen-eq "$1" "$2"; run lumen-mic "$3" "$4"; true', "sh", root.conf, root.eq ? "1" : "0", root.micConf, root.denoise && root.denoiseAvailable ? "1" : "0"];
         engineProc.running = true;
     }
 
@@ -569,7 +652,12 @@ Singleton {
     }
 
     function persist() {
-        file.setText(JSON.stringify({ eq: root.eq, denoise: root.denoise, modes: root.modes, devices: root.devices }));
+        file.setText(JSON.stringify({
+            eq: root.eq,
+            denoise: root.denoise,
+            modes: root.modes,
+            devices: root.devices
+        }));
     }
 
     Timer {
@@ -597,7 +685,7 @@ Singleton {
     Process {
         id: ladspaProbe
         command: ["sh", "-c", "for d in /usr/lib/ladspa /usr/lib64/ladspa /usr/local/lib/ladspa; do [ -f \"$d/librnnoise_ladspa.so\" ] && exit 0; done; exit 1"]
-        onExited: (code) => {
+        onExited: code => {
             root.denoiseAvailable = code === 0;
             root.engine();
         }
@@ -615,24 +703,33 @@ Singleton {
      * Up stops at the output's boost cap from this page. Every press also asks
      * the OSD to show, so it appears even when the level is already at a limit.
      */
-    signal volumeKey()
+    signal volumeKey
 
     GlobalShortcut {
         appid: "quickshell"
         name: "volumeUp"
         description: "Raise the volume, up to the boost cap"
-        onPressed: { Quickshell.execDetached(["wpctl", "set-volume", "-l", String(root.limit), "@DEFAULT_AUDIO_SINK@", "5%+"]); root.volumeKey(); }
+        onPressed: {
+            Quickshell.execDetached(["wpctl", "set-volume", "-l", String(root.limit), "@DEFAULT_AUDIO_SINK@", "5%+"]);
+            root.volumeKey();
+        }
     }
     GlobalShortcut {
         appid: "quickshell"
         name: "volumeDown"
         description: "Lower the volume"
-        onPressed: { Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"]); root.volumeKey(); }
+        onPressed: {
+            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"]);
+            root.volumeKey();
+        }
     }
     GlobalShortcut {
         appid: "quickshell"
         name: "volumeMute"
         description: "Mute or unmute the output"
-        onPressed: { Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]); root.volumeKey(); }
+        onPressed: {
+            Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]);
+            root.volumeKey();
+        }
     }
 }

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "lib/setDeco.js" as SetDeco
+import "lib/luaSettings.js" as LuaSettings
 import "Singletons"
 
 /**
@@ -30,69 +30,350 @@ SettingsSurface {
         var r = [];
         r.push(root.headEntry(winGrp));
         if (winGrp.open) {
-            r.push({ item: gapsInRow, kind: "scrub", bump: function (d) { gapsInScrub.bump(d); } });
-            r.push({ item: gapsOutRow, kind: "scrub", bump: function (d) { gapsOutScrub.bump(d); } });
-            r.push({ item: roundRow, kind: "scrub", bump: function (d) { roundScrub.bump(d); } });
-            r.push({ item: roundPowRow, kind: "scrub", bump: function (d) { roundPowScrub.bump(d); } });
-            r.push({ item: borderRow, kind: "scrub", bump: function (d) { borderScrub.bump(d); } });
-            r.push({ item: resizeRow, kind: "toggle", get: function () { return root.resizeOnBorder; }, set: function (v) { root.resizeOnBorder = v; root.writeDeco("resize_on_border", v ? "true" : "false"); } });
-            r.push({ item: layoutRow, kind: "seg", vals: ["dwindle", "master"], get: function () { return root.layout; }, set: function (v) { root.layout = v; root.writeDeco("layout", "\"" + v + "\""); } });
+            r.push({
+                item: gapsInRow,
+                kind: "scrub",
+                bump: function (d) {
+                    gapsInScrub.bump(d);
+                }
+            });
+            r.push({
+                item: gapsOutRow,
+                kind: "scrub",
+                bump: function (d) {
+                    gapsOutScrub.bump(d);
+                }
+            });
+            r.push({
+                item: roundRow,
+                kind: "scrub",
+                bump: function (d) {
+                    roundScrub.bump(d);
+                }
+            });
+            r.push({
+                item: roundPowRow,
+                kind: "scrub",
+                bump: function (d) {
+                    roundPowScrub.bump(d);
+                }
+            });
+            r.push({
+                item: borderRow,
+                kind: "scrub",
+                bump: function (d) {
+                    borderScrub.bump(d);
+                }
+            });
+            r.push({
+                item: resizeRow,
+                kind: "toggle",
+                get: function () {
+                    return root.resizeOnBorder;
+                },
+                set: function (v) {
+                    root.resizeOnBorder = v;
+                    root.writeDeco("resize_on_border", v ? "true" : "false");
+                }
+            });
+            r.push({
+                item: layoutRow,
+                kind: "seg",
+                vals: ["dwindle", "master"],
+                get: function () {
+                    return root.layout;
+                },
+                set: function (v) {
+                    root.layout = v;
+                    root.writeDeco("layout", "\"" + v + "\"");
+                }
+            });
         }
         r.push(root.headEntry(nightGrp));
         if (nightGrp.open) {
-            r.push({ item: nlModeRow, kind: "seg", vals: ["off", "on", "scheduled"], get: function () { return Flags.nightLightMode; }, set: function (v) { NightLight.setMode(v); } });
+            r.push({
+                item: nlModeRow,
+                kind: "seg",
+                vals: ["off", "on", "scheduled"],
+                get: function () {
+                    return Flags.nightLightMode;
+                },
+                set: function (v) {
+                    NightLight.setMode(v);
+                }
+            });
             if (Flags.nightLightMode !== "off")
-                r.push({ item: nlTempRow, kind: "scrub", bump: function (d) { nlTempScrub.bump(d); } });
+                r.push({
+                    item: nlTempRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        nlTempScrub.bump(d);
+                    }
+                });
             if (Flags.nightLightMode === "scheduled") {
-                r.push({ item: nlOnRow, kind: "scrub", bump: function (d) { nlOnScrub.bump(d); } });
-                r.push({ item: nlOffRow, kind: "scrub", bump: function (d) { nlOffScrub.bump(d); } });
+                r.push({
+                    item: nlOnRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        nlOnScrub.bump(d);
+                    }
+                });
+                r.push({
+                    item: nlOffRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        nlOffScrub.bump(d);
+                    }
+                });
             }
         }
         r.push(root.headEntry(shadowGrp));
         if (shadowGrp.open) {
-            r.push({ item: shEnRow, kind: "toggle", get: function () { return root.shadowOn; }, set: function (v) { root.shadowOn = v; root.writeShadow("enabled", v ? "true" : "false"); } });
+            r.push({
+                item: shEnRow,
+                kind: "toggle",
+                get: function () {
+                    return root.shadowOn;
+                },
+                set: function (v) {
+                    root.shadowOn = v;
+                    root.writeShadow("enabled", v ? "true" : "false");
+                }
+            });
             if (root.shadowOn) {
-                r.push({ item: shRangeRow, kind: "scrub", bump: function (d) { shRangeScrub.bump(d); } });
-                r.push({ item: shPowRow, kind: "scrub", bump: function (d) { shPowScrub.bump(d); } });
+                r.push({
+                    item: shRangeRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        shRangeScrub.bump(d);
+                    }
+                });
+                r.push({
+                    item: shPowRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        shPowScrub.bump(d);
+                    }
+                });
             }
         }
         r.push(root.headEntry(blurGrp));
         if (blurGrp.open) {
-            r.push({ item: blEnRow, kind: "toggle", get: function () { return root.blurOn; }, set: function (v) { root.blurOn = v; root.writeBlur("enabled", v ? "true" : "false"); } });
+            r.push({
+                item: blEnRow,
+                kind: "toggle",
+                get: function () {
+                    return root.blurOn;
+                },
+                set: function (v) {
+                    root.blurOn = v;
+                    root.writeBlur("enabled", v ? "true" : "false");
+                }
+            });
             if (root.blurOn) {
-                r.push({ item: blSizeRow, kind: "scrub", bump: function (d) { blSizeScrub.bump(d); } });
-                r.push({ item: blPassRow, kind: "scrub", bump: function (d) { blPassScrub.bump(d); } });
-                r.push({ item: blVibRow, kind: "scrub", bump: function (d) { blVibScrub.bump(d); } });
-                r.push({ item: blNoiseRow, kind: "scrub", bump: function (d) { blNoiseScrub.bump(d); } });
+                r.push({
+                    item: blSizeRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        blSizeScrub.bump(d);
+                    }
+                });
+                r.push({
+                    item: blPassRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        blPassScrub.bump(d);
+                    }
+                });
+                r.push({
+                    item: blVibRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        blVibScrub.bump(d);
+                    }
+                });
+                r.push({
+                    item: blNoiseRow,
+                    kind: "scrub",
+                    bump: function (d) {
+                        blNoiseScrub.bump(d);
+                    }
+                });
             }
         }
         r.push(root.headEntry(opGrp));
         if (opGrp.open) {
-            r.push({ item: opActRow, kind: "scrub", bump: function (d) { opActScrub.bump(d); } });
-            r.push({ item: opInactRow, kind: "scrub", bump: function (d) { opInactScrub.bump(d); } });
+            r.push({
+                item: opActRow,
+                kind: "scrub",
+                bump: function (d) {
+                    opActScrub.bump(d);
+                }
+            });
+            r.push({
+                item: opInactRow,
+                kind: "scrub",
+                bump: function (d) {
+                    opInactScrub.bump(d);
+                }
+            });
         }
         r.push(root.headEntry(pillGrp));
         if (pillGrp.open) {
-            r.push({ item: pillGapRow, kind: "scrub", bump: function (d) { pillGapScrub.bump(d); } });
-            r.push({ item: appGapRow, kind: "scrub", bump: function (d) { appGapScrub.bump(d); } });
-            r.push({ item: pillOpRow, kind: "scrub", bump: function (d) { pillOpScrub.bump(d); } });
-            r.push({ item: pillBlurRow, kind: "toggle", get: function () { return Flags.pillBlur; }, set: function (v) { Flags.pillBlur = v; root.applyPillBlur(v); } });
-            r.push({ item: pillHRow, kind: "scrub", bump: function (d) { pillHScrub.bump(d); } });
-            r.push({ item: pillRoundRow, kind: "scrub", bump: function (d) { pillRoundScrub.bump(d); } });
-            r.push({ item: idleWRow, kind: "scrub", bump: function (d) { idleWScrub.bump(d); } });
-            r.push({ item: shadowPillRow, kind: "toggle", get: function () { return Flags.pillShadow; }, set: function (v) { Flags.pillShadow = v; } });
-            r.push({ item: borderPillRow, kind: "toggle", get: function () { return Flags.pillBorder; }, set: function (v) { Flags.pillBorder = v; } });
-            r.push({ item: sheenRow, kind: "toggle", get: function () { return Flags.pillSheen; }, set: function (v) { Flags.pillSheen = v; } });
-            r.push({ item: springRow, kind: "seg", vals: ["soft", "snappy"], get: function () { return Flags.springFeel; }, set: function (v) { Flags.springFeel = v; } });
-            r.push({ item: expandRow, kind: "seg", vals: ["hover", "click"], get: function () { return Flags.expandMode; }, set: function (v) { Flags.expandMode = v; } });
-            r.push({ item: openDelayRow, kind: "scrub", bump: function (d) { openDelayScrub.bump(d); } });
-            r.push({ item: closeDelayRow, kind: "scrub", bump: function (d) { closeDelayScrub.bump(d); } });
+            r.push({
+                item: pillGapRow,
+                kind: "scrub",
+                bump: function (d) {
+                    pillGapScrub.bump(d);
+                }
+            });
+            r.push({
+                item: appGapRow,
+                kind: "scrub",
+                bump: function (d) {
+                    appGapScrub.bump(d);
+                }
+            });
+            r.push({
+                item: pillOpRow,
+                kind: "scrub",
+                bump: function (d) {
+                    pillOpScrub.bump(d);
+                }
+            });
+            r.push({
+                item: pillBlurRow,
+                kind: "toggle",
+                get: function () {
+                    return Flags.pillBlur;
+                },
+                set: function (v) {
+                    Flags.pillBlur = v;
+                    root.applyPillBlur(v);
+                }
+            });
+            r.push({
+                item: pillHRow,
+                kind: "scrub",
+                bump: function (d) {
+                    pillHScrub.bump(d);
+                }
+            });
+            r.push({
+                item: pillRoundRow,
+                kind: "scrub",
+                bump: function (d) {
+                    pillRoundScrub.bump(d);
+                }
+            });
+            r.push({
+                item: idleWRow,
+                kind: "scrub",
+                bump: function (d) {
+                    idleWScrub.bump(d);
+                }
+            });
+            r.push({
+                item: shadowPillRow,
+                kind: "toggle",
+                get: function () {
+                    return Flags.pillShadow;
+                },
+                set: function (v) {
+                    Flags.pillShadow = v;
+                }
+            });
+            r.push({
+                item: borderPillRow,
+                kind: "toggle",
+                get: function () {
+                    return Flags.pillBorder;
+                },
+                set: function (v) {
+                    Flags.pillBorder = v;
+                }
+            });
+            r.push({
+                item: sheenRow,
+                kind: "toggle",
+                get: function () {
+                    return Flags.pillSheen;
+                },
+                set: function (v) {
+                    Flags.pillSheen = v;
+                }
+            });
+            r.push({
+                item: springRow,
+                kind: "seg",
+                vals: ["soft", "snappy"],
+                get: function () {
+                    return Flags.springFeel;
+                },
+                set: function (v) {
+                    Flags.springFeel = v;
+                }
+            });
+            r.push({
+                item: expandRow,
+                kind: "seg",
+                vals: ["hover", "click"],
+                get: function () {
+                    return Flags.expandMode;
+                },
+                set: function (v) {
+                    Flags.expandMode = v;
+                }
+            });
+            r.push({
+                item: openDelayRow,
+                kind: "scrub",
+                bump: function (d) {
+                    openDelayScrub.bump(d);
+                }
+            });
+            r.push({
+                item: closeDelayRow,
+                kind: "scrub",
+                bump: function (d) {
+                    closeDelayScrub.bump(d);
+                }
+            });
         }
         r.push(root.headEntry(wsGrp));
         if (wsGrp.open) {
-            r.push({ item: wsStyleRow, kind: "seg", vals: ["dots", "numbers", "names"], get: function () { return Flags.wsStyle; }, set: function (v) { Flags.wsStyle = v; } });
-            r.push({ item: wsShowRow, kind: "seg", vals: ["occupied", "all"], get: function () { return Flags.wsShow; }, set: function (v) { Flags.wsShow = v; } });
-            r.push({ item: wsScrollRow, kind: "toggle", get: function () { return Flags.wsScroll; }, set: function (v) { Flags.wsScroll = v; } });
+            r.push({
+                item: wsStyleRow,
+                kind: "seg",
+                vals: ["dots", "numbers", "names"],
+                get: function () {
+                    return Flags.wsStyle;
+                },
+                set: function (v) {
+                    Flags.wsStyle = v;
+                }
+            });
+            r.push({
+                item: wsShowRow,
+                kind: "seg",
+                vals: ["occupied", "all"],
+                get: function () {
+                    return Flags.wsShow;
+                },
+                set: function (v) {
+                    Flags.wsShow = v;
+                }
+            });
+            r.push({
+                item: wsScrollRow,
+                kind: "toggle",
+                get: function () {
+                    return Flags.wsScroll;
+                },
+                set: function (v) {
+                    Flags.wsScroll = v;
+                }
+            });
         }
         return r;
     }
@@ -121,8 +402,14 @@ SettingsSurface {
     property real inactiveOpacity: 1.0
 
     readonly property var layoutOptions: [
-        { label: "Dwindle", value: "dwindle" },
-        { label: "Master", value: "master" }
+        {
+            label: "Dwindle",
+            value: "dwindle"
+        },
+        {
+            label: "Master",
+            value: "master"
+        }
     ]
 
     property string decoText: ""
@@ -150,42 +437,42 @@ SettingsSurface {
         root.decoText = decoFile.text();
         var t = root.decoText;
 
-        var gi = parseInt(SetDeco.getField(t, "gaps_in"), 10);
+        var gi = parseInt(LuaSettings.getField(t, "gaps_in"), 10);
         root.gapsIn = isNaN(gi) ? 6 : gi;
-        var go = parseInt(SetDeco.getField(t, "gaps_out"), 10);
+        var go = parseInt(LuaSettings.getField(t, "gaps_out"), 10);
         root.gapsOut = isNaN(go) ? 12 : go;
-        var rd = parseInt(SetDeco.getField(t, "rounding"), 10);
+        var rd = parseInt(LuaSettings.getField(t, "rounding"), 10);
         root.rounding = isNaN(rd) ? 12 : rd;
-        var rp = parseInt(SetDeco.getField(t, "rounding_power"), 10);
+        var rp = parseInt(LuaSettings.getField(t, "rounding_power"), 10);
         root.roundingPower = isNaN(rp) ? 4 : rp;
-        var bs = parseInt(SetDeco.getField(t, "border_size"), 10);
+        var bs = parseInt(LuaSettings.getField(t, "border_size"), 10);
         root.borderSize = isNaN(bs) ? 2 : bs;
-        root.resizeOnBorder = SetDeco.getField(t, "resize_on_border") === "true";
-        var lo = SetDeco.getField(t, "layout");
+        root.resizeOnBorder = LuaSettings.getField(t, "resize_on_border") === "true";
+        var lo = LuaSettings.getField(t, "layout");
         root.layout = lo.length > 0 ? lo : "dwindle";
 
-        root.blurOn = SetDeco.getBlockField(t, "blur", "enabled") === "true";
-        var bz = parseInt(SetDeco.getBlockField(t, "blur", "size"), 10);
+        root.blurOn = LuaSettings.getBlockField(t, "blur", "enabled") === "true";
+        var bz = parseInt(LuaSettings.getBlockField(t, "blur", "size"), 10);
         root.blurSize = isNaN(bz) ? 8 : bz;
-        var bp = parseInt(SetDeco.getBlockField(t, "blur", "passes"), 10);
+        var bp = parseInt(LuaSettings.getBlockField(t, "blur", "passes"), 10);
         root.blurPasses = isNaN(bp) ? 3 : bp;
-        var vb = parseFloat(SetDeco.getBlockField(t, "blur", "vibrancy"));
+        var vb = parseFloat(LuaSettings.getBlockField(t, "blur", "vibrancy"));
         root.blurVibrancy = isNaN(vb) ? 0.17 : vb;
-        var nz = parseFloat(SetDeco.getBlockField(t, "blur", "noise"));
+        var nz = parseFloat(LuaSettings.getBlockField(t, "blur", "noise"));
         root.blurNoise = isNaN(nz) ? 0.01 : nz;
 
-        root.shadowOn = SetDeco.getBlockField(t, "shadow", "enabled") === "true";
-        var sr = parseInt(SetDeco.getBlockField(t, "shadow", "range"), 10);
+        root.shadowOn = LuaSettings.getBlockField(t, "shadow", "enabled") === "true";
+        var sr = parseInt(LuaSettings.getBlockField(t, "shadow", "range"), 10);
         root.shadowRange = isNaN(sr) ? 12 : sr;
-        var sp = parseInt(SetDeco.getBlockField(t, "shadow", "render_power"), 10);
+        var sp = parseInt(LuaSettings.getBlockField(t, "shadow", "render_power"), 10);
         root.shadowRenderPower = isNaN(sp) ? 3 : sp;
 
-        var ao = parseFloat(SetDeco.getField(t, "active_opacity"));
+        var ao = parseFloat(LuaSettings.getField(t, "active_opacity"));
         root.activeOpacity = isNaN(ao) ? 1.0 : ao;
-        var io = parseFloat(SetDeco.getField(t, "inactive_opacity"));
+        var io = parseFloat(LuaSettings.getField(t, "inactive_opacity"));
         root.inactiveOpacity = isNaN(io) ? 1.0 : io;
 
-        Flags.pillBlur = SetDeco.hasNamedRule(t, "pill-blur");
+        Flags.pillBlur = LuaSettings.hasNamedRule(t, "pill-blur");
 
         root.base = {
             gapsIn: root.gapsIn,
@@ -223,9 +510,18 @@ SettingsSurface {
     }
 
     readonly property var nightModeOptions: [
-        { label: "Off", value: "off" },
-        { label: "On", value: "on" },
-        { label: "Scheduled", value: "scheduled" }
+        {
+            label: "Off",
+            value: "off"
+        },
+        {
+            label: "On",
+            value: "on"
+        },
+        {
+            label: "Scheduled",
+            value: "scheduled"
+        }
     ]
 
     /**
@@ -233,7 +529,7 @@ SettingsSurface {
      * by the caller) and reloads Hyprland so the change takes effect at once.
      */
     function writeDeco(name, literal) {
-        var res = SetDeco.setField(root.decoText, name, literal);
+        var res = LuaSettings.setField(root.decoText, name, literal);
         if (!res.ok)
             return;
         root.decoText = res.text;
@@ -252,9 +548,7 @@ SettingsSurface {
      */
     function writeOpacity(name, literal) {
         writeDeco(name, literal);
-        opacityRefresh.command = ["hyprctl", "eval",
-            "hl.config({ decoration = { active_opacity = " + root.activeOpacity.toFixed(2)
-            + ", inactive_opacity = " + root.inactiveOpacity.toFixed(2) + " } })"];
+        opacityRefresh.command = ["hyprctl", "eval", "hl.config({ decoration = { active_opacity = " + root.activeOpacity.toFixed(2) + ", inactive_opacity = " + root.inactiveOpacity.toFixed(2) + " } })"];
         opacityRefresh.running = true;
     }
 
@@ -264,7 +558,7 @@ SettingsSurface {
      * `shadow` block's `enabled` first.
      */
     function writeBlur(name, literal) {
-        var res = SetDeco.setBlockField(root.decoText, "blur", name, literal);
+        var res = LuaSettings.setBlockField(root.decoText, "blur", name, literal);
         if (!res.ok)
             return;
         root.decoText = res.text;
@@ -278,7 +572,7 @@ SettingsSurface {
      * `blur` block.
      */
     function writeShadow(name, literal) {
-        var res = SetDeco.setBlockField(root.decoText, "shadow", name, literal);
+        var res = LuaSettings.setBlockField(root.decoText, "shadow", name, literal);
         if (!res.ok)
             return;
         root.decoText = res.text;
@@ -296,11 +590,11 @@ SettingsSurface {
         var t = root.decoText;
         var res;
         if (on) {
-            if (SetDeco.hasNamedRule(t, "pill-blur"))
+            if (LuaSettings.hasNamedRule(t, "pill-blur"))
                 return;
-            res = SetDeco.addNamedRule(t, root.pillBlurRule);
+            res = LuaSettings.addNamedRule(t, root.pillBlurRule);
         } else {
-            res = SetDeco.removeNamedRule(t, "pill-blur");
+            res = LuaSettings.removeNamedRule(t, "pill-blur");
         }
         if (!res.ok)
             return;
@@ -364,9 +658,7 @@ SettingsSurface {
         void it.height;
         var t = it.seamTarget;
         var x = t.mapToItem(root, (t.leftPadding || 0) - 7 * root.s, 0).x;
-        var y = it.seamOnText
-            ? t.mapToItem(root, 0, (t.topPadding || 0) + t.contentHeight / 2).y
-            : it.mapToItem(root, 0, it.height / 2).y;
+        var y = it.seamOnText ? t.mapToItem(root, 0, (t.topPadding || 0) + t.contentHeight / 2).y : it.mapToItem(root, 0, it.height / 2).y;
         return Qt.point(x, y);
     }
 
@@ -396,7 +688,13 @@ SettingsSurface {
 
     /** Keyboard entry for a group heading: Enter folds it open or shut. */
     function headEntry(g) {
-        return { item: g.header, kind: "action", run: function () { g.toggle(); } };
+        return {
+            item: g.header,
+            kind: "action",
+            run: function () {
+                g.toggle();
+            }
+        };
     }
 
     component Group: Column {
@@ -424,7 +722,10 @@ SettingsSurface {
                 onHoveredChanged: root.reportRowHover(hdr, hovered)
             }
 
-            GroupLabel { id: gl; text: grp.title }
+            GroupLabel {
+                id: gl
+                text: grp.title
+            }
 
             GlyphIcon {
                 anchors.right: parent.right
@@ -435,7 +736,12 @@ SettingsSurface {
                 color: root.focusRowItem === hdr ? Theme.cream : Theme.faint
                 stroke: 2.0
                 rotation: grp.open ? 0 : -90
-                Behavior on rotation { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                Behavior on rotation {
+                    NumberAnimation {
+                        duration: Motion.fast
+                        easing.type: Easing.OutCubic
+                    }
+                }
             }
 
             MouseArea {
@@ -449,7 +755,12 @@ SettingsSurface {
             width: parent.width
             height: grp.open ? body.implicitHeight : 0
             clip: true
-            Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on height {
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.OutCubic
+                }
+            }
 
             Column {
                 id: body
@@ -482,11 +793,17 @@ SettingsSurface {
         width: parent ? parent.width : 0
         height: frow.collapsed ? 0 : (frow.rowH + (frow.expanded ? frow.capH : 0))
         clip: true
-        Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        Behavior on height {
+            NumberAnimation {
+                duration: Motion.fast
+                easing.type: Easing.OutCubic
+            }
+        }
 
         HoverHandler {
             id: fhover
-            onHoveredChanged: if (!frow.collapsed) root.reportRowHover(frow, hovered)
+            onHoveredChanged: if (!frow.collapsed)
+                root.reportRowHover(frow, hovered)
         }
 
         Rectangle {
@@ -495,7 +812,11 @@ SettingsSurface {
             anchors.bottomMargin: 3 * root.s
             radius: 9 * root.s
             color: (fhover.hovered || frow.focused) ? Theme.frameBg : "transparent"
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -569,598 +890,712 @@ SettingsSurface {
             anchors.rightMargin: 12 * root.s
             spacing: 0
 
-            Group { id: winGrp; title: "Window"
+            Group {
+                id: winGrp
+                title: "Window"
 
-            FieldRow {
-                id: gapsInRow
-                label: "Gaps inner"
-                caption: "Space between tiled windows"
-                ScrubValue {
-                    id: gapsInScrub
-                    s: root.s
-                    value: root.gapsIn
-                    openValue: root.base.gapsIn
-                    from: 0; to: 40; step: 1; unit: "px"
-                    onEdited: v => {
-                        root.gapsIn = v;
-                        root.writeDeco("gaps_in", String(v));
+                FieldRow {
+                    id: gapsInRow
+                    label: "Gaps inner"
+                    caption: "Space between tiled windows"
+                    ScrubValue {
+                        id: gapsInScrub
+                        s: root.s
+                        value: root.gapsIn
+                        openValue: root.base.gapsIn
+                        from: 0
+                        to: 40
+                        step: 1
+                        unit: "px"
+                        onEdited: v => {
+                            root.gapsIn = v;
+                            root.writeDeco("gaps_in", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: gapsOutRow
+                    label: "Gaps outer"
+                    caption: "Space to the screen edge"
+                    ScrubValue {
+                        id: gapsOutScrub
+                        s: root.s
+                        value: root.gapsOut
+                        openValue: root.base.gapsOut
+                        from: 0
+                        to: 60
+                        step: 1
+                        unit: "px"
+                        onEdited: v => {
+                            root.gapsOut = v;
+                            root.writeDeco("gaps_out", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: roundRow
+                    label: "Rounding"
+                    caption: "Corner radius in pixels"
+                    ScrubValue {
+                        id: roundScrub
+                        s: root.s
+                        value: root.rounding
+                        openValue: root.base.rounding
+                        from: 0
+                        to: 30
+                        step: 1
+                        unit: "px"
+                        onEdited: v => {
+                            root.rounding = v;
+                            root.writeDeco("rounding", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: roundPowRow
+                    label: "Rounding power"
+                    caption: "Higher bends corners to a squircle"
+                    ScrubValue {
+                        id: roundPowScrub
+                        s: root.s
+                        value: root.roundingPower
+                        openValue: root.base.roundingPower
+                        from: 1
+                        to: 10
+                        step: 1
+                        onEdited: v => {
+                            root.roundingPower = v;
+                            root.writeDeco("rounding_power", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: borderRow
+                    label: "Border size"
+                    caption: "Window outline thickness"
+                    ScrubValue {
+                        id: borderScrub
+                        s: root.s
+                        value: root.borderSize
+                        openValue: root.base.borderSize
+                        from: 0
+                        to: 8
+                        step: 1
+                        unit: "px"
+                        onEdited: v => {
+                            root.borderSize = v;
+                            root.writeDeco("border_size", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: resizeRow
+                    label: "Resize on border"
+                    caption: "Drag a window edge to resize"
+                    LinkToggle {
+                        s: root.s
+                        on: root.resizeOnBorder
+                        onToggled: {
+                            root.resizeOnBorder = !root.resizeOnBorder;
+                            root.writeDeco("resize_on_border", root.resizeOnBorder ? "true" : "false");
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: layoutRow
+                    label: "Layout"
+                    caption: "Tiling layout for new windows"
+                    SettingsSeg {
+                        s: root.s
+                        options: root.layoutOptions
+                        value: root.layout
+                        onPicked: v => {
+                            root.layout = v;
+                            root.writeDeco("layout", "\"" + v + "\"");
+                        }
                     }
                 }
             }
 
-            FieldRow {
-                id: gapsOutRow
-                label: "Gaps outer"
-                caption: "Space to the screen edge"
-                ScrubValue {
-                    id: gapsOutScrub
-                    s: root.s
-                    value: root.gapsOut
-                    openValue: root.base.gapsOut
-                    from: 0; to: 60; step: 1; unit: "px"
-                    onEdited: v => {
-                        root.gapsOut = v;
-                        root.writeDeco("gaps_out", String(v));
+            Group {
+                id: nightGrp
+                title: "Night light"
+
+                FieldRow {
+                    id: nlModeRow
+                    label: "Mode"
+                    caption: "Off, always warm, or auto by time"
+                    SettingsSeg {
+                        s: root.s
+                        options: root.nightModeOptions
+                        value: Flags.nightLightMode
+                        onPicked: v => NightLight.setMode(v)
+                    }
+                }
+
+                FieldRow {
+                    id: nlTempRow
+                    label: "Temperature"
+                    caption: "Lower is warmer"
+                    collapsed: Flags.nightLightMode === "off"
+                    ScrubValue {
+                        id: nlTempScrub
+                        s: root.s
+                        value: Flags.nightLightTemp
+                        openValue: root.base.nlTemp
+                        from: 2200
+                        to: 6000
+                        step: 100
+                        unit: "K"
+                        onEdited: v => NightLight.setTemp(v)
+                    }
+                }
+
+                FieldRow {
+                    id: nlOnRow
+                    label: "On at"
+                    caption: "Warm tint starts"
+                    collapsed: Flags.nightLightMode !== "scheduled"
+                    ScrubValue {
+                        id: nlOnScrub
+                        s: root.s
+                        value: Flags.nightLightOnMin
+                        openValue: root.base.nlOnMin
+                        from: 0
+                        to: 1425
+                        step: 15
+                        fmt: root.fmtClock
+                        onEdited: v => NightLight.setOnMin(v)
+                    }
+                }
+
+                FieldRow {
+                    id: nlOffRow
+                    label: "Off at"
+                    caption: "Back to neutral"
+                    collapsed: Flags.nightLightMode !== "scheduled"
+                    ScrubValue {
+                        id: nlOffScrub
+                        s: root.s
+                        value: Flags.nightLightOffMin
+                        openValue: root.base.nlOffMin
+                        from: 0
+                        to: 1425
+                        step: 15
+                        fmt: root.fmtClock
+                        onEdited: v => NightLight.setOffMin(v)
                     }
                 }
             }
 
-            FieldRow {
-                id: roundRow
-                label: "Rounding"
-                caption: "Corner radius in pixels"
-                ScrubValue {
-                    id: roundScrub
-                    s: root.s
-                    value: root.rounding
-                    openValue: root.base.rounding
-                    from: 0; to: 30; step: 1; unit: "px"
-                    onEdited: v => {
-                        root.rounding = v;
-                        root.writeDeco("rounding", String(v));
+            Group {
+                id: shadowGrp
+                title: "Shadow"
+
+                FieldRow {
+                    id: shEnRow
+                    label: "Enabled"
+                    caption: "Drop shadow under windows"
+                    LinkToggle {
+                        s: root.s
+                        on: root.shadowOn
+                        onToggled: {
+                            root.shadowOn = !root.shadowOn;
+                            root.writeShadow("enabled", root.shadowOn ? "true" : "false");
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: shRangeRow
+                    label: "Range"
+                    caption: "How far the shadow spreads"
+                    collapsed: !root.shadowOn
+                    ScrubValue {
+                        id: shRangeScrub
+                        s: root.s
+                        value: root.shadowRange
+                        openValue: root.base.shadowRange
+                        from: 0
+                        to: 50
+                        step: 1
+                        unit: "px"
+                        onEdited: v => {
+                            root.shadowRange = v;
+                            root.writeShadow("range", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: shPowRow
+                    label: "Render power"
+                    caption: "Shadow falloff sharpness"
+                    collapsed: !root.shadowOn
+                    ScrubValue {
+                        id: shPowScrub
+                        s: root.s
+                        value: root.shadowRenderPower
+                        openValue: root.base.shadowRenderPower
+                        from: 1
+                        to: 4
+                        step: 1
+                        onEdited: v => {
+                            root.shadowRenderPower = v;
+                            root.writeShadow("render_power", String(v));
+                        }
                     }
                 }
             }
 
-            FieldRow {
-                id: roundPowRow
-                label: "Rounding power"
-                caption: "Higher bends corners to a squircle"
-                ScrubValue {
-                    id: roundPowScrub
-                    s: root.s
-                    value: root.roundingPower
-                    openValue: root.base.roundingPower
-                    from: 1; to: 10; step: 1
-                    onEdited: v => {
-                        root.roundingPower = v;
-                        root.writeDeco("rounding_power", String(v));
+            Group {
+                id: blurGrp
+                title: "Blur"
+
+                FieldRow {
+                    id: blEnRow
+                    label: "Enabled"
+                    caption: "Blur behind transparent windows"
+                    LinkToggle {
+                        s: root.s
+                        on: root.blurOn
+                        onToggled: {
+                            root.blurOn = !root.blurOn;
+                            root.writeBlur("enabled", root.blurOn ? "true" : "false");
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: blSizeRow
+                    label: "Strength"
+                    caption: "Blur radius"
+                    collapsed: !root.blurOn
+                    ScrubValue {
+                        id: blSizeScrub
+                        s: root.s
+                        value: root.blurSize
+                        openValue: root.base.blurSize
+                        from: 1
+                        to: 20
+                        step: 1
+                        unit: "px"
+                        onEdited: v => {
+                            root.blurSize = v;
+                            root.writeBlur("size", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: blPassRow
+                    label: "Passes"
+                    caption: "More passes, smoother blur"
+                    collapsed: !root.blurOn
+                    ScrubValue {
+                        id: blPassScrub
+                        s: root.s
+                        value: root.blurPasses
+                        openValue: root.base.blurPasses
+                        from: 1
+                        to: 5
+                        step: 1
+                        onEdited: v => {
+                            root.blurPasses = v;
+                            root.writeBlur("passes", String(v));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: blVibRow
+                    label: "Vibrancy"
+                    caption: "Color saturation behind the blur"
+                    collapsed: !root.blurOn
+                    ScrubValue {
+                        id: blVibScrub
+                        s: root.s
+                        value: root.blurVibrancy
+                        openValue: root.base.blurVibrancy
+                        from: 0
+                        to: 1
+                        step: 0.01
+                        decimals: 2
+                        onEdited: v => {
+                            root.blurVibrancy = v;
+                            root.writeBlur("vibrancy", v.toFixed(2));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: blNoiseRow
+                    label: "Noise"
+                    caption: "Grain mixed into the blur"
+                    collapsed: !root.blurOn
+                    ScrubValue {
+                        id: blNoiseScrub
+                        s: root.s
+                        value: root.blurNoise
+                        openValue: root.base.blurNoise
+                        from: 0
+                        to: 0.2
+                        step: 0.01
+                        decimals: 2
+                        onEdited: v => {
+                            root.blurNoise = v;
+                            root.writeBlur("noise", v.toFixed(2));
+                        }
                     }
                 }
             }
 
-            FieldRow {
-                id: borderRow
-                label: "Border size"
-                caption: "Window outline thickness"
-                ScrubValue {
-                    id: borderScrub
-                    s: root.s
-                    value: root.borderSize
-                    openValue: root.base.borderSize
-                    from: 0; to: 8; step: 1; unit: "px"
-                    onEdited: v => {
-                        root.borderSize = v;
-                        root.writeDeco("border_size", String(v));
+            Group {
+                id: opGrp
+                title: "Opacity"
+
+                FieldRow {
+                    id: opActRow
+                    label: "Active window"
+                    caption: "Focused window transparency"
+                    ScrubValue {
+                        id: opActScrub
+                        s: root.s
+                        value: root.activeOpacity
+                        openValue: root.base.activeOpacity
+                        from: 0.5
+                        to: 1.0
+                        step: 0.05
+                        decimals: 2
+                        onEdited: v => {
+                            root.activeOpacity = v;
+                            root.writeOpacity("active_opacity", v.toFixed(2));
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: opInactRow
+                    label: "Inactive window"
+                    caption: "Unfocused window transparency"
+                    ScrubValue {
+                        id: opInactScrub
+                        s: root.s
+                        value: root.inactiveOpacity
+                        openValue: root.base.inactiveOpacity
+                        from: 0.5
+                        to: 1.0
+                        step: 0.05
+                        decimals: 2
+                        onEdited: v => {
+                            root.inactiveOpacity = v;
+                            root.writeOpacity("inactive_opacity", v.toFixed(2));
+                        }
                     }
                 }
             }
 
-            FieldRow {
-                id: resizeRow
-                label: "Resize on border"
-                caption: "Drag a window edge to resize"
-                LinkToggle {
-                    s: root.s
-                    on: root.resizeOnBorder
-                    onToggled: {
-                        root.resizeOnBorder = !root.resizeOnBorder;
-                        root.writeDeco("resize_on_border", root.resizeOnBorder ? "true" : "false");
+            Group {
+                id: pillGrp
+                title: "Pill"
+
+                FieldRow {
+                    id: pillGapRow
+                    label: "Pill gap"
+                    caption: "Space above the pill. Lower pulls windows up with it."
+                    ScrubValue {
+                        id: pillGapScrub
+                        s: root.s
+                        value: Flags.topGap
+                        openValue: root.base.topGap
+                        from: 0
+                        to: 2
+                        step: 0.1
+                        decimals: 1
+                        onEdited: v => Flags.topGap = v
+                    }
+                }
+
+                FieldRow {
+                    id: appGapRow
+                    label: "App gap"
+                    caption: "Space under the pill. Lower pulls windows up."
+                    ScrubValue {
+                        id: appGapScrub
+                        s: root.s
+                        value: Flags.appGap
+                        openValue: root.base.appGap
+                        from: 0
+                        to: 2
+                        step: 0.1
+                        decimals: 1
+                        onEdited: v => Flags.appGap = v
+                    }
+                }
+
+                FieldRow {
+                    id: pillOpRow
+                    label: "Pill opacity"
+                    caption: "How see-through the pill sits"
+                    ScrubValue {
+                        id: pillOpScrub
+                        s: root.s
+                        value: Flags.pillOpacity
+                        openValue: root.base.pillOpacity
+                        from: 0.55
+                        to: 1.0
+                        step: 0.05
+                        decimals: 2
+                        onEdited: v => Flags.pillOpacity = v
+                    }
+                }
+
+                FieldRow {
+                    id: pillBlurRow
+                    label: "Pill blur"
+                    caption: "Frosts behind the pill. Needs opacity under 100%."
+                    LinkToggle {
+                        s: root.s
+                        on: Flags.pillBlur
+                        onToggled: {
+                            Flags.pillBlur = !Flags.pillBlur;
+                            root.applyPillBlur(Flags.pillBlur);
+                        }
+                    }
+                }
+
+                FieldRow {
+                    id: pillHRow
+                    label: "Height"
+                    caption: "Resting pill height"
+                    ScrubValue {
+                        id: pillHScrub
+                        s: root.s
+                        value: Flags.pillHeight
+                        openValue: root.base.pillHeight
+                        from: 24
+                        to: 64
+                        step: 1
+                        decimals: 0
+                        unit: "px"
+                        onEdited: v => Flags.pillHeight = v
+                    }
+                }
+
+                FieldRow {
+                    id: pillRoundRow
+                    label: "Rounding"
+                    caption: "Corner radius, up to fully round"
+                    ScrubValue {
+                        id: pillRoundScrub
+                        s: root.s
+                        value: Flags.pillRounding
+                        openValue: root.base.pillRounding
+                        from: 0
+                        to: 32
+                        step: 1
+                        decimals: 0
+                        unit: "px"
+                        onEdited: v => Flags.pillRounding = v
+                    }
+                }
+
+                FieldRow {
+                    id: idleWRow
+                    label: "Idle width"
+                    caption: "Narrowest the resting pill gets"
+                    ScrubValue {
+                        id: idleWScrub
+                        s: root.s
+                        value: Flags.idleWidth
+                        openValue: root.base.idleWidth
+                        from: 100
+                        to: 320
+                        step: 5
+                        decimals: 0
+                        unit: "px"
+                        onEdited: v => Flags.idleWidth = v
+                    }
+                }
+
+                FieldRow {
+                    id: shadowPillRow
+                    label: "Shadow"
+                    caption: "Drop shadow under the pill"
+                    LinkToggle {
+                        s: root.s
+                        on: Flags.pillShadow
+                        onToggled: Flags.pillShadow = !Flags.pillShadow
+                    }
+                }
+
+                FieldRow {
+                    id: borderPillRow
+                    label: "Border"
+                    caption: "Hairline around the pill"
+                    LinkToggle {
+                        s: root.s
+                        on: Flags.pillBorder
+                        onToggled: Flags.pillBorder = !Flags.pillBorder
+                    }
+                }
+
+                FieldRow {
+                    id: sheenRow
+                    label: "Sheen"
+                    caption: "Highlight along the top edge"
+                    LinkToggle {
+                        s: root.s
+                        on: Flags.pillSheen
+                        onToggled: Flags.pillSheen = !Flags.pillSheen
+                    }
+                }
+
+                FieldRow {
+                    id: springRow
+                    label: "Spring feel"
+                    caption: "How the pill reshapes"
+                    SettingsSeg {
+                        s: root.s
+                        options: [
+                            {
+                                label: "Soft",
+                                value: "soft"
+                            },
+                            {
+                                label: "Snappy",
+                                value: "snappy"
+                            }
+                        ]
+                        value: Flags.springFeel
+                        onPicked: v => Flags.springFeel = v
+                    }
+                }
+
+                FieldRow {
+                    id: expandRow
+                    label: "Expand on"
+                    caption: "What opens the icon row"
+                    SettingsSeg {
+                        s: root.s
+                        options: [
+                            {
+                                label: "Hover",
+                                value: "hover"
+                            },
+                            {
+                                label: "Click",
+                                value: "click"
+                            }
+                        ]
+                        value: Flags.expandMode
+                        onPicked: v => Flags.expandMode = v
+                    }
+                }
+
+                FieldRow {
+                    id: openDelayRow
+                    label: "Open delay"
+                    caption: "Wait before the hover row opens"
+                    ScrubValue {
+                        id: openDelayScrub
+                        s: root.s
+                        value: Flags.openDelay
+                        openValue: root.base.openDelay
+                        from: 0
+                        to: 1000
+                        step: 50
+                        decimals: 0
+                        unit: "ms"
+                        onEdited: v => Flags.openDelay = v
+                    }
+                }
+
+                FieldRow {
+                    id: closeDelayRow
+                    label: "Close delay"
+                    caption: "Wait before it folds after you leave"
+                    ScrubValue {
+                        id: closeDelayScrub
+                        s: root.s
+                        value: Flags.closeDelay
+                        openValue: root.base.closeDelay
+                        from: 0
+                        to: 2000
+                        step: 50
+                        decimals: 0
+                        unit: "ms"
+                        onEdited: v => Flags.closeDelay = v
                     }
                 }
             }
 
-            FieldRow {
-                id: layoutRow
-                label: "Layout"
-                caption: "Tiling layout for new windows"
-                SettingsSeg {
-                    s: root.s
-                    options: root.layoutOptions
-                    value: root.layout
-                    onPicked: v => {
-                        root.layout = v;
-                        root.writeDeco("layout", "\"" + v + "\"");
+            Group {
+                id: wsGrp
+                title: "Workspaces"
+
+                FieldRow {
+                    id: wsStyleRow
+                    label: "Style"
+                    caption: "In the hover row"
+                    SettingsSeg {
+                        s: root.s
+                        options: [
+                            {
+                                label: "Dots",
+                                value: "dots"
+                            },
+                            {
+                                label: "Numbers",
+                                value: "numbers"
+                            },
+                            {
+                                label: "Names",
+                                value: "names"
+                            }
+                        ]
+                        value: Flags.wsStyle
+                        onPicked: v => Flags.wsStyle = v
                     }
                 }
-            }
 
-            }
-
-            Group { id: nightGrp; title: "Night light"
-
-            FieldRow {
-                id: nlModeRow
-                label: "Mode"
-                caption: "Off, always warm, or auto by time"
-                SettingsSeg {
-                    s: root.s
-                    options: root.nightModeOptions
-                    value: Flags.nightLightMode
-                    onPicked: v => NightLight.setMode(v)
-                }
-            }
-
-            FieldRow {
-                id: nlTempRow
-                label: "Temperature"
-                caption: "Lower is warmer"
-                collapsed: Flags.nightLightMode === "off"
-                ScrubValue {
-                    id: nlTempScrub
-                    s: root.s
-                    value: Flags.nightLightTemp
-                    openValue: root.base.nlTemp
-                    from: 2200; to: 6000; step: 100; unit: "K"
-                    onEdited: v => NightLight.setTemp(v)
-                }
-            }
-
-            FieldRow {
-                id: nlOnRow
-                label: "On at"
-                caption: "Warm tint starts"
-                collapsed: Flags.nightLightMode !== "scheduled"
-                ScrubValue {
-                    id: nlOnScrub
-                    s: root.s
-                    value: Flags.nightLightOnMin
-                    openValue: root.base.nlOnMin
-                    from: 0; to: 1425; step: 15
-                    fmt: root.fmtClock
-                    onEdited: v => NightLight.setOnMin(v)
-                }
-            }
-
-            FieldRow {
-                id: nlOffRow
-                label: "Off at"
-                caption: "Back to neutral"
-                collapsed: Flags.nightLightMode !== "scheduled"
-                ScrubValue {
-                    id: nlOffScrub
-                    s: root.s
-                    value: Flags.nightLightOffMin
-                    openValue: root.base.nlOffMin
-                    from: 0; to: 1425; step: 15
-                    fmt: root.fmtClock
-                    onEdited: v => NightLight.setOffMin(v)
-                }
-            }
-
-            }
-
-            Group { id: shadowGrp; title: "Shadow"
-
-            FieldRow {
-                id: shEnRow
-                label: "Enabled"
-                caption: "Drop shadow under windows"
-                LinkToggle {
-                    s: root.s
-                    on: root.shadowOn
-                    onToggled: {
-                        root.shadowOn = !root.shadowOn;
-                        root.writeShadow("enabled", root.shadowOn ? "true" : "false");
+                FieldRow {
+                    id: wsShowRow
+                    label: "Show"
+                    caption: "Or every one up to the last"
+                    SettingsSeg {
+                        s: root.s
+                        options: [
+                            {
+                                label: "Occupied",
+                                value: "occupied"
+                            },
+                            {
+                                label: "All",
+                                value: "all"
+                            }
+                        ]
+                        value: Flags.wsShow
+                        onPicked: v => Flags.wsShow = v
                     }
                 }
-            }
 
-            FieldRow {
-                id: shRangeRow
-                label: "Range"
-                caption: "How far the shadow spreads"
-                collapsed: !root.shadowOn
-                ScrubValue {
-                    id: shRangeScrub
-                    s: root.s
-                    value: root.shadowRange
-                    openValue: root.base.shadowRange
-                    from: 0; to: 50; step: 1; unit: "px"
-                    onEdited: v => {
-                        root.shadowRange = v;
-                        root.writeShadow("range", String(v));
+                FieldRow {
+                    id: wsScrollRow
+                    label: "Scroll to switch"
+                    caption: "Mouse wheel over the workspaces"
+                    LinkToggle {
+                        s: root.s
+                        on: Flags.wsScroll
+                        onToggled: Flags.wsScroll = !Flags.wsScroll
                     }
                 }
-            }
-
-            FieldRow {
-                id: shPowRow
-                label: "Render power"
-                caption: "Shadow falloff sharpness"
-                collapsed: !root.shadowOn
-                ScrubValue {
-                    id: shPowScrub
-                    s: root.s
-                    value: root.shadowRenderPower
-                    openValue: root.base.shadowRenderPower
-                    from: 1; to: 4; step: 1
-                    onEdited: v => {
-                        root.shadowRenderPower = v;
-                        root.writeShadow("render_power", String(v));
-                    }
-                }
-            }
-
-            }
-
-            Group { id: blurGrp; title: "Blur"
-
-            FieldRow {
-                id: blEnRow
-                label: "Enabled"
-                caption: "Blur behind transparent windows"
-                LinkToggle {
-                    s: root.s
-                    on: root.blurOn
-                    onToggled: {
-                        root.blurOn = !root.blurOn;
-                        root.writeBlur("enabled", root.blurOn ? "true" : "false");
-                    }
-                }
-            }
-
-            FieldRow {
-                id: blSizeRow
-                label: "Strength"
-                caption: "Blur radius"
-                collapsed: !root.blurOn
-                ScrubValue {
-                    id: blSizeScrub
-                    s: root.s
-                    value: root.blurSize
-                    openValue: root.base.blurSize
-                    from: 1; to: 20; step: 1; unit: "px"
-                    onEdited: v => {
-                        root.blurSize = v;
-                        root.writeBlur("size", String(v));
-                    }
-                }
-            }
-
-            FieldRow {
-                id: blPassRow
-                label: "Passes"
-                caption: "More passes, smoother blur"
-                collapsed: !root.blurOn
-                ScrubValue {
-                    id: blPassScrub
-                    s: root.s
-                    value: root.blurPasses
-                    openValue: root.base.blurPasses
-                    from: 1; to: 5; step: 1
-                    onEdited: v => {
-                        root.blurPasses = v;
-                        root.writeBlur("passes", String(v));
-                    }
-                }
-            }
-
-            FieldRow {
-                id: blVibRow
-                label: "Vibrancy"
-                caption: "Color saturation behind the blur"
-                collapsed: !root.blurOn
-                ScrubValue {
-                    id: blVibScrub
-                    s: root.s
-                    value: root.blurVibrancy
-                    openValue: root.base.blurVibrancy
-                    from: 0; to: 1; step: 0.01; decimals: 2
-                    onEdited: v => {
-                        root.blurVibrancy = v;
-                        root.writeBlur("vibrancy", v.toFixed(2));
-                    }
-                }
-            }
-
-            FieldRow {
-                id: blNoiseRow
-                label: "Noise"
-                caption: "Grain mixed into the blur"
-                collapsed: !root.blurOn
-                ScrubValue {
-                    id: blNoiseScrub
-                    s: root.s
-                    value: root.blurNoise
-                    openValue: root.base.blurNoise
-                    from: 0; to: 0.2; step: 0.01; decimals: 2
-                    onEdited: v => {
-                        root.blurNoise = v;
-                        root.writeBlur("noise", v.toFixed(2));
-                    }
-                }
-            }
-
-            }
-
-            Group { id: opGrp; title: "Opacity"
-
-            FieldRow {
-                id: opActRow
-                label: "Active window"
-                caption: "Focused window transparency"
-                ScrubValue {
-                    id: opActScrub
-                    s: root.s
-                    value: root.activeOpacity
-                    openValue: root.base.activeOpacity
-                    from: 0.5; to: 1.0; step: 0.05; decimals: 2
-                    onEdited: v => {
-                        root.activeOpacity = v;
-                        root.writeOpacity("active_opacity", v.toFixed(2));
-                    }
-                }
-            }
-
-            FieldRow {
-                id: opInactRow
-                label: "Inactive window"
-                caption: "Unfocused window transparency"
-                ScrubValue {
-                    id: opInactScrub
-                    s: root.s
-                    value: root.inactiveOpacity
-                    openValue: root.base.inactiveOpacity
-                    from: 0.5; to: 1.0; step: 0.05; decimals: 2
-                    onEdited: v => {
-                        root.inactiveOpacity = v;
-                        root.writeOpacity("inactive_opacity", v.toFixed(2));
-                    }
-                }
-            }
-
-            }
-
-            Group { id: pillGrp; title: "Pill"
-
-            FieldRow {
-                id: pillGapRow
-                label: "Pill gap"
-                caption: "Space above the pill. Lower pulls windows up with it."
-                ScrubValue {
-                    id: pillGapScrub
-                    s: root.s
-                    value: Flags.topGap
-                    openValue: root.base.topGap
-                    from: 0; to: 2; step: 0.1; decimals: 1
-                    onEdited: v => Flags.topGap = v
-                }
-            }
-
-            FieldRow {
-                id: appGapRow
-                label: "App gap"
-                caption: "Space under the pill. Lower pulls windows up."
-                ScrubValue {
-                    id: appGapScrub
-                    s: root.s
-                    value: Flags.appGap
-                    openValue: root.base.appGap
-                    from: 0; to: 2; step: 0.1; decimals: 1
-                    onEdited: v => Flags.appGap = v
-                }
-            }
-
-            FieldRow {
-                id: pillOpRow
-                label: "Pill opacity"
-                caption: "How see-through the pill sits"
-                ScrubValue {
-                    id: pillOpScrub
-                    s: root.s
-                    value: Flags.pillOpacity
-                    openValue: root.base.pillOpacity
-                    from: 0.55; to: 1.0; step: 0.05; decimals: 2
-                    onEdited: v => Flags.pillOpacity = v
-                }
-            }
-
-            FieldRow {
-                id: pillBlurRow
-                label: "Pill blur"
-                caption: "Frosts behind the pill. Needs opacity under 100%."
-                LinkToggle {
-                    s: root.s
-                    on: Flags.pillBlur
-                    onToggled: {
-                        Flags.pillBlur = !Flags.pillBlur;
-                        root.applyPillBlur(Flags.pillBlur);
-                    }
-                }
-            }
-
-            FieldRow {
-                id: pillHRow
-                label: "Height"
-                caption: "Resting pill height"
-                ScrubValue {
-                    id: pillHScrub
-                    s: root.s
-                    value: Flags.pillHeight
-                    openValue: root.base.pillHeight
-                    from: 24; to: 64; step: 1; decimals: 0
-                    unit: "px"
-                    onEdited: v => Flags.pillHeight = v
-                }
-            }
-
-            FieldRow {
-                id: pillRoundRow
-                label: "Rounding"
-                caption: "Corner radius, up to fully round"
-                ScrubValue {
-                    id: pillRoundScrub
-                    s: root.s
-                    value: Flags.pillRounding
-                    openValue: root.base.pillRounding
-                    from: 0; to: 32; step: 1; decimals: 0
-                    unit: "px"
-                    onEdited: v => Flags.pillRounding = v
-                }
-            }
-
-            FieldRow {
-                id: idleWRow
-                label: "Idle width"
-                caption: "Narrowest the resting pill gets"
-                ScrubValue {
-                    id: idleWScrub
-                    s: root.s
-                    value: Flags.idleWidth
-                    openValue: root.base.idleWidth
-                    from: 100; to: 320; step: 5; decimals: 0
-                    unit: "px"
-                    onEdited: v => Flags.idleWidth = v
-                }
-            }
-
-            FieldRow {
-                id: shadowPillRow
-                label: "Shadow"
-                caption: "Drop shadow under the pill"
-                LinkToggle {
-                    s: root.s
-                    on: Flags.pillShadow
-                    onToggled: Flags.pillShadow = !Flags.pillShadow
-                }
-            }
-
-            FieldRow {
-                id: borderPillRow
-                label: "Border"
-                caption: "Hairline around the pill"
-                LinkToggle {
-                    s: root.s
-                    on: Flags.pillBorder
-                    onToggled: Flags.pillBorder = !Flags.pillBorder
-                }
-            }
-
-            FieldRow {
-                id: sheenRow
-                label: "Sheen"
-                caption: "Highlight along the top edge"
-                LinkToggle {
-                    s: root.s
-                    on: Flags.pillSheen
-                    onToggled: Flags.pillSheen = !Flags.pillSheen
-                }
-            }
-
-            FieldRow {
-                id: springRow
-                label: "Spring feel"
-                caption: "How the pill reshapes"
-                SettingsSeg {
-                    s: root.s
-                    options: [{ label: "Soft", value: "soft" }, { label: "Snappy", value: "snappy" }]
-                    value: Flags.springFeel
-                    onPicked: (v) => Flags.springFeel = v
-                }
-            }
-
-            FieldRow {
-                id: expandRow
-                label: "Expand on"
-                caption: "What opens the icon row"
-                SettingsSeg {
-                    s: root.s
-                    options: [{ label: "Hover", value: "hover" }, { label: "Click", value: "click" }]
-                    value: Flags.expandMode
-                    onPicked: (v) => Flags.expandMode = v
-                }
-            }
-
-            FieldRow {
-                id: openDelayRow
-                label: "Open delay"
-                caption: "Wait before the hover row opens"
-                ScrubValue {
-                    id: openDelayScrub
-                    s: root.s
-                    value: Flags.openDelay
-                    openValue: root.base.openDelay
-                    from: 0; to: 1000; step: 50; decimals: 0
-                    unit: "ms"
-                    onEdited: v => Flags.openDelay = v
-                }
-            }
-
-            FieldRow {
-                id: closeDelayRow
-                label: "Close delay"
-                caption: "Wait before it folds after you leave"
-                ScrubValue {
-                    id: closeDelayScrub
-                    s: root.s
-                    value: Flags.closeDelay
-                    openValue: root.base.closeDelay
-                    from: 0; to: 2000; step: 50; decimals: 0
-                    unit: "ms"
-                    onEdited: v => Flags.closeDelay = v
-                }
-            }
-
-            }
-
-            Group { id: wsGrp; title: "Workspaces"
-
-            FieldRow {
-                id: wsStyleRow
-                label: "Style"
-                caption: "In the hover row"
-                SettingsSeg {
-                    s: root.s
-                    options: [{ label: "Dots", value: "dots" }, { label: "Numbers", value: "numbers" }, { label: "Names", value: "names" }]
-                    value: Flags.wsStyle
-                    onPicked: (v) => Flags.wsStyle = v
-                }
-            }
-
-            FieldRow {
-                id: wsShowRow
-                label: "Show"
-                caption: "Or every one up to the last"
-                SettingsSeg {
-                    s: root.s
-                    options: [{ label: "Occupied", value: "occupied" }, { label: "All", value: "all" }]
-                    value: Flags.wsShow
-                    onPicked: (v) => Flags.wsShow = v
-                }
-            }
-
-            FieldRow {
-                id: wsScrollRow
-                label: "Scroll to switch"
-                caption: "Mouse wheel over the workspaces"
-                LinkToggle {
-                    s: root.s
-                    on: Flags.wsScroll
-                    onToggled: Flags.wsScroll = !Flags.wsScroll
-                }
-            }
-
             }
 
             Text {
@@ -1176,7 +1611,10 @@ SettingsSurface {
                 lineHeight: 1.25
             }
 
-            Item { width: 1; height: 10 * root.s }
+            Item {
+                width: 1
+                height: 10 * root.s
+            }
         }
     }
 }

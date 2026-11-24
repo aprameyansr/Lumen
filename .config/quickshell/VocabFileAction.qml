@@ -20,7 +20,9 @@ Item {
     height: 30 * fa.s
     opacity: fa.dim ? 0.45 : 1
 
-    HoverHandler { onHoveredChanged: fa.page.reportRowHover(fa, hovered) }
+    HoverHandler {
+        onHoveredChanged: fa.page.reportRowHover(fa, hovered)
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -28,7 +30,11 @@ Item {
         anchors.bottomMargin: 2 * fa.s
         radius: 8 * fa.s
         color: fa.lit ? Theme.frameBg : "transparent"
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 
     Row {

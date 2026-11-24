@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
-import Quickshell
 import Quickshell.Io
 import "Singletons"
 
@@ -88,7 +87,9 @@ SettingsSurface {
 
     /** What the list shows: everything A to Z, or the best fuzzy matches first. */
     readonly property var shown: {
-        const byName = (a, b) => a.word.localeCompare(b.word, undefined, { sensitivity: "base" });
+        const byName = (a, b) => a.word.localeCompare(b.word, undefined, {
+                sensitivity: "base"
+            });
         const q = root.query.trim();
         if (q.length === 0)
             return root.words.slice().sort(byName);
@@ -98,7 +99,10 @@ SettingsSurface {
             for (const h of w.heard)
                 best = Math.max(best, root.fuzzy(q, h) - 2);
             if (best >= 0)
-                scored.push({ w: w, sc: best });
+                scored.push({
+                    w: w,
+                    sc: best
+                });
         }
         scored.sort((a, b) => b.sc - a.sc || byName(a.w, b.w));
         return scored.map(x => x.w);
@@ -177,10 +181,7 @@ SettingsSurface {
     // ── everyday English ──
 
     property var common: ({})
-    readonly property var contractions: ["i'm", "i've", "i'll", "i'd", "don't", "can't", "won't", "it's", "isn't",
-        "didn't", "doesn't", "wasn't", "aren't", "weren't", "couldn't", "wouldn't", "shouldn't", "haven't",
-        "hasn't", "hadn't", "you're", "you'll", "you've", "you'd", "we're", "we'll", "we've", "they're",
-        "they'll", "they've", "that's", "there's", "what's", "let's", "he's", "she's", "who's", "here's"]
+    readonly property var contractions: ["i'm", "i've", "i'll", "i'd", "don't", "can't", "won't", "it's", "isn't", "didn't", "doesn't", "wasn't", "aren't", "weren't", "couldn't", "wouldn't", "shouldn't", "haven't", "hasn't", "hadn't", "you're", "you'll", "you've", "you'd", "we're", "we'll", "we've", "they're", "they'll", "they've", "that's", "there's", "what's", "let's", "he's", "she's", "who's", "here's"]
 
     FileView {
         path: Dictate.svcDir + "/common-words.txt"
@@ -316,7 +317,11 @@ SettingsSurface {
         doneTimer.stop();
         const next = root.words.slice();
         const i = root.indexOfWord(root.current);
-        const entry = { word: root.current, heard: root.teachHeard, pinned: i >= 0 ? (next[i].pinned || []) : [] };
+        const entry = {
+            word: root.current,
+            heard: root.teachHeard,
+            pinned: i >= 0 ? (next[i].pinned || []) : []
+        };
         if (i >= 0)
             next[i] = entry;
         else
@@ -394,7 +399,11 @@ SettingsSurface {
         if (!root.isPinned(e, form))
             pinned.push(form);
         const next = root.words.slice();
-        next[i] = { word: e.word, heard: e.heard.slice(), pinned: pinned };
+        next[i] = {
+            word: e.word,
+            heard: e.heard.slice(),
+            pinned: pinned
+        };
         root.commit(next);
     }
 
@@ -434,7 +443,9 @@ SettingsSurface {
 
     function commit(arr) {
         root.words = arr;
-        writer.setText(JSON.stringify({ words: arr }, null, 2) + "\n");
+        writer.setText(JSON.stringify({
+            words: arr
+        }, null, 2) + "\n");
     }
 
     // ── import / export ──
@@ -457,13 +468,21 @@ SettingsSurface {
     }
 
     function merge(incoming) {
-        const next = root.words.map(w => ({ word: w.word, heard: w.heard.slice(), pinned: (w.pinned || []).slice() }));
+        const next = root.words.map(w => ({
+                    word: w.word,
+                    heard: w.heard.slice(),
+                    pinned: (w.pinned || []).slice()
+                }));
         let added = 0, grew = 0;
         for (const w of incoming) {
             const k = w.word.toLowerCase();
             const cur = next.find(x => x.word.toLowerCase() === k);
             if (!cur) {
-                next.push({ word: w.word, heard: w.heard.slice(), pinned: w.pinned.slice() });
+                next.push({
+                    word: w.word,
+                    heard: w.heard.slice(),
+                    pinned: w.pinned.slice()
+                });
                 added++;
                 continue;
             }
@@ -480,20 +499,23 @@ SettingsSurface {
                 grew++;
         }
         root.commit(next);
-        return { added: added, grew: grew };
+        return {
+            added: added,
+            grew: grew
+        };
     }
 
     function plural(n, one) {
         return n + " " + one + (n === 1 ? "" : "s");
     }
 
-    Process { id: notifyProc }
+    Process {
+        id: notifyProc
+    }
 
     Process {
         id: exportPick
-        command: ["zenity", "--file-selection", "--save",
-            "--title=Export vocabulary", "--filename=" + Dictate.home + "/lumen-vocabulary.json",
-            "--file-filter=Vocabulary (*.json) | *.json"]
+        command: ["zenity", "--file-selection", "--save", "--title=Export vocabulary", "--filename=" + Dictate.home + "/lumen-vocabulary.json", "--file-filter=Vocabulary (*.json) | *.json"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let path = this.text.trim();
@@ -504,8 +526,11 @@ SettingsSurface {
                 if (!/\.json$/i.test(path))
                     path += ".json";
                 exportWrite.target = path;
-                exportWrite.command = ["sh", "-c", "printf '%s\n' \"$2\" > \"$1\"", "_", path,
-                    JSON.stringify({ format: "lumen-vocabulary", version: 1, words: root.words }, null, 2)];
+                exportWrite.command = ["sh", "-c", "printf '%s\n' \"$2\" > \"$1\"", "_", path, JSON.stringify({
+                        format: "lumen-vocabulary",
+                        version: 1,
+                        words: root.words
+                    }, null, 2)];
                 exportWrite.running = true;
             }
         }
@@ -514,18 +539,15 @@ SettingsSurface {
     Process {
         id: exportWrite
         property string target: ""
-        onExited: (code) => {
-            root.notify(code === 0
-                ? "Exported " + root.plural(root.words.length, "word") + " to " + exportWrite.target.replace(Dictate.home, "~")
-                : "Couldn't write " + exportWrite.target.replace(Dictate.home, "~"));
+        onExited: code => {
+            root.notify(code === 0 ? "Exported " + root.plural(root.words.length, "word") + " to " + exportWrite.target.replace(Dictate.home, "~") : "Couldn't write " + exportWrite.target.replace(Dictate.home, "~"));
             root.requestSurface("vocab");
         }
     }
 
     Process {
         id: importPick
-        command: ["zenity", "--file-selection", "--title=Import vocabulary",
-            "--filename=" + Dictate.home + "/", "--file-filter=Vocabulary (*.json) | *.json", "--file-filter=All files | *"]
+        command: ["zenity", "--file-selection", "--title=Import vocabulary", "--filename=" + Dictate.home + "/", "--file-filter=Vocabulary (*.json) | *.json", "--file-filter=All files | *"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const path = this.text.trim();
@@ -548,8 +570,7 @@ SettingsSurface {
                     root.notify("That file has no vocabulary in it");
                 } else {
                     const r = root.merge(incoming);
-                    root.notify(r.added === 0 && r.grew === 0 ? "Everything in that file was already here"
-                        : "Added " + root.plural(r.added, "word") + (r.grew > 0 ? ", sharpened " + r.grew : ""));
+                    root.notify(r.added === 0 && r.grew === 0 ? "Everything in that file was already here" : "Added " + root.plural(r.added, "word") + (r.grew > 0 ? ", sharpened " + r.grew : ""));
                 }
                 root.requestSurface("vocab");
             }
@@ -560,13 +581,14 @@ SettingsSurface {
         try {
             const d = JSON.parse(text);
             const arr = Array.isArray(d) ? d : (d.words || []);
-            return arr.map(w => typeof w === "string" ? { word: w, heard: [] } : w)
-                .filter(w => w && w.word && String(w.word).trim().length > 0)
-                .map(w => ({
-                    word: String(w.word).trim(),
-                    heard: (w.heard || []).map(String),
-                    pinned: (w.pinned || []).map(String)
-                }));
+            return arr.map(w => typeof w === "string" ? {
+                    word: w,
+                    heard: []
+                } : w).filter(w => w && w.word && String(w.word).trim().length > 0).map(w => ({
+                        word: String(w.word).trim(),
+                        heard: (w.heard || []).map(String),
+                        pinned: (w.pinned || []).map(String)
+                    }));
         } catch (e) {
             return [];
         }
@@ -620,8 +642,10 @@ SettingsSurface {
         path: root.vocabPath
         atomicWrites: true
         printErrors: false
-        onSaved: Dictate.send({ cmd: "reload" })
-        onSaveFailed: (err) => console.log("vocab: write failed: " + err)
+        onSaved: Dictate.send({
+            cmd: "reload"
+        })
+        onSaveFailed: err => console.log("vocab: write failed: " + err)
     }
 
     // ── row registry ──
@@ -637,20 +661,62 @@ SettingsSurface {
             for (let i = 0; i < wordRep.count; i++) {
                 const it = wordRep.itemAt(i);
                 if (it && root.shown[i])
-                    r.push({ item: it, kind: "action", run: (function (w) { return function () { root.openWord(w); }; })(root.shown[i].word) });
+                    r.push({
+                        item: it,
+                        kind: "action",
+                        run: (function (w) {
+                                return function () {
+                                    root.openWord(w);
+                                };
+                            })(root.shown[i].word)
+                    });
             }
-            r.push({ item: addRow, kind: "action", run: root.openAdd });
-            r.push({ item: importRow, kind: "action", run: root.importList });
-            r.push({ item: exportRow, kind: "action", run: root.exportList });
+            r.push({
+                item: addRow,
+                kind: "action",
+                run: root.openAdd
+            });
+            r.push({
+                item: importRow,
+                kind: "action",
+                run: root.importList
+            });
+            r.push({
+                item: exportRow,
+                kind: "action",
+                run: root.exportList
+            });
         } else if (root.view === "word") {
             for (let i = 0; i < formRep.count; i++) {
                 const it = formRep.itemAt(i);
                 if (it && it.form !== undefined)
-                    r.push({ item: it, kind: "action", run: (function (f) { return function () { root.togglePin(f); }; })(it.form) });
+                    r.push({
+                        item: it,
+                        kind: "action",
+                        run: (function (f) {
+                                return function () {
+                                    root.togglePin(f);
+                                };
+                            })(it.form)
+                    });
             }
-            r.push({ item: teachMoreRow, kind: "action", run: function () { root.startTeach(root.current); } });
-            r.push({ item: addAnotherRow, kind: "action", run: root.openAdd });
-            r.push({ item: removeWordRow, kind: "action", run: root.removeCurrent });
+            r.push({
+                item: teachMoreRow,
+                kind: "action",
+                run: function () {
+                    root.startTeach(root.current);
+                }
+            });
+            r.push({
+                item: addAnotherRow,
+                kind: "action",
+                run: root.openAdd
+            });
+            r.push({
+                item: removeWordRow,
+                kind: "action",
+                run: root.removeCurrent
+            });
         }
         return r;
     }
@@ -679,7 +745,10 @@ SettingsSurface {
             showBack: true
         }
 
-        Item { width: 1; height: 8 * root.s }
+        Item {
+            width: 1
+            height: 8 * root.s
+        }
 
         // ── list ──
 
@@ -729,7 +798,7 @@ SettingsSurface {
                         root.focusRowItem = null;
                         wordFlick.contentY = 0;
                     }
-                    Keys.onPressed: (e) => {
+                    Keys.onPressed: e => {
                         if (e.key === Qt.Key_Down) {
                             root.kbMove(1);
                             e.accepted = true;
@@ -754,7 +823,12 @@ SettingsSurface {
                     height: 1
                     color: Theme.faint
                     opacity: searchField.activeFocus ? 0.7 : 0.18
-                    Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.standard
+                            easing.type: Motion.easeStandard
+                        }
+                    }
                 }
 
                 /** Wipe heat over the search underline, as on the clipboard. */
@@ -767,8 +841,14 @@ SettingsSurface {
                     visible: vocabWipe.holding
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-                        GradientStop { position: 1.0; color: Theme.vermLit }
+                        GradientStop {
+                            position: 0.0
+                            color: Qt.alpha(Theme.vermLit, 0.15)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Theme.vermLit
+                        }
                     }
                 }
 
@@ -785,9 +865,15 @@ SettingsSurface {
                     readonly property bool holding: vocabWipeHeat.holding
                     readonly property color tone: holding ? Theme.vermLit : (vocabWipeArea.containsMouse ? Theme.cream : Theme.faint)
 
-                    function keyPress() { vocabWipeHeat.press(); }
-                    function keyRelease() { vocabWipeHeat.release(); }
-                    function cancel() { vocabWipeHeat.cancel(); }
+                    function keyPress() {
+                        vocabWipeHeat.press();
+                    }
+                    function keyRelease() {
+                        vocabWipeHeat.release();
+                    }
+                    function cancel() {
+                        vocabWipeHeat.cancel();
+                    }
 
                     Tooltip {
                         s: root.s
@@ -802,7 +888,11 @@ SettingsSurface {
                         color: vocabWipe.tone
                         font.family: Theme.fontJp
                         font.pixelSize: 12 * root.s
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     GlyphIcon {
@@ -812,7 +902,11 @@ SettingsSurface {
                         height: 12 * root.s
                         name: "trash"
                         color: vocabWipe.tone
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     HeatHold {
@@ -833,7 +927,11 @@ SettingsSurface {
                 }
             }
 
-            Item { width: 1; height: visible ? 6 * root.s : 0; visible: root.words.length > 0 }
+            Item {
+                width: 1
+                height: visible ? 6 * root.s : 0
+                visible: root.words.length > 0
+            }
 
             Text {
                 width: parent.width
@@ -841,9 +939,7 @@ SettingsSurface {
                 leftPadding: 9 * root.s
                 rightPadding: 9 * root.s
                 bottomPadding: 6 * root.s
-                text: root.words.length === 0
-                    ? "Names and terms dictation gets wrong. Add one, say it a few times, and it's spelled right from then on."
-                    : "Nothing matches “" + root.query.trim() + "”. Press Enter to add it."
+                text: root.words.length === 0 ? "Names and terms dictation gets wrong. Add one, say it a few times, and it's spelled right from then on." : "Nothing matches “" + root.query.trim() + "”. Press Enter to add it."
                 color: Theme.faint
                 font.family: Theme.font
                 font.pixelSize: 10 * root.s
@@ -865,7 +961,13 @@ SettingsSurface {
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 interactive: contentHeight > height
-                Behavior on contentY { enabled: !wordFlick.moving; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                Behavior on contentY {
+                    enabled: !wordFlick.moving
+                    NumberAnimation {
+                        duration: Motion.fast
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 Column {
                     id: wordCol
@@ -884,15 +986,21 @@ SettingsSurface {
 
                             readonly property bool focused: root.focusRowItem === wrow
                             readonly property bool expanded: whover.hovered || wrow.focused
-                            readonly property int skips: { void root.common; return root.skippedCount(wrow.modelData); }
-                            readonly property string caption: wrow.modelData.heard.length === 0
-                                ? "Not taught yet"
-                                : root.plural(wrow.modelData.heard.length, "form") + (wrow.skips > 0 ? " · " + wrow.skips + " skipped as everyday English" : "")
+                            readonly property int skips: {
+                                void root.common;
+                                return root.skippedCount(wrow.modelData);
+                            }
+                            readonly property string caption: wrow.modelData.heard.length === 0 ? "Not taught yet" : root.plural(wrow.modelData.heard.length, "form") + (wrow.skips > 0 ? " · " + wrow.skips + " skipped as everyday English" : "")
 
                             width: parent ? parent.width : 0
                             height: 30 * root.s + (wrow.expanded ? 14 * root.s : 0)
                             clip: true
-                            Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                            Behavior on height {
+                                NumberAnimation {
+                                    duration: Motion.fast
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
 
                             HoverHandler {
                                 id: whover
@@ -905,7 +1013,11 @@ SettingsSurface {
                                 anchors.bottomMargin: 3 * root.s
                                 radius: 9 * root.s
                                 color: wrow.expanded ? Theme.frameBg : "transparent"
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Motion.fast
+                                    }
+                                }
                             }
 
                             MouseArea {
@@ -979,7 +1091,9 @@ SettingsSurface {
                                     font.family: Theme.font
                                     font.pixelSize: 11 * root.s
                                     font.weight: Font.DemiBold
-                                    font.features: { "tnum": 1 }
+                                    font.features: {
+                                        "tnum": 1
+                                    }
                                 }
 
                                 Rectangle {
@@ -989,7 +1103,11 @@ SettingsSurface {
                                     height: 22 * root.s
                                     radius: 6 * root.s
                                     color: rmArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
-                                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: Motion.fast
+                                        }
+                                    }
 
                                     GlyphIcon {
                                         anchors.centerIn: parent
@@ -1014,7 +1132,6 @@ SettingsSurface {
                 }
             }
 
-
             Item {
                 id: addRow
                 width: parent.width
@@ -1022,7 +1139,9 @@ SettingsSurface {
 
                 readonly property bool lit: addArea.containsMouse || root.focusRowItem === addRow
 
-                HoverHandler { onHoveredChanged: root.reportRowHover(addRow, hovered) }
+                HoverHandler {
+                    onHoveredChanged: root.reportRowHover(addRow, hovered)
+                }
 
                 Rectangle {
                     anchors.fill: parent
@@ -1032,7 +1151,11 @@ SettingsSurface {
                     color: addRow.lit ? Qt.alpha(Theme.vermLit, 0.1) : "transparent"
                     border.width: 1
                     border.color: Qt.alpha(Theme.vermLit, addRow.lit ? 0.6 : 0.32)
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Row {
                         anchors.centerIn: parent
@@ -1112,9 +1235,7 @@ SettingsSurface {
                 leftPadding: 9 * root.s
                 rightPadding: 9 * root.s
                 bottomPadding: 6 * root.s
-                text: !root.currentEntry || root.currentEntry.heard.length === 0
-                    ? "No forms yet. Teach it so dictation learns how you say it."
-                    : "Each line is how the model heard it. Anything that's everyday English is skipped unless you use it, so normal sentences stay as spoken."
+                text: !root.currentEntry || root.currentEntry.heard.length === 0 ? "No forms yet. Teach it so dictation learns how you say it." : "Each line is how the model heard it. Anything that's everyday English is skipped unless you use it, so normal sentences stay as spoken."
                 color: Theme.faint
                 font.family: Theme.font
                 font.pixelSize: 10 * root.s
@@ -1137,7 +1258,10 @@ SettingsSurface {
 
                     readonly property bool focused: root.focusRowItem === frow
                     readonly property bool lit: fhover.hovered || frow.focused
-                    readonly property bool risky: { void root.common; return root.isCommon(frow.form); }
+                    readonly property bool risky: {
+                        void root.common;
+                        return root.isCommon(frow.form);
+                    }
                     readonly property bool used: !frow.risky || (root.currentEntry !== null && root.isPinned(root.currentEntry, frow.form))
 
                     width: parent ? parent.width : 0
@@ -1154,7 +1278,11 @@ SettingsSurface {
                         anchors.bottomMargin: 2 * root.s
                         radius: 8 * root.s
                         color: frow.lit ? Theme.frameBg : "transparent"
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
                     MouseArea {
@@ -1195,7 +1323,11 @@ SettingsSurface {
                             color: frow.used ? Qt.alpha(Theme.vermLit, 0.14) : Qt.alpha(Theme.flameGlow, chipArea.containsMouse ? 0.2 : 0.12)
                             border.width: 1
                             border.color: frow.used ? Qt.alpha(Theme.vermLit, 0.45) : Qt.alpha(Theme.flameGlow, 0.4)
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             Text {
                                 id: chipText
@@ -1223,8 +1355,16 @@ SettingsSurface {
                             radius: 6 * root.s
                             opacity: frow.lit ? 1 : 0
                             color: frmArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             GlyphIcon {
                                 anchors.centerIn: parent
@@ -1248,7 +1388,10 @@ SettingsSurface {
                 }
             }
 
-            Item { width: 1; height: 4 * root.s }
+            Item {
+                width: 1
+                height: 4 * root.s
+            }
 
             Rectangle {
                 width: parent.width
@@ -1256,7 +1399,10 @@ SettingsSurface {
                 color: Theme.hairSoft
             }
 
-            Item { width: 1; height: 4 * root.s }
+            Item {
+                width: 1
+                height: 4 * root.s
+            }
 
             Item {
                 id: teachMoreRow
@@ -1264,7 +1410,9 @@ SettingsSurface {
                 height: 30 * root.s
                 readonly property bool lit: tmArea.containsMouse || root.focusRowItem === teachMoreRow
 
-                HoverHandler { onHoveredChanged: root.reportRowHover(teachMoreRow, hovered) }
+                HoverHandler {
+                    onHoveredChanged: root.reportRowHover(teachMoreRow, hovered)
+                }
 
                 Rectangle {
                     anchors.fill: parent
@@ -1272,7 +1420,11 @@ SettingsSurface {
                     anchors.bottomMargin: 2 * root.s
                     radius: 8 * root.s
                     color: teachMoreRow.lit ? Theme.frameBg : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 Row {
@@ -1314,7 +1466,9 @@ SettingsSurface {
                 height: 30 * root.s
                 readonly property bool lit: aaArea.containsMouse || root.focusRowItem === addAnotherRow
 
-                HoverHandler { onHoveredChanged: root.reportRowHover(addAnotherRow, hovered) }
+                HoverHandler {
+                    onHoveredChanged: root.reportRowHover(addAnotherRow, hovered)
+                }
 
                 Rectangle {
                     anchors.fill: parent
@@ -1322,7 +1476,11 @@ SettingsSurface {
                     anchors.bottomMargin: 2 * root.s
                     radius: 8 * root.s
                     color: addAnotherRow.lit ? Theme.frameBg : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 Row {
@@ -1366,7 +1524,9 @@ SettingsSurface {
                 height: 30 * root.s
                 readonly property bool lit: rwArea.containsMouse || root.focusRowItem === removeWordRow
 
-                HoverHandler { onHoveredChanged: root.reportRowHover(removeWordRow, hovered) }
+                HoverHandler {
+                    onHoveredChanged: root.reportRowHover(removeWordRow, hovered)
+                }
 
                 Rectangle {
                     anchors.fill: parent
@@ -1374,7 +1534,11 @@ SettingsSurface {
                     anchors.bottomMargin: 2 * root.s
                     radius: 8 * root.s
                     color: removeWordRow.lit ? Qt.alpha(Theme.verm, 0.12) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 Row {
@@ -1441,9 +1605,12 @@ SettingsSurface {
                 radius: 8 * root.s
                 color: Theme.frameBg
                 border.width: 1
-                border.color: root.addWarn ? Qt.alpha(Theme.flameGlow, 0.55)
-                    : (addField.activeFocus ? Qt.alpha(Theme.vermLit, 0.45) : Theme.hairSoft)
-                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                border.color: root.addWarn ? Qt.alpha(Theme.flameGlow, 0.55) : (addField.activeFocus ? Qt.alpha(Theme.vermLit, 0.45) : Theme.hairSoft)
+                Behavior on border.color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
                 TextField {
                     id: addField
@@ -1466,7 +1633,7 @@ SettingsSurface {
                         root.addText = text;
                         root.addWarn = false;
                     }
-                    Keys.onPressed: (e) => {
+                    Keys.onPressed: e => {
                         if (e.key === Qt.Key_Escape) {
                             root.toList();
                             e.accepted = true;
@@ -1518,10 +1685,7 @@ SettingsSurface {
                 width: parent.width
                 topPadding: 4 * root.s
                 horizontalAlignment: Text.AlignHCenter
-                text: Dictate.live ? "Listening…"
-                    : (Dictate.state === "working" ? "Working it out…"
-                    : (root.teachTakes >= root.goal ? "Got it"
-                    : (root.teachTakes === 0 ? "Hold " + Dictate.keyLabel + " and say it" : "Once more")))
+                text: Dictate.live ? "Listening…" : (Dictate.state === "working" ? "Working it out…" : (root.teachTakes >= root.goal ? "Got it" : (root.teachTakes === 0 ? "Hold " + Dictate.keyLabel + " and say it" : "Once more")))
                 color: Theme.subtle
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
@@ -1552,8 +1716,17 @@ SettingsSurface {
                         border.width: 1
                         border.color: filled ? Theme.vermLit : Theme.hair
                         scale: filled ? 1 : 0.85
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                        Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Easing.OutBack } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Easing.OutBack
+                            }
+                        }
                     }
                 }
             }
@@ -1565,9 +1738,11 @@ SettingsSurface {
                 rightPadding: 9 * root.s
                 horizontalAlignment: Text.AlignHCenter
                 visible: root.lastHeard.length > 0 || !Dictate.ready
-                readonly property bool risky: { void root.common; return root.lastHeard.length > 0 && root.isCommon(root.lastHeard); }
-                text: !Dictate.ready ? "Speech model is loading…"
-                    : "Heard “" + root.lastHeard + "”" + (risky ? ". That's everyday English, so it'll be skipped unless you use it" : "")
+                readonly property bool risky: {
+                    void root.common;
+                    return root.lastHeard.length > 0 && root.isCommon(root.lastHeard);
+                }
+                text: !Dictate.ready ? "Speech model is loading…" : "Heard “" + root.lastHeard + "”" + (risky ? ". That's everyday English, so it'll be skipped unless you use it" : "")
                 color: risky ? Theme.flameGlow : Theme.faint
                 font.family: Theme.font
                 font.pixelSize: 10 * root.s
@@ -1575,10 +1750,16 @@ SettingsSurface {
                 wrapMode: Text.WordWrap
             }
 
-            Item { width: 1; height: 8 * root.s }
+            Item {
+                width: 1
+                height: 8 * root.s
+            }
         }
 
-        Item { width: 1; height: 6 * root.s }
+        Item {
+            width: 1
+            height: 6 * root.s
+        }
 
         Rectangle {
             width: parent.width
@@ -1594,10 +1775,7 @@ SettingsSurface {
                 anchors.left: parent.left
                 anchors.leftMargin: 4 * root.s
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.view === "teach" ? "enter save · esc back"
-                    : (root.view === "add" ? "enter next · esc back"
-                    : (root.view === "word" ? "enter use / skip · del remove form · esc back"
-                    : (searchField.activeFocus ? "↑↓ pick · enter open · esc clear" : "type to search · enter open · del remove · esc close")))
+                text: root.view === "teach" ? "enter save · esc back" : (root.view === "add" ? "enter next · esc back" : (root.view === "word" ? "enter use / skip · del remove form · esc back" : (searchField.activeFocus ? "↑↓ pick · enter open · esc clear" : "type to search · enter open · del remove · esc close")))
             }
         }
     }

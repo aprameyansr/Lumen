@@ -14,14 +14,16 @@ PillSurface {
     mRight: 16
     mBottom: 16
     readonly property real appRowHeight: 34 * s
-    implicitHeight: processes ? 460 * s : Math.min(410 * s, header.height + headings.anchors.topMargin + headings.height
-        + rows.count * appRowHeight + appList.anchors.bottomMargin + actionBar.height + readingStatus.height)
+    implicitHeight: processes ? 460 * s : Math.min(410 * s, header.height + headings.anchors.topMargin + headings.height + rows.count * appRowHeight + appList.anchors.bottomMargin + actionBar.height + readingStatus.height)
 
     readonly property string probe: Quickshell.shellDir + "/lib/sysmon_apps.py"
-    readonly property var desktopApps: DesktopEntries.applications.values
-        .filter(entry => entry && !entry.noDisplay)
-        .map(entry => ({ id: entry.id, name: entry.name, startup: entry.startupClass,
-                          icon: entry.icon, command: entry.command }))
+    readonly property var desktopApps: DesktopEntries.applications.values.filter(entry => entry && !entry.noDisplay).map(entry => ({
+                id: entry.id,
+                name: entry.name,
+                startup: entry.startupClass,
+                icon: entry.icon,
+                command: entry.command
+            }))
 
     property var apps: ({})
     property bool processes: false
@@ -29,9 +31,7 @@ PillSurface {
     property string appFilterName: ""
     property var filterMembers: []
     readonly property bool canViewProcesses: !processes && available && !!selected
-    readonly property Item pointedFilterControl: filterChip.visible && (filterChip.hovered || filterChip.activeFocus)
-        ? filterChip : viewProcesses.visible && (viewProcesses.hovered || viewProcesses.activeFocus)
-        ? viewProcesses : null
+    readonly property Item pointedFilterControl: filterChip.visible && (filterChip.hovered || filterChip.activeFocus) ? filterChip : viewProcesses.visible && (viewProcesses.hovered || viewProcesses.activeFocus) ? viewProcesses : null
     readonly property string actionSubject: processes ? "Process" : "App"
     readonly property bool sampling: processes ? processSamples.running : sample.running
     property string sortColumn: "memory"
@@ -46,9 +46,7 @@ PillSurface {
     readonly property var selected: apps[selection] || null
     readonly property bool canAct: open && available && !!selected && selected.targets.length > 0 && !action.running
 
-    ameForm: open ? (modeTabs.pointedOption ? "soul"
-        : pointedFilterControl || hoverKey || selection ? "rowseam"
-        : processes && search.input.activeFocus ? "caret" : "soul") : "off"
+    ameForm: open ? (modeTabs.pointedOption ? "soul" : pointedFilterControl || hoverKey || selection ? "rowseam" : processes && search.input.activeFocus ? "caret" : "soul") : "off"
     amePoint: {
         void appList.contentY;
         void root.height;
@@ -76,14 +74,15 @@ PillSurface {
             if (rows.get(i).appId !== key)
                 continue;
             const item = appList.itemAtIndex(i);
-            if (item && item.y - appList.contentY >= 0
-                && item.y + item.height - appList.contentY <= appList.height)
+            if (item && item.y - appList.contentY >= 0 && item.y + item.height - appList.contentY <= appList.height)
                 return item.mapToItem(root, 4 * s, item.height / 2);
         }
         return header.soulPoint;
     }
 
-    ListModel { id: rows }
+    ListModel {
+        id: rows
+    }
 
     onOpenChanged: {
         if (open) {
@@ -196,16 +195,16 @@ PillSurface {
         if (!query)
             return true;
         return query.split(/\s+/).every(part => Fuzzy.score({
-            name: app.name, keywords: [String(app.pid)]
-        }, part) < 99);
+                name: app.name,
+                keywords: [String(app.pid)]
+            }, part) < 99);
     }
 
     function updateRows(result) {
         if (appFilter && appFilter !== "@system" && !result.some(row => row.appGroup === appFilter)) {
             // Window-based app identities can acquire a desktop ID between tabs.
             const previous = new Set(filterMembers);
-            const candidates = new Set(result.filter(row => previous.has(row.id) && row.appGroup !== "@system")
-                .map(row => row.appGroup));
+            const candidates = new Set(result.filter(row => previous.has(row.id) && row.appGroup !== "@system").map(row => row.appGroup));
             if (candidates.size === 1)
                 appFilter = candidates.values().next().value;
         }
@@ -221,9 +220,16 @@ PillSurface {
             let match = i;
             while (match < rows.count && rows.get(match).appId !== app.id)
                 match++;
-            const properties = { appId: app.id, appName: app.name, appIcon: app.icon || "", processId: app.pid ?? 0,
-                                 memory: app.memory, estimated: app.estimated, cpu: app.cpu,
-                                 gpu: app.gpu ?? -1 };
+            const properties = {
+                appId: app.id,
+                appName: app.name,
+                appIcon: app.icon || "",
+                processId: app.pid ?? 0,
+                memory: app.memory,
+                estimated: app.estimated,
+                cpu: app.cpu,
+                gpu: app.gpu ?? -1
+            };
             if (match === rows.count)
                 rows.insert(i, properties);
             else {
@@ -237,8 +243,7 @@ PillSurface {
         if (selection && !next[selection]) {
             // Desktop entry metadata can arrive after the first window-based sample.
             const previous = apps[selection];
-            const matches = result.filter(app => app.id !== "@system" && previous
-                && previous.roots.some(old => app.roots.some(current => old[0] === current[0] && old[1] === current[1])));
+            const matches = result.filter(app => app.id !== "@system" && previous && previous.roots.some(old => app.roots.some(current => old[0] === current[0] && old[1] === current[1])));
             selection = matches.length === 1 ? matches[0].id : "";
         }
         if (selection && !matchesSearch(next[selection]))
@@ -290,8 +295,7 @@ PillSurface {
 
     Process {
         id: sample
-        command: ["python3", "-B", root.probe, "sample", JSON.stringify(root.desktopApps),
-                  Sysmon.gpuDevice.vendor, Dictate.svcDir, Dictate.engine]
+        command: ["python3", "-B", root.probe, "sample", JSON.stringify(root.desktopApps), Sysmon.gpuDevice.vendor, Dictate.svcDir, Dictate.engine]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (!root.open || root.processes)
@@ -309,14 +313,14 @@ PillSurface {
         interval: 1800
         running: root.open && !root.processes
         repeat: true
-        onTriggered: if (!sample.running) sample.running = true
+        onTriggered: if (!sample.running)
+            sample.running = true
     }
 
     Process {
         id: processSamples
         running: root.open && root.processes
-        command: ["python3", "-B", root.probe, "processes", Sysmon.gpuDevice.vendor,
-                  JSON.stringify(root.desktopApps), Dictate.svcDir, Dictate.engine]
+        command: ["python3", "-B", root.probe, "processes", Sysmon.gpuDevice.vendor, JSON.stringify(root.desktopApps), Dictate.svcDir, Dictate.engine]
         stdout: SplitParser {
             onRead: line => {
                 if (!root.open || !root.processes)
@@ -334,9 +338,7 @@ PillSurface {
         stdout: StdioCollector {
             onStreamFinished: {
                 const result = Sysmon.unpack(text);
-                root.message = result && result.sent > 0
-                    ? (result.skipped ? "Signal sent to remaining processes" : "Signal sent")
-                    : "No live process could be signaled";
+                root.message = result && result.sent > 0 ? (result.skipped ? "Signal sent to remaining processes" : "Signal sent") : "No live process could be signaled";
                 if (root.open && !root.processes && !sample.running)
                     sample.running = true;
             }
@@ -357,7 +359,16 @@ PillSurface {
         anchors.verticalCenter: header.verticalCenter
         s: root.s
         keyboardNavigation: true
-        options: [{label: "Apps", value: false}, {label: "Processes", value: true}]
+        options: [
+            {
+                label: "Apps",
+                value: false
+            },
+            {
+                label: "Processes",
+                value: true
+            }
+        ]
         value: root.processes
         onPicked: value => root.changeView(value)
     }
@@ -373,7 +384,8 @@ PillSurface {
         kanji: "探"
         placeholder: "Find a process or PID"
         onMoved: delta => root.move(delta)
-        onAccepted: if (!root.selection) root.move(1)
+        onAccepted: if (!root.selection)
+            root.move(1)
         onDismissed: root.requestClose()
         onTextChanged: if (root.processes && root.available) {
             root.updateRows(Object.values(root.apps));
@@ -396,7 +408,9 @@ PillSurface {
         color: Theme.cream
         font.family: Theme.font
         font.pixelSize: 11 * root.s
-        font.features: { "tnum": 1 }
+        font.features: {
+            "tnum": 1
+        }
         textFormat: Text.PlainText
         elide: Text.ElideRight
         verticalAlignment: Text.AlignVCenter
@@ -427,8 +441,7 @@ PillSurface {
                 width: 16 * root.s
                 height: width
                 sourceSize: Qt.size(width, height)
-                source: columns.icon.startsWith("/") ? "file://" + columns.icon
-                    : columns.icon && columns.icon !== "@ai" ? Quickshell.iconPath(columns.icon, true) : ""
+                source: columns.icon.startsWith("/") ? "file://" + columns.icon : columns.icon && columns.icon !== "@ai" ? Quickshell.iconPath(columns.icon, true) : ""
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 visible: status === Image.Ready
@@ -512,13 +525,35 @@ PillSurface {
         anchors.fill: headings
 
         Repeater {
-            model: [{ key: "name", title: root.processes ? "Process" : "App name", width: 0 }]
-                .concat(root.processes ? [{ key: "pid", title: "Process ID", width: 84 }] : [])
-                .concat([
-                    { key: "memory", title: "Memory", width: 89 },
-                    { key: "cpu", title: "Processor", width: 80 },
-                    { key: "gpu", title: "GPU", width: 62 }
-                ])
+            model: [
+                {
+                    key: "name",
+                    title: root.processes ? "Process" : "App name",
+                    width: 0
+                }
+            ].concat(root.processes ? [
+                {
+                    key: "pid",
+                    title: "Process ID",
+                    width: 84
+                }
+            ] : []).concat([
+                {
+                    key: "memory",
+                    title: "Memory",
+                    width: 89
+                },
+                {
+                    key: "cpu",
+                    title: "Processor",
+                    width: 80
+                },
+                {
+                    key: "gpu",
+                    title: "GPU",
+                    width: 62
+                }
+            ])
 
             MouseArea {
                 required property var modelData
@@ -570,7 +605,11 @@ PillSurface {
                 radius: 7 * root.s
                 color: root.selection === row.appId ? Theme.frameBg : "transparent"
             }
-            Rectangle { width: parent.width; height: 1; color: Theme.hairSoft }
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.hairSoft
+            }
 
             Columns {
                 x: 10 * root.s
@@ -595,11 +634,17 @@ PillSurface {
                         root.hoverKey = "";
                 }
             }
-            TapHandler { onTapped: root.choose(row.appId) }
+            TapHandler {
+                onTapped: root.choose(row.appId)
+            }
         }
     }
 
-    WheelScroller { anchors.fill: appList; s: root.s; flick: appList }
+    WheelScroller {
+        anchors.fill: appList
+        s: root.s
+        flick: appList
+    }
 
     Rectangle {
         visible: appList.contentHeight > appList.height
@@ -618,8 +663,7 @@ PillSurface {
         anchors.bottom: parent.bottom
         height: root.available ? 0 : 23 * root.s
         visible: !root.available
-        text: root.sampling ? (root.processes ? "Reading processes…" : "Reading running apps…")
-            : (root.processes ? "Process readings unavailable" : "App readings unavailable")
+        text: root.sampling ? (root.processes ? "Reading processes…" : "Reading running apps…") : (root.processes ? "Process readings unavailable" : "App readings unavailable")
         color: Theme.subtle
     }
 
@@ -629,17 +673,18 @@ PillSurface {
         width: parent.width
         height: 37 * root.s
 
-        Rectangle { width: parent.width; height: 1; color: Theme.hair }
+        Rectangle {
+            width: parent.width
+            height: 1
+            color: Theme.hair
+        }
 
         Cell {
             anchors.left: parent.left
             anchors.right: viewProcesses.visible ? viewProcesses.left : actions.left
             anchors.rightMargin: 12 * root.s
             anchors.verticalCenter: actions.verticalCenter
-            text: root.message || (root.selected
-                ? (root.processes ? "PID " + root.selected.pid : root.selected.count + " processes") + " · " + root.selected.name
-                : root.processes ? (root.available && rows.count === 0 ? "No matching processes" : "Select a process")
-                : "Select an app")
+            text: root.message || (root.selected ? (root.processes ? "PID " + root.selected.pid : root.selected.count + " processes") + " · " + root.selected.name : root.processes ? (root.available && rows.count === 0 ? "No matching processes" : "Select a process") : "Select an app")
             color: Theme.subtle
         }
 
@@ -698,7 +743,10 @@ PillSurface {
                         font.weight: Font.DemiBold
                     }
                 }
-                HoverHandler { id: primaryHover; cursorShape: Qt.PointingHandCursor }
+                HoverHandler {
+                    id: primaryHover
+                    cursorShape: Qt.PointingHandCursor
+                }
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -734,7 +782,10 @@ PillSurface {
                     name: root.menuOpen ? "chevron-down" : "chevron-up"
                     color: Theme.iconDim
                 }
-                HoverHandler { id: toggleHover; cursorShape: Qt.PointingHandCursor }
+                HoverHandler {
+                    id: toggleHover
+                    cursorShape: Qt.PointingHandCursor
+                }
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -759,7 +810,8 @@ PillSurface {
                 readonly property real s: root.s
                 readonly property Item focusRowItem: null
 
-                function reportRowHover(item, hovered) {}
+                function reportRowHover() {
+                }
 
                 function activateRow(item) {
                     root.actionMode = item.modelData.mode;
@@ -774,9 +826,18 @@ PillSurface {
 
                 Repeater {
                     model: [
-                        { name: "Halt " + root.actionSubject, icon: "shutdown",
-                          sub: root.processes ? "Ask the process to exit" : "Ask the app to close", mode: "terminate" },
-                        { name: "Kill " + root.actionSubject, icon: "close", sub: "Force quit now", mode: "kill" }
+                        {
+                            name: "Halt " + root.actionSubject,
+                            icon: "shutdown",
+                            sub: root.processes ? "Ask the process to exit" : "Ask the app to close",
+                            mode: "terminate"
+                        },
+                        {
+                            name: "Kill " + root.actionSubject,
+                            icon: "close",
+                            sub: "Force quit now",
+                            mode: "kill"
+                        }
                     ]
 
                     SettingsRow {

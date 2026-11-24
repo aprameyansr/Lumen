@@ -25,34 +25,22 @@ Singleton {
     readonly property bool discharging: state === UPowerDeviceState.Discharging
     readonly property bool low: !charging && pct <= 15
 
-    readonly property real rateW: !dev ? 0
-        : (discharging ? -dev.changeRate : (charging ? dev.changeRate : 0))
+    readonly property real rateW: !dev ? 0 : (discharging ? -dev.changeRate : (charging ? dev.changeRate : 0))
     readonly property real capacityWh: dev ? dev.energyCapacity : 0
 
     readonly property bool healthSupported: dev ? dev.healthSupported : false
     readonly property int health: dev ? Math.round(dev.healthPercentage) : 0
 
-    readonly property bool hasTime: !dev ? false
-        : (charging ? dev.timeToFull > 0 : (discharging ? dev.timeToEmpty > 0 : false))
-    readonly property string timeStr: !dev ? ""
-        : (charging ? fmt(dev.timeToFull) : (discharging ? fmt(dev.timeToEmpty) : ""))
+    readonly property bool hasTime: !dev ? false : (charging ? dev.timeToFull > 0 : (discharging ? dev.timeToEmpty > 0 : false))
+    readonly property string timeStr: !dev ? "" : (charging ? fmt(dev.timeToFull) : (discharging ? fmt(dev.timeToEmpty) : ""))
 
-    readonly property string stateLabel: charging ? "Charging"
-        : (full ? "On AC · Full"
-        : (discharging ? "Discharging" : "On AC"))
+    readonly property string stateLabel: charging ? "Charging" : (full ? "On AC · Full" : (discharging ? "Discharging" : "On AC"))
 
     property bool lowNotified: false
     property bool criticalNotified: false
 
     function notifyBattery(title, body, urgency, icon) {
-        Quickshell.execDetached([
-            "notify-send",
-            "-a", "Lumen",
-            "-u", urgency,
-            "-i", icon,
-            title,
-            body
-        ]);
+        Quickshell.execDetached(["notify-send", "-a", "Lumen", "-u", urgency, "-i", icon, title, body]);
     }
 
     function checkBatteryNotifications() {
@@ -70,24 +58,14 @@ Singleton {
         // Critical battery: 5% or below.
         if (pct <= 5 && !criticalNotified) {
             criticalNotified = true;
-            notifyBattery(
-                "Battery critical",
-                "Battery is critically low at " + pct + "%.",
-                "critical",
-                "/usr/share/icons/Adwaita/symbolic/legacy/battery-empty-symbolic.svg"
-            );
+            notifyBattery("Battery critical", "Battery is critically low at " + pct + "%.", "critical", "/usr/share/icons/Adwaita/symbolic/legacy/battery-empty-symbolic.svg");
             return;
         }
 
         // Low battery: 15% or below.
         if (pct <= 15 && !lowNotified) {
             lowNotified = true;
-            notifyBattery(
-                "Battery low",
-                "Battery is at " + pct + "%.",
-                "normal",
-                "/usr/share/icons/Adwaita/symbolic/status/battery-level-10-symbolic.svg"
-            );
+            notifyBattery("Battery low", "Battery is at " + pct + "%.", "normal", "/usr/share/icons/Adwaita/symbolic/status/battery-level-10-symbolic.svg");
         }
     }
 

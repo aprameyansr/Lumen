@@ -2,20 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
-/**
- * Shared base for the morphing settings surfaces: the category index and each
- * sub-surface. Carries the keyboard-navigable row registry and the glowing
- * row-soul seam, and morphs back to the parent index when empty space is clicked
- * on a sub-surface. The deriving surface sets `rows`
- * and lays out its own content column (header, section labels, SettingsRow lines).
- *
- * Each `rows` entry pairs a row item with its control kind and the backing getter
- * and setter: `seg` cycles a segmented choice (wrapping), `toggle` flips a
- * boolean, `scrub` bumps a numeric scrub through its `bump(dir)`, `nav` morphs
- * to another surface, `action` calls its `run()`. The host routes arrow keys through `kbMove`,
- * `kbAdjust` and `kbActivate`; hover and clicks route through `reportRowHover`
- * and `activateRow`, keeping `kbIndex` and the seam in sync.
- */
+// Shared settings row navigation and focus indicator.
 PillSurface {
     id: root
 
@@ -42,16 +29,15 @@ PillSurface {
     }
 
     function rowIndexOf(item) {
-        for (var i = 0; i < rows.length; i++)
-            if (rows[i].item === item)
-                return i;
-        return -1;
+        return rows.findIndex(row => row.item === item);
     }
 
     /** Step a seg row's value by `dir`, wrapping at both ends like a mouse click. */
     function segCycle(r, dir) {
-        var n = r.vals.length;
-        var i = r.vals.indexOf(r.get());
+        const n = r.vals.length;
+        if (n === 0)
+            return;
+        const i = r.vals.indexOf(r.get());
         r.set(r.vals[(((i < 0 ? 0 : i) + dir) % n + n) % n]);
     }
 
@@ -69,7 +55,9 @@ PillSurface {
             kbIndex = 0;
             focusRowItem = rows[0].item;
         }
-        var r = rows[kbIndex];
+        const r = rows[kbIndex];
+        if (!r)
+            return;
         if (r.kind === "seg")
             segCycle(r, dir);
         else if (r.kind === "toggle")
@@ -79,40 +67,40 @@ PillSurface {
     }
 
     function kbActivate() {
-        if (kbIndex < 0)
+        const row = rows[kbIndex];
+        if (row?.kind === "scrub") {
+            row.run?.();
             return;
-        var r = rows[kbIndex];
-        if (r.kind === "toggle")
-            r.set(!r.get());
-        else if (r.kind === "nav")
-            root.requestSurface(r.surface);
-        else if (r.kind === "seg")
-            segCycle(r, 1);
-        else if (r.kind === "action")
-            r.run();
+        }
+        activateControl(row);
     }
 
-    /**
-     * A click anywhere on a row drives its control: toggles flip, nav rows open
-     * their surface, and segmented rows step to the next value (wrapping). The
-     * control's own hit areas stay on top, so clicking a specific segment still
-     * picks it directly.
-     */
-    function activateRow(item) {
-        var idx = rowIndexOf(item);
-        if (idx < 0)
+    function activateControl(row) {
+        if (!row)
             return;
-        kbIndex = idx;
+        switch (row.kind) {
+        case "toggle":
+            row.set(!row.get());
+            break;
+        case "nav":
+            root.requestSurface(row.surface);
+            break;
+        case "seg":
+            segCycle(row, 1);
+            break;
+        case "action":
+            row.run();
+            break;
+        }
+    }
+
+    function activateRow(item) {
+        const index = rowIndexOf(item);
+        if (index < 0)
+            return;
+        kbIndex = index;
         focusRowItem = item;
-        var r = rows[idx];
-        if (r.kind === "toggle")
-            r.set(!r.get());
-        else if (r.kind === "nav")
-            root.requestSurface(r.surface);
-        else if (r.kind === "seg")
-            segCycle(r, 1);
-        else if (r.kind === "action")
-            r.run();
+        activateControl(rows[index]);
     }
 
     readonly property bool rowFocused: focusRowItem !== null && active

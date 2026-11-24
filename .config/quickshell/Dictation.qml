@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import Quickshell.Services.Pipewire
 import "Singletons"
 
@@ -32,15 +31,56 @@ SettingsSurface {
         void root.rowsRev;
         void root.items;
         const r = [
-            { item: enableRow, kind: "toggle", get: function () { return Flags.dictateEnabled; }, set: function (v) { Flags.dictateEnabled = v; } },
-            { item: engineRow, kind: "seg", vals: ["whisper", "parakeet"], get: function () { return Flags.dictateEngine; }, set: function (v) { Flags.dictateEngine = v; } },
-            { item: micRow, kind: "seg", vals: root.micChoices.map(n => n.name), get: function () { return root.micNode ? root.micNode.name : "default"; }, set: function (v) { Flags.dictateMic = v; } },
-            { item: vocabRow, kind: "nav", surface: "vocab" }
+            {
+                item: enableRow,
+                kind: "toggle",
+                get: function () {
+                    return Flags.dictateEnabled;
+                },
+                set: function (v) {
+                    Flags.dictateEnabled = v;
+                }
+            },
+            {
+                item: engineRow,
+                kind: "seg",
+                vals: ["whisper", "parakeet"],
+                get: function () {
+                    return Flags.dictateEngine;
+                },
+                set: function (v) {
+                    Flags.dictateEngine = v;
+                }
+            },
+            {
+                item: micRow,
+                kind: "seg",
+                vals: root.micChoices.map(n => n.name),
+                get: function () {
+                    return root.micNode ? root.micNode.name : "default";
+                },
+                set: function (v) {
+                    Flags.dictateMic = v;
+                }
+            },
+            {
+                item: vocabRow,
+                kind: "nav",
+                surface: "vocab"
+            }
         ];
         for (let i = 0; i < histRep.count; i++) {
             const it = histRep.itemAt(i);
             if (it && root.items[i])
-                r.push({ item: it, kind: "action", run: (function (row) { return function () { row.copy(); }; })(it) });
+                r.push({
+                    item: it,
+                    kind: "action",
+                    run: (function (row) {
+                            return function () {
+                                row.copy();
+                            };
+                        })(it)
+                });
         }
         return r;
     }
@@ -57,7 +97,10 @@ SettingsSurface {
     }
 
     /** "System default" first, then every mic. */
-    readonly property var systemDefault: ({ name: "default", description: "System default" })
+    readonly property var systemDefault: ({
+            name: "default",
+            description: "System default"
+        })
     readonly property var micChoices: [root.systemDefault].concat(root.micSources)
 
     /**
@@ -89,13 +132,17 @@ SettingsSurface {
     DeviceMenu {
         s: root.s
         open: root.micMenuOpen
-        y: { void root.height; void root.micMenuOpen; return micRow.mapToItem(root, 0, micRow.height).y + 2 * root.s; }
+        y: {
+            void root.height;
+            void root.micMenuOpen;
+            return micRow.mapToItem(root, 0, micRow.height).y + 2 * root.s;
+        }
         anchors.right: parent.right
         anchors.rightMargin: root.mRight * root.s
         width: 220 * root.s
         model: root.micChoices
         current: root.micNode
-        onPick: (node) => {
+        onPick: node => {
             Flags.dictateMic = node.name;
             root.micMenuOpen = false;
         }
@@ -203,7 +250,9 @@ SettingsSurface {
                     font.family: Theme.font
                     font.pixelSize: 28 * root.s
                     font.weight: Font.DemiBold
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
                 Text {
                     text: Dictate.totalWords === 1 ? "word dictated" : "words dictated"
@@ -231,7 +280,9 @@ SettingsSurface {
                         font.family: Theme.font
                         font.pixelSize: 12.5 * root.s
                         font.weight: Font.DemiBold
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                     Text {
                         anchors.baseline: parent.children[0].baseline
@@ -246,14 +297,14 @@ SettingsSurface {
                     anchors.right: parent.right
                     spacing: 5 * root.s
                     Text {
-                        text: "≈ " + (Dictate.minutesSaved >= 60
-                            ? (Math.floor(Dictate.minutesSaved / 60) + " h " + (Dictate.minutesSaved % 60) + " min")
-                            : (Dictate.minutesSaved + " min"))
+                        text: "≈ " + (Dictate.minutesSaved >= 60 ? (Math.floor(Dictate.minutesSaved / 60) + " h " + (Dictate.minutesSaved % 60) + " min") : (Dictate.minutesSaved + " min"))
                         color: Theme.cream
                         font.family: Theme.font
                         font.pixelSize: 12.5 * root.s
                         font.weight: Font.DemiBold
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                     Text {
                         anchors.baseline: parent.children[0].baseline
@@ -273,7 +324,10 @@ SettingsSurface {
             color: Theme.hairSoft
         }
 
-        Item { width: 1; height: 4 * root.s }
+        Item {
+            width: 1
+            height: 4 * root.s
+        }
 
         // ── settings ──
 
@@ -302,9 +356,18 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "Whisper", value: "whisper" }, { label: "Parakeet", value: "parakeet" }]
+                options: [
+                    {
+                        label: "Whisper",
+                        value: "whisper"
+                    },
+                    {
+                        label: "Parakeet",
+                        value: "parakeet"
+                    }
+                ]
                 value: Flags.dictateEngine
-                onPicked: (v) => Flags.dictateEngine = v
+                onPicked: v => Flags.dictateEngine = v
             }
         }
 
@@ -323,7 +386,11 @@ SettingsSurface {
                 color: micChipArea.containsMouse || root.micMenuOpen ? Theme.frameBg : "transparent"
                 border.width: 1
                 border.color: root.micMenuOpen ? Qt.alpha(Theme.vermLit, 0.45) : Theme.hairSoft
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
                 Text {
                     id: micChipText
@@ -414,9 +481,15 @@ SettingsSurface {
                 readonly property bool holding: histWipeHeat.holding
                 readonly property color tone: holding ? Theme.vermLit : (histWipeArea.containsMouse ? Theme.cream : Theme.faint)
 
-                function keyPress() { histWipeHeat.press(); }
-                function keyRelease() { histWipeHeat.release(); }
-                function cancel() { histWipeHeat.cancel(); }
+                function keyPress() {
+                    histWipeHeat.press();
+                }
+                function keyRelease() {
+                    histWipeHeat.release();
+                }
+                function cancel() {
+                    histWipeHeat.cancel();
+                }
 
                 Tooltip {
                     s: root.s
@@ -431,7 +504,11 @@ SettingsSurface {
                     color: histWipe.tone
                     font.family: Theme.fontJp
                     font.pixelSize: 12 * root.s
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 GlyphIcon {
@@ -441,7 +518,11 @@ SettingsSurface {
                     height: 12 * root.s
                     name: "trash"
                     color: histWipe.tone
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 HeatHold {
@@ -469,8 +550,14 @@ SettingsSurface {
                 visible: histWipe.holding
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Qt.alpha(Theme.vermLit, 0.15) }
-                    GradientStop { position: 1.0; color: Theme.vermLit }
+                    GradientStop {
+                        position: 0.0
+                        color: Qt.alpha(Theme.vermLit, 0.15)
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Theme.vermLit
+                    }
                 }
             }
         }
@@ -499,7 +586,13 @@ SettingsSurface {
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
-            Behavior on contentY { enabled: !histFlick.moving; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            Behavior on contentY {
+                enabled: !histFlick.moving
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.OutCubic
+                }
+            }
 
             Column {
                 id: histCol
@@ -529,7 +622,12 @@ SettingsSurface {
 
                         width: parent ? parent.width : 0
                         height: body.implicitHeight + 16 * root.s
-                        Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+                        Behavior on height {
+                            NumberAnimation {
+                                duration: Motion.fast
+                                easing.type: Easing.OutCubic
+                            }
+                        }
 
                         Timer {
                             id: copiedTimer
@@ -548,7 +646,11 @@ SettingsSurface {
                             anchors.bottomMargin: 2 * root.s
                             radius: 9 * root.s
                             color: hrow.lit ? Theme.frameBg : "transparent"
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
                         }
 
                         MouseArea {
@@ -580,8 +682,7 @@ SettingsSurface {
                             }
                             Text {
                                 width: parent.width
-                                text: hrow.copied ? "Copied to clipboard"
-                                    : root.when(hrow.entry.t) + " · " + hrow.entry.words + (hrow.entry.words === 1 ? " word" : " words")
+                                text: hrow.copied ? "Copied to clipboard" : root.when(hrow.entry.t) + " · " + hrow.entry.words + (hrow.entry.words === 1 ? " word" : " words")
                                 color: hrow.copied ? Theme.vermLit : Theme.faint
                                 font.family: Theme.font
                                 font.pixelSize: 9 * root.s
@@ -597,14 +698,22 @@ SettingsSurface {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 2 * root.s
                             opacity: hrow.lit ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             Rectangle {
                                 width: copyLabel.implicitWidth + 14 * root.s
                                 height: 22 * root.s
                                 radius: 6 * root.s
                                 color: cpArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.14) : "transparent"
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Motion.fast
+                                    }
+                                }
 
                                 Text {
                                     id: copyLabel
@@ -631,7 +740,11 @@ SettingsSurface {
                                 height: 22 * root.s
                                 radius: 6 * root.s
                                 color: hrmArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Motion.fast
+                                    }
+                                }
 
                                 GlyphIcon {
                                     anchors.centerIn: parent
@@ -657,7 +770,10 @@ SettingsSurface {
             }
         }
 
-        Item { width: 1; height: 6 * root.s }
+        Item {
+            width: 1
+            height: 6 * root.s
+        }
 
         Rectangle {
             width: parent.width
@@ -673,8 +789,7 @@ SettingsSurface {
                 anchors.left: parent.left
                 anchors.leftMargin: 4 * root.s
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.focusRowItem && root.focusRowItem.parent === histCol
-                    ? "enter copy · del remove · hold ⇧del wipe" : "enter open · esc back"
+                text: root.focusRowItem && root.focusRowItem.parent === histCol ? "enter copy · del remove · hold ⇧del wipe" : "enter open · esc back"
                 color: Theme.faint
                 font.family: Theme.font
                 font.pixelSize: 9.5 * root.s

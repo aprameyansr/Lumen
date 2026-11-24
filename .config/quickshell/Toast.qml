@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import Quickshell
 import Quickshell.Services.Notifications
 import "Singletons"
 
@@ -24,7 +23,9 @@ Item {
     required property Item host
 
     readonly property bool critical: notif.urgency === NotificationUrgency.Critical
-    readonly property var acts: notif.actions.filter(function(a) { return a.text.length > 0 && a.identifier !== "default"; })
+    readonly property var acts: notif.actions.filter(function (a) {
+        return a.text.length > 0 && a.identifier !== "default";
+    })
 
     implicitHeight: Math.max(iconTile.height, col.implicitHeight)
 
@@ -43,7 +44,9 @@ Item {
         deadline = Math.max(deadline, Date.now() + ms);
     }
 
-    function armDeadline() { deadline = notif ? (Notifs.expireAt[notif.id] || (Date.now() + Math.max(1, Flags.notifSecs || 6) * 1000)) : 0; }
+    function armDeadline() {
+        deadline = notif ? (Notifs.expireAt[notif.id] || (Date.now() + Math.max(1, Flags.notifSecs || 6) * 1000)) : 0;
+    }
     Component.onCompleted: armDeadline()
 
     Timer {
@@ -74,18 +77,54 @@ Item {
 
     ParallelAnimation {
         id: settle
-        NumberAnimation { target: root.host; property: "swipeX"; to: 0; duration: Motion.standard; easing.type: Easing.OutBack }
-        NumberAnimation { target: root.host; property: "swipeY"; to: 0; duration: Motion.standard; easing.type: Easing.OutBack }
-        NumberAnimation { target: root.host; property: "swipeFade"; to: 1; duration: Motion.standard; easing.type: Motion.easeStandard }
+        NumberAnimation {
+            target: root.host
+            property: "swipeX"
+            to: 0
+            duration: Motion.standard
+            easing.type: Easing.OutBack
+        }
+        NumberAnimation {
+            target: root.host
+            property: "swipeY"
+            to: 0
+            duration: Motion.standard
+            easing.type: Easing.OutBack
+        }
+        NumberAnimation {
+            target: root.host
+            property: "swipeFade"
+            to: 1
+            duration: Motion.standard
+            easing.type: Motion.easeStandard
+        }
     }
 
     ParallelAnimation {
         id: fling
         property real toX: 0
         property real toY: 0
-        NumberAnimation { target: root.host; property: "swipeX"; to: fling.toX; duration: Motion.fast; easing.type: Easing.InCubic }
-        NumberAnimation { target: root.host; property: "swipeY"; to: fling.toY; duration: Motion.fast; easing.type: Easing.InCubic }
-        NumberAnimation { target: root.host; property: "swipeFade"; to: 0; duration: Motion.fast; easing.type: Easing.InCubic }
+        NumberAnimation {
+            target: root.host
+            property: "swipeX"
+            to: fling.toX
+            duration: Motion.fast
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: root.host
+            property: "swipeY"
+            to: fling.toY
+            duration: Motion.fast
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: root.host
+            property: "swipeFade"
+            to: 0
+            duration: Motion.fast
+            easing.type: Easing.InCubic
+        }
         onFinished: {
             root.enterX = -fling.toX;
             root.enterY = -fling.toY;
@@ -112,9 +151,11 @@ Item {
         readonly property real farX: root.host.width / 2
         readonly property real farY: root.host.height * 0.6
 
-        function fadeFor(moved, far) { return 1 - 0.6 * Math.min(1, moved / far); }
+        function fadeFor(moved, far) {
+            return 1 - 0.6 * Math.min(1, moved / far);
+        }
 
-        onPressed: function(m) {
+        onPressed: function (m) {
             settle.stop();
             const p = mapToItem(null, m.x, m.y);
             px = p.x;
@@ -122,7 +163,7 @@ Item {
             pt = Date.now();
             axis = "";
         }
-        onPositionChanged: function(m) {
+        onPositionChanged: function (m) {
             const p = mapToItem(null, m.x, m.y);
             const dx = p.x - px;
             const dy = p.y - py;
@@ -136,7 +177,7 @@ Item {
                 root.host.swipeFade = fadeFor(-root.host.swipeY, farY);
             }
         }
-        onReleased: function(m) {
+        onReleased: {
             if (axis === "") {
                 Notifs.activateNotif(root.notif);
                 Notifs.removePopup(root.notif);
@@ -200,7 +241,9 @@ Item {
         font.pixelSize: 11 * root.s
 
         Behavior on color {
-            ColorAnimation { duration: Motion.fast }
+            ColorAnimation {
+                duration: Motion.fast
+            }
         }
 
         MouseArea {

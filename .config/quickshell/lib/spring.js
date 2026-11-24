@@ -26,5 +26,7 @@ function step(x0, v0, w, z, dt) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-    module.exports = { step };
+    module.exports = {
+        step
+    };
 }

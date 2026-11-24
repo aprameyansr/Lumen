@@ -34,10 +34,7 @@ Column {
      * StartupWMClass or id.
      */
     function normalizeClass(cls) {
-        return String(cls)
-            .replace(/\[(.)(.)\]/g, "$2")
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, "");
+        return String(cls).replace(/\[(.)(.)\]/g, "$2").toLowerCase().replace(/[^a-z0-9]/g, "");
     }
 
     /**
@@ -56,29 +53,29 @@ Column {
         if (want.length === 0)
             return null;
         var apps = picker.allApps;
-        for (var i = 0; i < apps.length; i++) {
-            var e = apps[i];
+        for (let i = 0; i < apps.length; i++) {
+            const e = apps[i];
             if (!e)
                 continue;
-            var cands = [e.startupClass, e.id, e.name];
-            for (var j = 0; j < cands.length; j++)
+            const cands = [e.startupClass, e.id, e.name];
+            for (let j = 0; j < cands.length; j++)
                 if (cands[j] && picker.normalizeClass(cands[j]) === want)
                     return e;
         }
         var best = null;
         var bestLen = 0;
-        for (var k = 0; k < apps.length; k++) {
-            var e2 = apps[k];
+        for (let k = 0; k < apps.length; k++) {
+            const e2 = apps[k];
             if (!e2)
                 continue;
-            var cands2 = [e2.startupClass, e2.id, e2.name];
-            for (var n = 0; n < cands2.length; n++) {
+            const cands2 = [e2.startupClass, e2.id, e2.name];
+            for (let n = 0; n < cands2.length; n++) {
                 if (!cands2[n])
                     continue;
-                var got = picker.normalizeClass(cands2[n]);
+                const got = picker.normalizeClass(cands2[n]);
                 if (got.length < 4)
                     continue;
-                var hit = (want.length >= 4 && got.indexOf(want) !== -1) || want.indexOf(got) !== -1;
+                const hit = (want.length >= 4 && got.indexOf(want) !== -1) || want.indexOf(got) !== -1;
                 if (hit && got.length > bestLen) {
                     best = e2;
                     bestLen = got.length;
@@ -91,7 +88,7 @@ Column {
     readonly property var allEntries: {
         var src = DesktopEntries.applications.values;
         var out = [];
-        for (var i = 0; i < src.length; i++)
+        for (let i = 0; i < src.length; i++)
             if (src[i] && !src[i].noDisplay)
                 out.push(src[i]);
         return out;
@@ -133,8 +130,10 @@ Column {
         picker.query = "";
     }
 
-    onResultsChanged: if (selectedIndex >= results.length) selectedIndex = 0;
-    onAddOpenChanged: if (addOpen) Qt.callLater(search.input.forceActiveFocus)
+    onResultsChanged: if (selectedIndex >= results.length)
+        selectedIndex = 0
+    onAddOpenChanged: if (addOpen)
+        Qt.callLater(search.input.forceActiveFocus)
 
     Item {
         width: parent.width
@@ -253,7 +252,11 @@ Column {
         }
     }
 
-    Item { width: 1; height: visible ? 4 * picker.s : 0; visible: picker.addOpen }
+    Item {
+        width: 1
+        height: visible ? 4 * picker.s : 0
+        visible: picker.addOpen
+    }
 
     SearchField {
         id: search
@@ -267,12 +270,16 @@ Column {
             picker.query = text;
             picker.selectedIndex = 0;
         }
-        onMoved: (d) => picker.moveSel(d)
+        onMoved: d => picker.moveSel(d)
         onAccepted: picker.pick()
         onDismissed: picker.closeAdd()
     }
 
-    Item { width: 1; height: visible ? 6 * picker.s : 0; visible: picker.addOpen }
+    Item {
+        width: 1
+        height: visible ? 6 * picker.s : 0
+        visible: picker.addOpen
+    }
 
     Item {
         width: parent.width
@@ -310,7 +317,7 @@ Column {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onPositionChanged: (m) => {
+                    onPositionChanged: m => {
                         var g = appArea.mapToItem(null, m.x, m.y);
                         if (g.x !== picker.lastPointer.x || g.y !== picker.lastPointer.y) {
                             picker.lastPointer = Qt.point(g.x, g.y);
@@ -332,7 +339,7 @@ Column {
                     height: 24 * picker.s
                     radius: 6 * picker.s
                     color: Qt.rgba(1, 1, 1, 0.05)
-                    visible: !(appIcon.status === Image.Ready && appIcon.source != "")
+                    visible: !(appIcon.status === Image.Ready && appIcon.source.toString().length > 0)
                 }
                 Image {
                     id: appIcon
@@ -342,7 +349,7 @@ Column {
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     smooth: true
-                    visible: status === Image.Ready && source != ""
+                    visible: status === Image.Ready && source.toString().length > 0
                     source: appRow.entry && appRow.entry.icon ? Quickshell.iconPath(appRow.entry.icon, true) : ""
                 }
 

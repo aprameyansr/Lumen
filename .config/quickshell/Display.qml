@@ -61,10 +61,22 @@ SettingsSurface {
     readonly property bool selIsMain: selMon !== null && selMon.name === mainName
 
     readonly property var scaleOptions: [
-        { label: "1.0", value: 1 },
-        { label: "1.25", value: 1.25 },
-        { label: "1.5", value: 1.5 },
-        { label: "2.0", value: 2 }
+        {
+            label: "1.0",
+            value: 1
+        },
+        {
+            label: "1.25",
+            value: 1.25
+        },
+        {
+            label: "1.5",
+            value: 1.5
+        },
+        {
+            label: "2.0",
+            value: 2
+        }
     ]
 
     onActiveChanged: {
@@ -83,18 +95,52 @@ SettingsSurface {
         }
     }
 
-    onSelMonChanged: if (selMon) card.syncToCurrent()
+    onSelMonChanged: if (selMon)
+        card.syncToCurrent()
 
     rows: {
         void root.selMon;
         void root.mainName;
         var e = [
-            { item: resRow, kind: "scrub", bump: function (d) { card.bumpRes(d); } },
-            { item: rateRow, kind: "scrub", bump: function (d) { card.bumpRate(d); } },
-            { item: scaleRow, kind: "seg", vals: root.scaleOptions.map(function (o) { return o.value; }), get: function () { return card.pickScale; }, set: function (v) { card.pickScale = v; } }
+            {
+                item: resRow,
+                kind: "scrub",
+                bump: function (d) {
+                    card.bumpRes(d);
+                }
+            },
+            {
+                item: rateRow,
+                kind: "scrub",
+                bump: function (d) {
+                    card.bumpRate(d);
+                }
+            },
+            {
+                item: scaleRow,
+                kind: "seg",
+                vals: root.scaleOptions.map(function (o) {
+                    return o.value;
+                }),
+                get: function () {
+                    return card.pickScale;
+                },
+                set: function (v) {
+                    card.pickScale = v;
+                }
+            }
         ];
         if (root.selMon && !root.selIsMain)
-            e.push({ item: mainRow, kind: "toggle", get: function () { return card.pendingMain; }, set: function (v) { card.pendingMain = v; } });
+            e.push({
+                item: mainRow,
+                kind: "toggle",
+                get: function () {
+                    return card.pendingMain;
+                },
+                set: function (v) {
+                    card.pendingMain = v;
+                }
+            });
         return e;
     }
 
@@ -107,29 +153,34 @@ SettingsSurface {
      */
     function resolutionsFor(mon) {
         var byRes = {};
-        for (var i = 0; i < mon.modes.length; i++) {
-            var m = mon.modes[i];
-            var key = m.w + "x" + m.h;
+        for (let i = 0; i < mon.modes.length; i++) {
+            const m = mon.modes[i];
+            let key = m.w + "x" + m.h;
             if (!byRes[key])
-                byRes[key] = { w: m.w, h: m.h, key: key, rates: [] };
+                byRes[key] = {
+                    w: m.w,
+                    h: m.h,
+                    key: key,
+                    rates: []
+                };
             if (byRes[key].rates.indexOf(m.hz) === -1)
                 byRes[key].rates.push(m.hz);
         }
-        var list = [];
-        for (var k in byRes) {
-            byRes[k].rates.sort(function (a, b) { return b - a; });
-            list.push(byRes[k]);
-        }
+        const list = Object.values(byRes);
+        for (const mode of list)
+            mode.rates.sort((a, b) => b - a);
         list.sort(function (a, b) {
-            if (a.w === mon.width && a.h === mon.height) return -1;
-            if (b.w === mon.width && b.h === mon.height) return 1;
+            if (a.w === mon.width && a.h === mon.height)
+                return -1;
+            if (b.w === mon.width && b.h === mon.height)
+                return 1;
             return (b.w * b.h) - (a.w * a.h);
         });
         return list;
     }
 
     function monitorByName(name) {
-        for (var i = 0; i < monitors.length; i++)
+        for (let i = 0; i < monitors.length; i++)
             if (monitors[i].name === name)
                 return monitors[i];
         return null;
@@ -137,7 +188,7 @@ SettingsSurface {
 
     /** The first monitor that is not `name`; the anchor for placement moves. */
     function otherMonitor(name) {
-        for (var i = 0; i < monitors.length; i++)
+        for (let i = 0; i < monitors.length; i++)
             if (monitors[i].name !== name)
                 return monitors[i];
         return null;
@@ -152,12 +203,24 @@ SettingsSurface {
         var oW = Math.round(other.width / other.scale);
         var oH = Math.round(other.height / other.scale);
         if (side === "left")
-            return { x: other.x - myW, y: other.y };
+            return {
+                x: other.x - myW,
+                y: other.y
+            };
         if (side === "above")
-            return { x: other.x, y: other.y - myH };
+            return {
+                x: other.x,
+                y: other.y - myH
+            };
         if (side === "below")
-            return { x: other.x, y: other.y + oH };
-        return { x: other.x + oW, y: other.y };
+            return {
+                x: other.x,
+                y: other.y + oH
+            };
+        return {
+            x: other.x + oW,
+            y: other.y
+        };
     }
 
     /** The pending-move x/y for `mon` using the card's current size picks, or null. */
@@ -168,8 +231,7 @@ SettingsSurface {
         if (!other || card.resolutions.length === 0)
             return null;
         var res = card.resolutions[Math.min(card.resIndex, card.resolutions.length - 1)];
-        return placementXY(other, pendingMove.side,
-            Math.round(res.w / card.pickScale), Math.round(res.h / card.pickScale));
+        return placementXY(other, pendingMove.side, Math.round(res.w / card.pickScale), Math.round(res.h / card.pickScale));
     }
 
     /**
@@ -185,8 +247,11 @@ SettingsSurface {
             return;
         var oT = null;
         var tiles = mapLayout.tiles;
-        for (var i = 0; i < tiles.length; i++)
-            if (tiles[i].name !== name) { oT = tiles[i]; break; }
+        for (let i = 0; i < tiles.length; i++)
+            if (tiles[i].name !== name) {
+                oT = tiles[i];
+                break;
+            }
         if (!oT)
             return;
         var nx = (cx - (oT.x + oT.w / 2)) / oT.w;
@@ -196,7 +261,10 @@ SettingsSurface {
         var myW = res ? Math.round(res.w / card.pickScale) : Math.round(mon.width / mon.scale);
         var myH = res ? Math.round(res.h / card.pickScale) : Math.round(mon.height / mon.scale);
         var p = placementXY(other, side, myW, myH);
-        pendingMove = (p.x === mon.x && p.y === mon.y) ? null : { name: name, side: side };
+        pendingMove = (p.x === mon.x && p.y === mon.y) ? null : {
+            name: name,
+            side: side
+        };
     }
 
     /**
@@ -209,15 +277,25 @@ SettingsSurface {
     readonly property var mapLayout: {
         var mons = root.monitors;
         if (mons.length === 0 || mapBox.width <= 0)
-            return { h: 0, tiles: [] };
+            return {
+                h: 0,
+                tiles: []
+            };
         var rects = [];
         var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (var i = 0; i < mons.length; i++) {
-            var m = mons[i];
-            var r = { name: m.name, hz: m.refresh, x: m.x, y: m.y, w: Math.round(m.width / m.scale), h: Math.round(m.height / m.scale) };
-            var p = root.pendingXY(m);
+        for (let i = 0; i < mons.length; i++) {
+            const m = mons[i];
+            let r = {
+                name: m.name,
+                hz: m.refresh,
+                x: m.x,
+                y: m.y,
+                w: Math.round(m.width / m.scale),
+                h: Math.round(m.height / m.scale)
+            };
+            const p = root.pendingXY(m);
             if (p) {
-                var res = card.resolutions[Math.min(card.resIndex, card.resolutions.length - 1)];
+                const res = card.resolutions[Math.min(card.resIndex, card.resolutions.length - 1)];
                 r.x = p.x;
                 r.y = p.y;
                 r.w = Math.round(res.w / card.pickScale);
@@ -232,9 +310,19 @@ SettingsSurface {
         var k = Math.min(mapBox.width / (maxX - minX), (96 * root.s) / (maxY - minY));
         var ox = (mapBox.width - (maxX - minX) * k) / 2;
         var tiles = rects.map(function (t) {
-            return { name: t.name, hz: t.hz, x: ox + (t.x - minX) * k, y: (t.y - minY) * k, w: t.w * k, h: t.h * k };
+            return {
+                name: t.name,
+                hz: t.hz,
+                x: ox + (t.x - minX) * k,
+                y: (t.y - minY) * k,
+                w: t.w * k,
+                h: t.h * k
+            };
         });
-        return { h: (maxY - minY) * k, tiles: tiles };
+        return {
+            h: (maxY - minY) * k,
+            tiles: tiles
+        };
     }
 
     /**
@@ -288,7 +376,7 @@ SettingsSurface {
                 root.monitors = Mon.parse(this.text);
                 root.mainName = root.mainFromLua(root.luaNow());
                 if (!root.monitorByName(root.selName)) {
-                    var main = root.monitorByName(root.mainName);
+                    const main = root.monitorByName(root.mainName);
                     root.selName = main ? main.name : (root.monitors.length > 0 ? root.monitors[0].name : "");
                 }
                 if (!root.quietRead)
@@ -304,10 +392,8 @@ SettingsSurface {
         property string mode: ""
         property string position: ""
         property real scale: 1
-        command: ["sh", "-c",
-            "sh \"$1\" apply \"$2\" \"$3\" \"$4\" \"$5\"",
-            "sh", root.helper, out, mode, position, String(scale)]
-        onExited: (exitCode) => {
+        command: ["sh", "-c", "sh \"$1\" apply \"$2\" \"$3\" \"$4\" \"$5\"", "sh", root.helper, out, mode, position, String(scale)]
+        onExited: exitCode => {
             if (exitCode === 0) {
                 root.startCountdown();
             } else {
@@ -331,7 +417,7 @@ SettingsSurface {
 
     /** Drags each workspace in `range` onto `out` after a main swap (Lua dispatcher). */
     function moveWorkspaces(range, out) {
-        for (var i = range[0]; i <= range[1]; i++)
+        for (let i = range[0]; i <= range[1]; i++)
             Hyprland.dispatch("hl.dsp.workspace.move({ workspace = " + i + ", monitor = '" + out + "' })");
     }
 
@@ -434,7 +520,7 @@ SettingsSurface {
         path: root.monitorsPath
         atomicWrites: true
         printErrors: false
-        onSaveFailed: (err) => {
+        onSaveFailed: err => {
             root.note = "Live mode kept, but writing monitors.lua failed.";
             console.log("display: write failed: " + err);
         }
@@ -474,7 +560,11 @@ SettingsSurface {
             height: 32 * root.s
             radius: 8 * root.s
             color: (crowHover.hovered || crow.focused) ? Theme.frameBg : "transparent"
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -532,7 +622,10 @@ SettingsSurface {
             showBack: true
         }
 
-        Item { width: 1; height: 12 * root.s }
+        Item {
+            width: 1
+            height: 12 * root.s
+        }
 
         Column {
             anchors.left: parent.left
@@ -545,7 +638,12 @@ SettingsSurface {
                 id: mapBox
                 width: parent.width
                 height: root.mapLayout.h
-                Behavior on height { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                Behavior on height {
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
 
                 Repeater {
                     model: root.mapLayout.tiles
@@ -570,10 +668,30 @@ SettingsSurface {
                         border.width: 1
                         border.color: tile.moved ? Qt.alpha(Theme.vermLit, 0.7) : (tile.sel ? Theme.cream : Theme.hairSoft)
 
-                        Behavior on x { enabled: !tileMA.pressed; NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-                        Behavior on y { enabled: !tileMA.pressed; NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-                        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on x {
+                            enabled: !tileMA.pressed
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Motion.easeStandard
+                            }
+                        }
+                        Behavior on y {
+                            enabled: !tileMA.pressed
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Motion.easeStandard
+                            }
+                        }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
+                        Behavior on border.color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         Column {
                             anchors.centerIn: parent
@@ -594,7 +712,9 @@ SettingsSurface {
                                 font.family: Theme.font
                                 font.pixelSize: 8.5 * root.s
                                 font.weight: Font.Medium
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                         }
 
@@ -622,13 +742,13 @@ SettingsSurface {
                             cursorShape: pressed ? Qt.ClosedHandCursor : (root.monitors.length >= 2 ? Qt.OpenHandCursor : Qt.PointingHandCursor)
                             property real sx: 0
                             property real sy: 0
-                            onPressed: (mouse) => {
+                            onPressed: mouse => {
                                 if (root.pendingOut.length === 0)
                                     root.selName = tile.modelData.name;
                                 sx = mouse.x;
                                 sy = mouse.y;
                             }
-                            onPositionChanged: (mouse) => {
+                            onPositionChanged: mouse => {
                                 if (!pressed || root.monitors.length < 2 || root.pendingOut.length > 0)
                                     return;
                                 tile.dx += mouse.x - sx;
@@ -654,7 +774,11 @@ SettingsSurface {
                 border.width: 1
                 border.color: card.pending ? Qt.alpha(Theme.vermLit, 0.55) : Theme.hairSoft
                 implicitHeight: cardCol.implicitHeight + 22 * root.s
-                Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                Behavior on border.color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
                 property int resIndex: 0
                 property int rateIndex: 0
@@ -699,7 +823,7 @@ SettingsSurface {
                         return;
                     var resos = root.resolutionsFor(mon);
                     var ri = 0;
-                    for (var i = 0; i < resos.length; i++) {
+                    for (let i = 0; i < resos.length; i++) {
                         if (resos[i].w === mon.width && resos[i].h === mon.height) {
                             ri = i;
                             break;
@@ -717,9 +841,12 @@ SettingsSurface {
                 function nearestIn(rates, hz) {
                     var best = 0;
                     var bestDiff = 1e9;
-                    for (var i = 0; i < rates.length; i++) {
-                        var d = Math.abs(rates[i] - hz);
-                        if (d < bestDiff) { bestDiff = d; best = i; }
+                    for (let i = 0; i < rates.length; i++) {
+                        const d = Math.abs(rates[i] - hz);
+                        if (d < bestDiff) {
+                            bestDiff = d;
+                            best = i;
+                        }
                     }
                     return best;
                 }
@@ -768,11 +895,16 @@ SettingsSurface {
                             width: parent.width
                             s: root.s
                             label: "Resolution"
-                            options: card.resolutions.map(function (r, i) { return { label: r.w + "×" + r.h, value: i }; })
+                            options: card.resolutions.map(function (r, i) {
+                                return {
+                                    label: r.w + "×" + r.h,
+                                    value: i
+                                };
+                            })
                             value: card.resIndex
                             open: root.openPicker === root.selName + ":res"
                             onRequestToggle: root.openPicker = (root.openPicker === root.selName + ":res" ? "" : root.selName + ":res")
-                            onPicked: (v) => {
+                            onPicked: v => {
                                 card.resIndex = v;
                                 card.rateIndex = card.nearestRateIndex(card.rates.length > 0 ? card.rates[0] : 60);
                                 root.openPicker = "";
@@ -788,11 +920,16 @@ SettingsSurface {
                             width: parent.width
                             s: root.s
                             label: "Refresh"
-                            options: card.rates.map(function (hz, i) { return { label: hz + "Hz", value: i }; })
+                            options: card.rates.map(function (hz, i) {
+                                return {
+                                    label: hz + "Hz",
+                                    value: i
+                                };
+                            })
                             value: Math.min(card.rateIndex, Math.max(0, card.rates.length - 1))
                             open: root.openPicker === root.selName + ":rate"
                             onRequestToggle: root.openPicker = (root.openPicker === root.selName + ":rate" ? "" : root.selName + ":rate")
-                            onPicked: (v) => {
+                            onPicked: v => {
                                 card.rateIndex = v;
                                 root.openPicker = "";
                             }
@@ -822,7 +959,7 @@ SettingsSurface {
                                 s: root.s
                                 options: root.scaleOptions
                                 value: card.pickScale
-                                onPicked: (v) => card.pickScale = v
+                                onPicked: v => card.pickScale = v
                             }
                         }
                     }
@@ -861,19 +998,25 @@ SettingsSurface {
                         height: 30 * root.s
 
                         Rectangle {
-                            id: applyBtn
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             visible: !card.pending && root.pendingOut.length === 0
                             width: applyLabel.implicitWidth + 28 * root.s
                             height: 28 * root.s
                             radius: 9 * root.s
-                            color: !card.applyReady ? Qt.alpha(Theme.onGlow, 0.10)
-                                : (applyArea.containsMouse ? Qt.alpha(Theme.onGlow, 0.34) : Qt.alpha(Theme.onGlow, 0.20))
+                            color: !card.applyReady ? Qt.alpha(Theme.onGlow, 0.10) : (applyArea.containsMouse ? Qt.alpha(Theme.onGlow, 0.34) : Qt.alpha(Theme.onGlow, 0.20))
                             border.width: 1
                             border.color: Qt.alpha(Theme.onGlow, !card.applyReady ? 0.22 : (applyArea.containsMouse ? 0.6 : 0.4))
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
-                            Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
+                            Behavior on border.color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             Text {
                                 id: applyLabel
@@ -891,7 +1034,8 @@ SettingsSurface {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: card.applyReady ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                onClicked: if (card.applyReady) root.apply()
+                                onClicked: if (card.applyReady)
+                                    root.apply()
                             }
                         }
 
@@ -903,13 +1047,16 @@ SettingsSurface {
                             spacing: 9 * root.s
 
                             Rectangle {
-                                id: keepBtn
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: keepLabel.implicitWidth + 28 * root.s
                                 height: 28 * root.s
                                 radius: 9 * root.s
                                 color: keepArea.containsMouse ? Theme.vermLit : Theme.verm
-                                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Motion.fast
+                                    }
+                                }
 
                                 Text {
                                     id: keepLabel
@@ -957,7 +1104,10 @@ SettingsSurface {
             }
         }
 
-        Item { width: 1; height: 4 * root.s }
+        Item {
+            width: 1
+            height: 4 * root.s
+        }
     }
 
     MouseArea {

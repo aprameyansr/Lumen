@@ -22,8 +22,8 @@ Item {
     default property alias rightContent: rightSlot.data
 
     signal moved(int delta)
-    signal accepted()
-    signal dismissed()
+    signal accepted
+    signal dismissed
     signal keyPressed(var event)
 
     height: 30 * s
@@ -60,7 +60,7 @@ Item {
         cursorDelegate: Item {}
         Keys.onUpPressed: root.moved(-1)
         Keys.onDownPressed: root.moved(1)
-        Keys.onPressed: (e) => {
+        Keys.onPressed: e => {
             root.keyPressed(e);
             if (e.accepted)
                 return;
@@ -85,7 +85,12 @@ Item {
         height: 1
         color: Theme.faint
         opacity: field.activeFocus ? 0.7 : 0
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
     }
 
     Text {
@@ -97,7 +102,9 @@ Item {
         color: Theme.faint
         font.family: Theme.font
         font.pixelSize: 10.5 * root.s
-        font.features: { "tnum": 1 }
+        font.features: {
+            "tnum": 1
+        }
     }
 
     Item {

@@ -32,8 +32,14 @@ Item {
             radius: parent.radius
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Theme.vermDim }
-                GradientStop { position: 1.0; color: Theme.vermLit }
+                GradientStop {
+                    position: 0.0
+                    color: Theme.vermDim
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Theme.vermLit
+                }
             }
         }
     }

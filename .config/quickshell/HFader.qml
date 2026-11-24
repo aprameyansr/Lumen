@@ -19,7 +19,7 @@ Item {
 
     signal moved(real v)
     signal committed(real v)
-    signal focusRequested()
+    signal focusRequested
 
     implicitHeight: 16 * s
 
@@ -56,10 +56,21 @@ Item {
             radius: parent.radius
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root.on ? Theme.vermBurn : Theme.vermDimDeep }
-                GradientStop { position: 1.0; color: root.on ? Theme.vermLit : Theme.vermDim }
+                GradientStop {
+                    position: 0.0
+                    color: root.on ? Theme.vermBurn : Theme.vermDimDeep
+                }
+                GradientStop {
+                    position: 1.0
+                    color: root.on ? Theme.vermLit : Theme.vermDim
+                }
             }
-            Behavior on width { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+            Behavior on width {
+                enabled: !dragArea.pressed
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         Rectangle {
@@ -70,7 +81,12 @@ Item {
             height: 11 * root.s
             radius: 2 * root.s
             color: Theme.tickRest
-            Behavior on x { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+            Behavior on x {
+                enabled: !dragArea.pressed
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -83,8 +99,14 @@ Item {
                 const v = Math.max(0, Math.min(1, (mx + 8 * root.s) / track.width));
                 root.moved(v);
             }
-            onPressed: (e) => { root.focusRequested(); setFromX(e.x); }
-            onPositionChanged: (e) => { if (pressed) setFromX(e.x); }
+            onPressed: e => {
+                root.focusRequested();
+                setFromX(e.x);
+            }
+            onPositionChanged: e => {
+                if (pressed)
+                    setFromX(e.x);
+            }
             onReleased: root.committed(root.value)
         }
     }
@@ -100,6 +122,8 @@ Item {
         font.family: Theme.font
         font.pixelSize: 10 * root.s
         font.weight: Font.DemiBold
-        font.features: { "tnum": 1 }
+        font.features: {
+            "tnum": 1
+        }
     }
 }

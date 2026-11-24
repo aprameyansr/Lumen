@@ -76,10 +76,7 @@ PillSurface {
      * gesture reads clearly. These binds are shown read-only.
      */
     function comboPretty(c) {
-        return c.replace("mouse_up", "Scroll ↑")
-                .replace("mouse_down", "Scroll ↓")
-                .replace("mouse:272", "LMB")
-                .replace("mouse:273", "RMB");
+        return c.replace("mouse_up", "Scroll ↑").replace("mouse_down", "Scroll ↓").replace("mouse:272", "LMB").replace("mouse:273", "RMB");
     }
 
     function refresh() {
@@ -188,14 +185,23 @@ PillSurface {
     function save() {
         var text = bindsFile.text();
         if (root.formAdd) {
-            if (root.formCombo.length === 0) { root.conflict = "pick a key"; return; }
-            if (root.formCmd.length === 0) { root.conflict = "command empty"; return; }
+            if (root.formCombo.length === 0) {
+                root.conflict = "pick a key";
+                return;
+            }
+            if (root.formCmd.length === 0) {
+                root.conflict = "command empty";
+                return;
+            }
             if (Binds.inUse(text, root.formCombo, -1)) {
                 root.conflict = root.formCombo + " already bound";
                 return;
             }
-            var a = Binds.add(text, root.formCombo, root.formCmd, root.formName);
-            if (!a.ok) { root.conflict = a.error || "add failed"; return; }
+            const a = Binds.add(text, root.formCombo, root.formCmd, root.formName);
+            if (!a.ok) {
+                root.conflict = a.error || "add failed";
+                return;
+            }
             writer.setText(a.text);
             return;
         }
@@ -207,25 +213,43 @@ PillSurface {
 
         var out = text;
         if (root.formCombo !== root.origCombo) {
-            var r = Binds.rebind(out, root.formLine, root.formCombo);
-            if (!r.ok) { root.conflict = r.error || "rebind failed"; return; }
+            const r = Binds.rebind(out, root.formLine, root.formCombo);
+            if (!r.ok) {
+                root.conflict = r.error || "rebind failed";
+                return;
+            }
             out = r.text;
         }
         if (root.formCmdEditable && root.formCmd !== root.origCmd) {
-            if (root.formCmd.length === 0) { root.conflict = "command empty"; return; }
-            var c = Binds.editCmd(out, root.formLine, root.formCmd);
-            if (!c.ok) { root.conflict = c.error || "command edit failed"; return; }
+            if (root.formCmd.length === 0) {
+                root.conflict = "command empty";
+                return;
+            }
+            const c = Binds.editCmd(out, root.formLine, root.formCmd);
+            if (!c.ok) {
+                root.conflict = c.error || "command edit failed";
+                return;
+            }
             out = c.text;
         }
         if (!root.formCmdEditable && root.formAction !== root.origAction) {
-            if (root.formAction.trim().length === 0) { root.conflict = "action empty"; return; }
-            var a2 = Binds.editAction(out, root.formLine, root.formAction.trim());
-            if (!a2.ok) { root.conflict = a2.error || "action edit failed"; return; }
+            if (root.formAction.trim().length === 0) {
+                root.conflict = "action empty";
+                return;
+            }
+            const a2 = Binds.editAction(out, root.formLine, root.formAction.trim());
+            if (!a2.ok) {
+                root.conflict = a2.error || "action edit failed";
+                return;
+            }
             out = a2.text;
         }
         if (root.formName !== root.origName) {
-            var n = Binds.editName(out, root.formLine, root.formName);
-            if (!n.ok) { root.conflict = n.error || "name edit failed"; return; }
+            const n = Binds.editName(out, root.formLine, root.formName);
+            if (!n.ok) {
+                root.conflict = n.error || "name edit failed";
+                return;
+            }
             out = n.text;
         }
 
@@ -240,7 +264,10 @@ PillSurface {
         if (root.formAdd || root.formLine < 0)
             return;
         var d = Binds.del(bindsFile.text(), root.formLine);
-        if (!d.ok) { root.conflict = d.error || "delete failed"; return; }
+        if (!d.ok) {
+            root.conflict = d.error || "delete failed";
+            return;
+        }
         writer.setText(d.text);
     }
 
@@ -260,7 +287,8 @@ PillSurface {
         }
     }
 
-    onFormOpenChanged: if (formOpen) Qt.callLater(nameField.forceActiveFocus)
+    onFormOpenChanged: if (formOpen)
+        Qt.callLater(nameField.forceActiveFocus)
 
     readonly property Item focusRowItem: list.focusRowItem
 
@@ -302,7 +330,7 @@ PillSurface {
             bindsFile.reload();
             root.refresh();
         }
-        onSaveFailed: (err) => {
+        onSaveFailed: err => {
             root.conflict = "write failed";
             console.log("keybinds: write failed: " + err);
         }
@@ -316,7 +344,7 @@ PillSurface {
     Item {
         id: keyCatcher
         focus: root.listening
-        Keys.onPressed: (e) => {
+        Keys.onPressed: e => {
             if (!root.listening)
                 return;
             e.accepted = true;
@@ -325,7 +353,7 @@ PillSurface {
             root.loneMod = Chord.loneModifier(e.key, e.nativeScanCode) || "";
             root.capture(e.key, e.modifiers);
         }
-        Keys.onReleased: (e) => {
+        Keys.onReleased: e => {
             if (!root.listening)
                 return;
             e.accepted = true;
@@ -386,7 +414,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 8 * root.s }
+        Item {
+            width: 1
+            height: 8 * root.s
+        }
 
         Item {
             width: parent.width
@@ -425,7 +456,7 @@ PillSurface {
                     root.query = text;
                     root.focusIndex = 0;
                 }
-                Keys.onPressed: (e) => {
+                Keys.onPressed: e => {
                     if (e.key === Qt.Key_Down) {
                         root.move(1);
                         e.accepted = true;
@@ -447,11 +478,19 @@ PillSurface {
                 height: 1
                 color: Theme.faint
                 opacity: searchField.activeFocus ? 0.7 : 0.18
-                Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
             }
         }
 
-        Item { width: 1; height: 8 * root.s }
+        Item {
+            width: 1
+            height: 8 * root.s
+        }
 
         ListView {
             id: list
@@ -474,11 +513,13 @@ PillSurface {
                 width: ListView.view.width
                 height: 38 * root.s
 
-                onFocusedChanged: if (focused) list.focusRowItem = brow
+                onFocusedChanged: if (focused)
+                    list.focusRowItem = brow
 
                 HoverHandler {
                     id: rowHover
-                    onHoveredChanged: if (hovered && !root.listening) root.focusIndex = brow.index
+                    onHoveredChanged: if (hovered && !root.listening)
+                        root.focusIndex = brow.index
                 }
 
                 Rectangle {
@@ -487,7 +528,11 @@ PillSurface {
                     anchors.bottomMargin: 3 * root.s
                     radius: 9 * root.s
                     color: (rowHover.hovered || brow.focused) ? Theme.frameBg : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 Rectangle {
@@ -501,7 +546,11 @@ PillSurface {
                     color: brow.focused ? Qt.alpha(Theme.vermLit, 0.16) : Theme.frameBg
                     border.width: 1
                     border.color: brow.focused ? Qt.alpha(Theme.vermLit, 0.45) : Theme.hairSoft
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         id: comboText
@@ -684,16 +733,18 @@ PillSurface {
                     color: root.listening ? Qt.alpha(Theme.vermLit, 0.12) : Theme.frameBg
                     border.width: 1
                     border.color: root.listening ? Qt.alpha(Theme.vermLit, 0.55) : Theme.hairSoft
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         anchors.left: parent.left
                         anchors.leftMargin: 11 * root.s
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.listening ? "press keys…  esc cancels"
-                            : (root.formCombo.length ? root.formCombo : "tap to set a key")
-                        color: root.listening ? Theme.flameGlow
-                            : (root.formCombo.length ? Theme.cream : Theme.faint)
+                        text: root.listening ? "press keys…  esc cancels" : (root.formCombo.length ? root.formCombo : "tap to set a key")
+                        color: root.listening ? Theme.flameGlow : (root.formCombo.length ? Theme.cream : Theme.faint)
                         font.family: Theme.font
                         font.pixelSize: 11.5 * root.s
                         font.weight: root.formCombo.length ? Font.DemiBold : Font.Medium
@@ -755,9 +806,14 @@ PillSurface {
                         selectionColor: Theme.verm
                         text: root.formName
                         onTextEdited: root.formName = text
-                        Keys.onPressed: (e) => {
-                            if (e.key === Qt.Key_Escape) { root.closeForm(); e.accepted = true; }
-                            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.save(); e.accepted = true; }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Escape) {
+                                root.closeForm();
+                                e.accepted = true;
+                            } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                                root.save();
+                                e.accepted = true;
+                            }
                         }
                     }
                 }
@@ -808,9 +864,14 @@ PillSurface {
                         selectionColor: Theme.verm
                         text: root.formCmd
                         onTextEdited: root.formCmd = text
-                        Keys.onPressed: (e) => {
-                            if (e.key === Qt.Key_Escape) { root.closeForm(); e.accepted = true; }
-                            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.save(); e.accepted = true; }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Escape) {
+                                root.closeForm();
+                                e.accepted = true;
+                            } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                                root.save();
+                                e.accepted = true;
+                            }
                         }
                     }
 
@@ -833,9 +894,14 @@ PillSurface {
                         selectionColor: Theme.verm
                         text: root.formAction
                         onTextEdited: root.formAction = text
-                        Keys.onPressed: (e) => {
-                            if (e.key === Qt.Key_Escape) { root.closeForm(); e.accepted = true; }
-                            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.save(); e.accepted = true; }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Escape) {
+                                root.closeForm();
+                                e.accepted = true;
+                            } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                                root.save();
+                                e.accepted = true;
+                            }
                         }
                     }
                 }
@@ -857,7 +923,6 @@ PillSurface {
                 height: 30 * root.s
 
                 Rectangle {
-                    id: deleteBtn
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     visible: !root.formAdd
@@ -889,7 +954,6 @@ PillSurface {
                 }
 
                 Rectangle {
-                    id: saveBtn
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     width: saveLabel.implicitWidth + 30 * root.s
@@ -919,7 +983,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 9 * root.s }
+        Item {
+            width: 1
+            height: 9 * root.s
+        }
 
         Rectangle {
             width: parent.width

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "lib/setInput.js" as SetInput
+import "lib/luaSettings.js" as LuaSettings
 import "Singletons"
 
 /**
@@ -29,14 +29,78 @@ SettingsSurface {
      * wraps around to the start of the list.
      */
     rows: [
-        { item: sensRow, kind: "scrub", bump: function (d) { sensScrub.bump(d); } },
-        { item: accelRow, kind: "seg", vals: ["flat", "adaptive"], get: function () { return root.accelProfile; }, set: function (v) { root.accelProfile = v; root.writeInputField("accel_profile", "\"" + v + "\""); } },
-        { item: layoutRow, kind: "seg", vals: root.kbLayoutVals, get: function () { return root.kbLayout; }, set: function (v) { root.setKbLayout(v); } },
-        { item: rateRow, kind: "scrub", bump: function (d) { rateScrub.bump(d); } },
-        { item: delayRow, kind: "scrub", bump: function (d) { delayScrub.bump(d); } },
-        { item: numlockRow, kind: "toggle", get: function () { return root.numlockOn; }, set: function (v) { root.numlockOn = v; root.writeInputField("numlock_by_default", v ? "true" : "false"); } },
-        { item: sizeRow, kind: "scrub", bump: function (d) { sizeScrub.bump(d); } },
-        { item: themeRow, kind: "toggle", get: function () { return root.themeOpen; }, set: function (v) { root.themeOpen = v; } }
+        {
+            item: sensRow,
+            kind: "scrub",
+            bump: function (d) {
+                sensScrub.bump(d);
+            }
+        },
+        {
+            item: accelRow,
+            kind: "seg",
+            vals: ["flat", "adaptive"],
+            get: function () {
+                return root.accelProfile;
+            },
+            set: function (v) {
+                root.accelProfile = v;
+                root.writeInputField("accel_profile", "\"" + v + "\"");
+            }
+        },
+        {
+            item: layoutRow,
+            kind: "seg",
+            vals: root.kbLayoutVals,
+            get: function () {
+                return root.kbLayout;
+            },
+            set: function (v) {
+                root.setKbLayout(v);
+            }
+        },
+        {
+            item: rateRow,
+            kind: "scrub",
+            bump: function (d) {
+                rateScrub.bump(d);
+            }
+        },
+        {
+            item: delayRow,
+            kind: "scrub",
+            bump: function (d) {
+                delayScrub.bump(d);
+            }
+        },
+        {
+            item: numlockRow,
+            kind: "toggle",
+            get: function () {
+                return root.numlockOn;
+            },
+            set: function (v) {
+                root.numlockOn = v;
+                root.writeInputField("numlock_by_default", v ? "true" : "false");
+            }
+        },
+        {
+            item: sizeRow,
+            kind: "scrub",
+            bump: function (d) {
+                sizeScrub.bump(d);
+            }
+        },
+        {
+            item: themeRow,
+            kind: "toggle",
+            get: function () {
+                return root.themeOpen;
+            },
+            set: function (v) {
+                root.themeOpen = v;
+            }
+        }
     ]
 
     property string note: ""
@@ -64,8 +128,14 @@ SettingsSurface {
     property var base: ({})
 
     readonly property var accelOptions: [
-        { label: "Flat", value: "flat" },
-        { label: "Adaptive", value: "adaptive" }
+        {
+            label: "Flat",
+            value: "flat"
+        },
+        {
+            label: "Adaptive",
+            value: "adaptive"
+        }
     ]
 
     readonly property var kbLayouts: ["de", "us", "gb", "fr", "es", "it", "tr"]
@@ -95,23 +165,23 @@ SettingsSurface {
         root.envText = envFile.text();
         root.autostartText = autostartFile.text();
 
-        var inp = root.inputText;
-        var sens = parseFloat(SetInput.getField(inp, "sensitivity"));
+        const inp = root.inputText;
+        const sens = parseFloat(LuaSettings.getField(inp, "sensitivity"));
         root.sensitivity = isNaN(sens) ? 0 : sens;
-        var ap = SetInput.getField(inp, "accel_profile");
+        const ap = LuaSettings.getField(inp, "accel_profile");
         root.accelProfile = ap.length > 0 ? ap : "flat";
-        var kl = SetInput.getField(inp, "kb_layout");
+        const kl = LuaSettings.getField(inp, "kb_layout");
         root.kbLayout = kl.length > 0 ? kl : "de";
-        var rr = parseInt(SetInput.getField(inp, "repeat_rate"), 10);
+        const rr = parseInt(LuaSettings.getField(inp, "repeat_rate"), 10);
         root.repeatRate = isNaN(rr) ? 25 : rr;
-        var rd = parseInt(SetInput.getField(inp, "repeat_delay"), 10);
+        const rd = parseInt(LuaSettings.getField(inp, "repeat_delay"), 10);
         root.repeatDelay = isNaN(rd) ? 600 : rd;
-        root.numlockOn = SetInput.getField(inp, "numlock_by_default") === "true";
+        root.numlockOn = LuaSettings.getField(inp, "numlock_by_default") === "true";
 
-        var env = root.envText;
-        var cs = parseInt(SetInput.getEnv(env, "XCURSOR_SIZE"), 10);
+        const env = root.envText;
+        const cs = parseInt(LuaSettings.getEnv(env, "XCURSOR_SIZE"), 10);
         root.cursorSize = isNaN(cs) ? 24 : cs;
-        var ct = SetInput.getEnv(env, "XCURSOR_THEME");
+        const ct = LuaSettings.getEnv(env, "XCURSOR_THEME");
         root.cursorTheme = ct.length > 0 ? ct : "Bibata-Modern-Ice";
 
         root.base = {
@@ -127,7 +197,7 @@ SettingsSurface {
      * and reloads Hyprland so the change takes effect at once.
      */
     function writeInputField(name, literal) {
-        var res = SetInput.setField(root.inputText, name, literal);
+        const res = LuaSettings.setField(root.inputText, name, literal);
         if (!res.ok)
             return;
         root.inputText = res.text;
@@ -150,16 +220,16 @@ SettingsSurface {
         setcursorProc.size = size;
         setcursorProc.running = true;
 
-        var env = root.envText;
-        var e1 = SetInput.setEnv(env, "XCURSOR_THEME", theme);
-        var e2 = SetInput.setEnv(e1.ok ? e1.text : env, "XCURSOR_SIZE", String(size));
-        var e3 = SetInput.setEnv(e2.ok ? e2.text : (e1.ok ? e1.text : env), "HYPRCURSOR_SIZE", String(size));
-        if (e3.ok || e2.ok || e1.ok) {
-            root.envText = e3.ok ? e3.text : (e2.ok ? e2.text : e1.text);
-            envWriter.setText(root.envText);
+        let env = root.envText;
+        const sizeText = String(size);
+        for (const [key, value] of [["XCURSOR_THEME", theme], ["XCURSOR_SIZE", sizeText], ["HYPRCURSOR_SIZE", sizeText]])
+            env = LuaSettings.setEnv(env, key, value).text;
+        if (env !== root.envText) {
+            root.envText = env;
+            envWriter.setText(env);
         }
 
-        var auto = SetInput.setCursorLine(root.autostartText, theme, size);
+        const auto = LuaSettings.setCursorLine(root.autostartText, theme, size);
         if (auto.ok) {
             root.autostartText = auto.text;
             autostartWriter.setText(auto.text);
@@ -240,7 +310,9 @@ SettingsSurface {
         command: ["sh", "-c", "{ printf '%s\\n' \"$HOME/.icons\" \"$HOME/.local/share/icons\" /usr/share/icons; printf '%s' \"${XDG_DATA_DIRS:-/usr/local/share:/usr/share}\" | tr ':' '\\n' | sed 's#/*$#/icons#'; } | sort -u | while IFS= read -r d; do [ -d \"$d\" ] || continue; for t in \"$d\"/*/; do [ -d \"$t/cursors\" ] && basename \"$t\"; done; done | sort -u"]
         stdout: StdioCollector {
             onStreamFinished: {
-                var lines = this.text.split("\n").filter(function (l) { return l.trim().length > 0; });
+                var lines = this.text.split("\n").filter(function (l) {
+                    return l.trim().length > 0;
+                });
                 root.cursorThemes = lines;
             }
         }
@@ -292,7 +364,12 @@ SettingsSurface {
         width: parent ? parent.width : 0
         height: frow.rowH + (frow.expanded ? frow.capH : 0)
         clip: true
-        Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        Behavior on height {
+            NumberAnimation {
+                duration: Motion.fast
+                easing.type: Easing.OutCubic
+            }
+        }
 
         HoverHandler {
             id: fhover
@@ -305,7 +382,11 @@ SettingsSurface {
             anchors.bottomMargin: 3 * root.s
             radius: 9 * root.s
             color: (fhover.hovered || frow.focused) ? Theme.frameBg : "transparent"
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -385,7 +466,9 @@ SettingsSurface {
             anchors.rightMargin: 12 * root.s
             spacing: 0
 
-            GroupLabel { text: "Pointer" }
+            GroupLabel {
+                text: "Pointer"
+            }
 
             FieldRow {
                 id: sensRow
@@ -397,7 +480,10 @@ SettingsSurface {
                     s: root.s
                     value: root.sensitivity
                     openValue: root.base.sensitivity
-                    from: -1; to: 1; step: 0.1; decimals: 1
+                    from: -1
+                    to: 1
+                    step: 0.1
+                    decimals: 1
                     onEdited: v => {
                         root.sensitivity = v;
                         root.writeInputField("sensitivity", String(v));
@@ -414,14 +500,16 @@ SettingsSurface {
                     s: root.s
                     options: root.accelOptions
                     value: root.accelProfile
-                    onPicked: (v) => {
+                    onPicked: v => {
                         root.accelProfile = v;
                         root.writeInputField("accel_profile", "\"" + v + "\"");
                     }
                 }
             }
 
-            GroupLabel { text: "Keyboard" }
+            GroupLabel {
+                text: "Keyboard"
+            }
 
             FieldRow {
                 id: layoutRow
@@ -459,7 +547,10 @@ SettingsSurface {
                     s: root.s
                     value: root.repeatRate
                     openValue: root.base.repeatRate
-                    from: 10; to: 80; step: 1; unit: "Hz"
+                    from: 10
+                    to: 80
+                    step: 1
+                    unit: "Hz"
                     onEdited: v => {
                         root.repeatRate = v;
                         root.writeInputField("repeat_rate", String(v));
@@ -477,7 +568,10 @@ SettingsSurface {
                     s: root.s
                     value: root.repeatDelay
                     openValue: root.base.repeatDelay
-                    from: 150; to: 1000; step: 25; unit: "ms"
+                    from: 150
+                    to: 1000
+                    step: 25
+                    unit: "ms"
                     onEdited: v => {
                         root.repeatDelay = v;
                         root.writeInputField("repeat_delay", String(v));
@@ -500,7 +594,9 @@ SettingsSurface {
                 }
             }
 
-            GroupLabel { text: "Cursor" }
+            GroupLabel {
+                text: "Cursor"
+            }
 
             FieldRow {
                 id: sizeRow
@@ -512,7 +608,10 @@ SettingsSurface {
                     s: root.s
                     value: root.cursorSize
                     openValue: root.base.cursorSize
-                    from: 12; to: 96; step: 4; unit: "px"
+                    from: 12
+                    to: 96
+                    step: 4
+                    unit: "px"
                     onEdited: v => {
                         root.cursorSize = v;
                         root.applyCursor(root.cursorTheme, v);
@@ -520,7 +619,10 @@ SettingsSurface {
                 }
             }
 
-            Item { width: 1; height: 8 * root.s }
+            Item {
+                width: 1
+                height: 8 * root.s
+            }
 
             /**
              * DisplayPicker draws its own chip and dropdown, so the wrapper only
@@ -548,11 +650,16 @@ SettingsSurface {
                     width: themeRow.width - 16 * root.s
                     s: root.s
                     label: "Theme"
-                    options: root.cursorThemes.map(function (t) { return { label: t, value: t }; })
+                    options: root.cursorThemes.map(function (t) {
+                        return {
+                            label: t,
+                            value: t
+                        };
+                    })
                     value: root.cursorTheme
                     open: root.themeOpen
                     onRequestToggle: root.themeOpen = !root.themeOpen
-                    onPicked: (v) => {
+                    onPicked: v => {
                         root.cursorTheme = v;
                         root.themeOpen = false;
                         root.applyCursor(v, root.cursorSize);
@@ -573,7 +680,10 @@ SettingsSurface {
                 lineHeight: 1.25
             }
 
-            Item { width: 1; height: 10 * root.s }
+            Item {
+                width: 1
+                height: 10 * root.s
+            }
         }
     }
 }

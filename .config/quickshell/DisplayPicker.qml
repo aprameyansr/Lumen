@@ -25,10 +25,10 @@ Item {
     property var value
     property bool open: false
     signal picked(var value)
-    signal requestToggle()
+    signal requestToggle
 
     readonly property string currentLabel: {
-        for (var i = 0; i < options.length; i++)
+        for (let i = 0; i < options.length; i++)
             if (options[i].value === value)
                 return options[i].label;
         return options.length ? options[0].label : "";
@@ -67,7 +67,11 @@ Item {
             color: pick.open ? Qt.alpha(Theme.onGlow, 0.14) : (field.hovered ? Theme.frameBg : "transparent")
             border.width: 1
             border.color: pick.open ? Qt.alpha(Theme.onGlow, 0.5) : Theme.hairSoft
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
 
             DisplayLabel {
                 anchors.left: parent.left
@@ -134,8 +138,14 @@ Item {
         clip: true
         radius: 9 * pick.s
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.cardTop }
-            GradientStop { position: 1.0; color: Theme.cardBot }
+            GradientStop {
+                position: 0.0
+                color: Theme.cardTop
+            }
+            GradientStop {
+                position: 1.0
+                color: Theme.cardBot
+            }
         }
         border.width: 1
         border.color: Theme.frameBorder
@@ -155,10 +165,11 @@ Item {
                 width: ListView.view.width
                 height: 24 * pick.s
                 radius: 7 * pick.s
-                color: optHover.hovered ? Theme.frameBg
-                    : (optRow.current ? Qt.alpha(Theme.onGlow, 0.16) : "transparent")
+                color: optHover.hovered ? Theme.frameBg : (optRow.current ? Qt.alpha(Theme.onGlow, 0.16) : "transparent")
 
-                HoverHandler { id: optHover }
+                HoverHandler {
+                    id: optHover
+                }
 
                 DisplayLabel {
                     anchors.left: parent.left

@@ -74,25 +74,44 @@ Item {
                 height: parent.height * Math.max(0, Math.min(1, root.value))
                 radius: parent.radius
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: root.lit ? Theme.vermLit : Theme.vermDim }
-                    GradientStop { position: 1.0; color: root.lit ? Theme.vermBurn : Theme.vermDimDeep }
+                    GradientStop {
+                        position: 0.0
+                        color: root.lit ? Theme.vermLit : Theme.vermDim
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: root.lit ? Theme.vermBurn : Theme.vermDimDeep
+                    }
                 }
-                Behavior on height { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+                Behavior on height {
+                    enabled: !dragArea.pressed
+                    NumberAnimation {
+                        duration: Motion.fast
+                    }
+                }
             }
         }
 
         Rectangle {
             id: tick
             anchors.horizontalCenter: parent.horizontalCenter
-            y: Math.max(0, Math.min(root.trackH - height,
-                (1 - Math.max(0, Math.min(1, root.value))) * root.trackH - height / 2))
+            y: Math.max(0, Math.min(root.trackH - height, (1 - Math.max(0, Math.min(1, root.value))) * root.trackH - height / 2))
             width: 11 * root.s
             height: 2.5 * root.s
             radius: 2 * root.s
             color: Theme.tickRest
             opacity: root.focused ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-            Behavior on y { enabled: !dragArea.pressed; NumberAnimation { duration: Motion.fast } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
+            Behavior on y {
+                enabled: !dragArea.pressed
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         MouseArea {
@@ -104,8 +123,11 @@ Item {
                 const v = 1 - Math.max(0, Math.min(1, (my - 10 * root.s) / root.trackH));
                 root.moved(v);
             }
-            onPressed: (e) => setFromY(e.y)
-            onPositionChanged: (e) => { if (pressed) setFromY(e.y); }
+            onPressed: e => setFromY(e.y)
+            onPositionChanged: e => {
+                if (pressed)
+                    setFromY(e.y);
+            }
             onReleased: root.committed(root.value)
         }
     }
@@ -121,7 +143,11 @@ Item {
         font.family: Theme.font
         font.pixelSize: 9 * root.s
         font.weight: Font.DemiBold
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 
     Item {
@@ -152,6 +178,10 @@ Item {
         font.pixelSize: 9 * root.s
         font.weight: Font.DemiBold
         font.letterSpacing: 0.3 * root.s
-        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 }

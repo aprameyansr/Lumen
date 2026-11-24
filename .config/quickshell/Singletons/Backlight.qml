@@ -22,7 +22,7 @@ Singleton {
     property string dev: ""
     property int maxRaw: 0
 
-    signal changed()
+    signal changed
 
     function ingest(raw) {
         if (root.maxRaw <= 0 || isNaN(raw))
@@ -46,7 +46,6 @@ Singleton {
     }
 
     FileView {
-        id: maxFile
         path: root.dev ? "/sys/class/backlight/" + root.dev + "/max_brightness" : ""
         blockLoading: true
         printErrors: false
@@ -72,18 +71,24 @@ Singleton {
      * Brightness keys, bound in binds.lua as hl.dsp.global("quickshell:brightness*").
      * Every press also asks the OSD to show, so it appears even at 0 % or 100 %.
      */
-    signal keyPressed()
+    signal keyPressed
 
     GlobalShortcut {
         appid: "quickshell"
         name: "brightnessUp"
         description: "Raise the screen brightness"
-        onPressed: { Quickshell.execDetached(["brightnessctl", "set", "5%+"]); root.keyPressed(); }
+        onPressed: {
+            Quickshell.execDetached(["brightnessctl", "set", "5%+"]);
+            root.keyPressed();
+        }
     }
     GlobalShortcut {
         appid: "quickshell"
         name: "brightnessDown"
         description: "Lower the screen brightness"
-        onPressed: { Quickshell.execDetached(["brightnessctl", "set", "5%-"]); root.keyPressed(); }
+        onPressed: {
+            Quickshell.execDetached(["brightnessctl", "set", "5%-"]);
+            root.keyPressed();
+        }
     }
 }

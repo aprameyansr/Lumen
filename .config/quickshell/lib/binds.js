@@ -19,31 +19,45 @@ function splitArgs(inner) {
     for (var i = 0; i < inner.length; i++) {
         var c = inner[i];
         if (inStr) {
-            if (c === '"') inStr = false;
+            if (c === '"')
+                inStr = false;
             continue;
         }
-        if (c === '"') { inStr = true; continue; }
-        if (c === '(' || c === '{' || c === '[') depth++;
-        else if (c === ')' || c === '}' || c === ']') depth--;
+        if (c === '"') {
+            inStr = true;
+            continue;
+        }
+        if (c === '(' || c === '{' || c === '[')
+            depth++;
+        else if (c === ')' || c === '}' || c === ']')
+            depth--;
         else if (c === ',' && depth === 0) {
             args.push(inner.slice(start, i));
             start = i + 1;
         }
     }
     args.push(inner.slice(start));
-    return args.map(function (a) { return a.trim(); });
+    return args.map(function (a) {
+        return a.trim();
+    });
 }
 
 function resolveCombo(firstArg, modValue) {
     var modMatch = firstArg.match(/^mod\s*\.\.\s*"([^"]*)"$/);
     if (modMatch) {
-        return { combo: modValue + modMatch[1] };
+        return {
+            combo: modValue + modMatch[1]
+        };
     }
     var litMatch = firstArg.match(/^"([^"]*)"$/);
     if (litMatch) {
-        return { combo: litMatch[1] };
+        return {
+            combo: litMatch[1]
+        };
     }
-    return { combo: firstArg };
+    return {
+        combo: firstArg
+    };
 }
 
 function deriveLabel(action) {
@@ -51,27 +65,37 @@ function deriveLabel(action) {
     if (exec) {
         var cmd = exec[1];
         var script = cmd.match(/\/scripts\/([^\/]+)\.sh\b/);
-        if (script) return script[1];
+        if (script)
+            return script[1];
         return cmd.split(/\s+/)[0];
     }
     var execEnv = action.match(/exec_cmd\(\s*os\.getenv\([^)]*\)\s*\.\.\s*"([^"]*)"/);
     if (execEnv) {
         var path = execEnv[1];
         var s = path.match(/\/scripts\/([^\/]+)\.sh\b/);
-        if (s) return s[1];
+        if (s)
+            return s[1];
         return path;
     }
 
-    if (/window\.kill\b/.test(action)) return "kill window";
-    if (/window\.close\b/.test(action)) return "close window";
-    if (/window\.fullscreen\b/.test(action)) return "fullscreen";
-    if (/window\.float\b/.test(action)) return "float";
-    if (/window\.move\b/.test(action)) return "move to workspace";
-    if (/window\.drag\b/.test(action)) return "drag window";
-    if (/window\.resize\b/.test(action)) return "resize window";
+    if (/window\.kill\b/.test(action))
+        return "kill window";
+    if (/window\.close\b/.test(action))
+        return "close window";
+    if (/window\.fullscreen\b/.test(action))
+        return "fullscreen";
+    if (/window\.float\b/.test(action))
+        return "float";
+    if (/window\.move\b/.test(action))
+        return "move to workspace";
+    if (/window\.drag\b/.test(action))
+        return "drag window";
+    if (/window\.resize\b/.test(action))
+        return "resize window";
 
     var ws = action.match(/focus\(\s*{\s*workspace\s*=\s*"r([+-]\d+)"/);
-    if (ws) return "workspace " + ws[1];
+    if (ws)
+        return "workspace " + ws[1];
 
     return action.replace(/^hl\.dsp\./, "").replace(/\(\)$/, "");
 }
@@ -99,13 +123,15 @@ function isExecAction(action) {
  */
 function execCmd(action) {
     var m = action.match(/exec_cmd\(\s*"((?:[^"\\]|\\.)*)"\s*\)/);
-    if (!m) return "";
+    if (!m)
+        return "";
     return m[1].replace(/\\"/g, '"').replace(/\\\\/g, "\\");
 }
 
 function parseLine(raw, lineIndex, modValue) {
     var open = raw.indexOf("hl.bind(");
-    if (open === -1) return null;
+    if (open === -1)
+        return null;
 
     var depth = 0;
     var inStr = false;
@@ -114,21 +140,31 @@ function parseLine(raw, lineIndex, modValue) {
     for (var i = startInner - 1; i < raw.length; i++) {
         var c = raw[i];
         if (inStr) {
-            if (c === '"') inStr = false;
+            if (c === '"')
+                inStr = false;
             continue;
         }
-        if (c === '"') { inStr = true; continue; }
-        if (c === '(') depth++;
+        if (c === '"') {
+            inStr = true;
+            continue;
+        }
+        if (c === '(')
+            depth++;
         else if (c === ')') {
             depth--;
-            if (depth === 0) { endInner = i; break; }
+            if (depth === 0) {
+                endInner = i;
+                break;
+            }
         }
     }
-    if (endInner === -1) return null;
+    if (endInner === -1)
+        return null;
 
     var inner = raw.slice(startInner, endInner);
     var args = splitArgs(inner);
-    if (args.length < 2) return null;
+    if (args.length < 2)
+        return null;
 
     var resolved = resolveCombo(args[0], modValue);
     var action = args[1];
@@ -155,7 +191,8 @@ function parse(luaText) {
     var out = [];
     for (var i = 0; i < lines.length; i++) {
         var entry = parseLine(lines[i], i, modValue);
-        if (entry) out.push(entry);
+        if (entry)
+            out.push(entry);
     }
     return out;
 }
@@ -164,13 +201,21 @@ function rebind(luaText, lineIndex, newCombo) {
     var modValue = readMod(luaText);
     var lines = luaText.split("\n");
     if (lineIndex < 0 || lineIndex >= lines.length) {
-        return { text: luaText, ok: false, error: "invalid lineIndex" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "invalid lineIndex"
+        };
     }
 
     var raw = lines[lineIndex];
     var open = raw.indexOf("hl.bind(");
     if (open === -1) {
-        return { text: luaText, ok: false, error: "no hl.bind on line" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "no hl.bind on line"
+        };
     }
 
     var startInner = open + "hl.bind(".length;
@@ -180,16 +225,29 @@ function rebind(luaText, lineIndex, newCombo) {
     for (var i = startInner; i < raw.length; i++) {
         var c = raw[i];
         if (inStr) {
-            if (c === '"') inStr = false;
+            if (c === '"')
+                inStr = false;
             continue;
         }
-        if (c === '"') { inStr = true; continue; }
-        if (c === '(' || c === '{' || c === '[') depth++;
-        else if (c === ')' || c === '}' || c === ']') depth--;
-        else if (c === ',' && depth === 0) { firstEnd = i; break; }
+        if (c === '"') {
+            inStr = true;
+            continue;
+        }
+        if (c === '(' || c === '{' || c === '[')
+            depth++;
+        else if (c === ')' || c === '}' || c === ']')
+            depth--;
+        else if (c === ',' && depth === 0) {
+            firstEnd = i;
+            break;
+        }
     }
     if (firstEnd === -1) {
-        return { text: luaText, ok: false, error: "could not isolate first arg" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "could not isolate first arg"
+        };
     }
 
     var firstRaw = raw.slice(startInner, firstEnd);
@@ -208,14 +266,20 @@ function rebind(luaText, lineIndex, newCombo) {
     var newLine = raw.slice(0, startInner) + newFirstRaw + raw.slice(firstEnd);
     lines[lineIndex] = newLine;
 
-    return { text: lines.join("\n"), ok: true, error: "" };
+    return {
+        text: lines.join("\n"),
+        ok: true,
+        error: ""
+    };
 }
 
 function inUse(luaText, newCombo, exceptLineIndex) {
     var entries = parse(luaText);
     for (var i = 0; i < entries.length; i++) {
-        if (entries[i].lineIndex === exceptLineIndex) continue;
-        if (entries[i].combo === newCombo) return true;
+        if (entries[i].lineIndex === exceptLineIndex)
+            continue;
+        if (entries[i].combo === newCombo)
+            return true;
     }
     return false;
 }
@@ -248,14 +312,20 @@ function closeParenIndex(raw, open) {
     for (var i = open + "hl.bind(".length - 1; i < raw.length; i++) {
         var c = raw[i];
         if (inStr) {
-            if (c === '"') inStr = false;
+            if (c === '"')
+                inStr = false;
             continue;
         }
-        if (c === '"') { inStr = true; continue; }
-        if (c === '(') depth++;
+        if (c === '"') {
+            inStr = true;
+            continue;
+        }
+        if (c === '(')
+            depth++;
         else if (c === ')') {
             depth--;
-            if (depth === 0) return i;
+            if (depth === 0)
+                return i;
         }
     }
     return -1;
@@ -274,17 +344,24 @@ function argStart(raw, innerStart, nth) {
     for (var i = innerStart; i < raw.length; i++) {
         var c = raw[i];
         if (inStr) {
-            if (c === '"') inStr = false;
+            if (c === '"')
+                inStr = false;
             continue;
         }
-        if (c === '"') { inStr = true; continue; }
-        if (c === '(' || c === '{' || c === '[') depth++;
+        if (c === '"') {
+            inStr = true;
+            continue;
+        }
+        if (c === '(' || c === '{' || c === '[')
+            depth++;
         else if (c === ')' || c === '}' || c === ']') {
-            if (depth === 0) return -1;
+            if (depth === 0)
+                return -1;
             depth--;
         } else if (c === ',' && depth === 0) {
             seen++;
-            if (seen === nth) return i + 1;
+            if (seen === nth)
+                return i + 1;
         }
     }
     return -1;
@@ -297,18 +374,26 @@ function argStart(raw, innerStart, nth) {
  */
 function argRange(raw, argIndex) {
     var open = raw.indexOf("hl.bind(");
-    if (open === -1) return null;
+    if (open === -1)
+        return null;
     var innerStart = open + "hl.bind(".length;
     var close = closeParenIndex(raw, open);
-    if (close === -1) return null;
+    if (close === -1)
+        return null;
 
     var start = argIndex === 0 ? innerStart : argStart(raw, innerStart, argIndex - 1);
-    if (start === -1) return null;
+    if (start === -1)
+        return null;
 
     var end = argStart(raw, start, 0);
-    if (end === -1) end = close;
-    else end = end - 1;
-    return { start: start, end: end };
+    if (end === -1)
+        end = close;
+    else
+        end = end - 1;
+    return {
+        start: start,
+        end: end
+    };
 }
 
 /**
@@ -320,9 +405,17 @@ function argRange(raw, argIndex) {
  */
 function add(luaText, combo, cmd, name) {
     if (!combo || !combo.length)
-        return { text: luaText, ok: false, error: "empty combo" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "empty combo"
+        };
     if (!cmd || !cmd.length)
-        return { text: luaText, ok: false, error: "empty command" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "empty command"
+        };
 
     var modValue = readMod(luaText);
     var lines = luaText.split("\n");
@@ -334,11 +427,18 @@ function add(luaText, combo, cmd, name) {
 
     var insertAt = lines.length;
     for (var i = lines.length - 1; i >= 0; i--) {
-        if (lines[i].trim().length) { insertAt = i + 1; break; }
+        if (lines[i].trim().length) {
+            insertAt = i + 1;
+            break;
+        }
         insertAt = i;
     }
     lines.splice(insertAt, 0, line);
-    return { text: lines.join("\n"), ok: true, error: "" };
+    return {
+        text: lines.join("\n"),
+        ok: true,
+        error: ""
+    };
 }
 
 /**
@@ -348,9 +448,17 @@ function add(luaText, combo, cmd, name) {
 function del(luaText, lineIndex) {
     var lines = luaText.split("\n");
     if (lineIndex < 0 || lineIndex >= lines.length)
-        return { text: luaText, ok: false, error: "invalid lineIndex" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "invalid lineIndex"
+        };
     lines.splice(lineIndex, 1);
-    return { text: lines.join("\n"), ok: true, error: "" };
+    return {
+        text: lines.join("\n"),
+        ok: true,
+        error: ""
+    };
 }
 
 /**
@@ -362,12 +470,20 @@ function del(luaText, lineIndex) {
 function editCmd(luaText, lineIndex, cmd) {
     var lines = luaText.split("\n");
     if (lineIndex < 0 || lineIndex >= lines.length)
-        return { text: luaText, ok: false, error: "invalid lineIndex" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "invalid lineIndex"
+        };
 
     var raw = lines[lineIndex];
     var range = argRange(raw, 1);
     if (!range)
-        return { text: luaText, ok: false, error: "could not isolate dispatch arg" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "could not isolate dispatch arg"
+        };
 
     var slice = raw.slice(range.start, range.end);
     var leading = slice.match(/^\s*/)[0];
@@ -375,7 +491,11 @@ function editCmd(luaText, lineIndex, cmd) {
     var dispatch = 'hl.dsp.exec_cmd("' + escapeCmd(cmd) + '")';
 
     lines[lineIndex] = raw.slice(0, range.start) + leading + dispatch + trailing + raw.slice(range.end);
-    return { text: lines.join("\n"), ok: true, error: "" };
+    return {
+        text: lines.join("\n"),
+        ok: true,
+        error: ""
+    };
 }
 
 /**
@@ -389,14 +509,20 @@ function balanceOk(s) {
     for (var i = 0; i < s.length; i++) {
         var c = s[i];
         if (inStr) {
-            if (c === '"') inStr = false;
+            if (c === '"')
+                inStr = false;
             continue;
         }
-        if (c === '"') { inStr = true; continue; }
-        if (c === '(' || c === '{' || c === '[') depth++;
+        if (c === '"') {
+            inStr = true;
+            continue;
+        }
+        if (c === '(' || c === '{' || c === '[')
+            depth++;
         else if (c === ')' || c === '}' || c === ']') {
             depth--;
-            if (depth < 0) return false;
+            if (depth < 0)
+                return false;
         }
     }
     return depth === 0 && !inStr;
@@ -413,21 +539,37 @@ function balanceOk(s) {
 function editAction(luaText, lineIndex, action) {
     var lines = luaText.split("\n");
     if (lineIndex < 0 || lineIndex >= lines.length)
-        return { text: luaText, ok: false, error: "invalid lineIndex" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "invalid lineIndex"
+        };
     if (!balanceOk(action))
-        return { text: luaText, ok: false, error: "unbalanced () or quote" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "unbalanced () or quote"
+        };
 
     var raw = lines[lineIndex];
     var range = argRange(raw, 1);
     if (!range)
-        return { text: luaText, ok: false, error: "could not isolate dispatch arg" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "could not isolate dispatch arg"
+        };
 
     var slice = raw.slice(range.start, range.end);
     var leading = slice.match(/^\s*/)[0];
     var trailing = slice.match(/\s*$/)[0];
 
     lines[lineIndex] = raw.slice(0, range.start) + leading + action + trailing + raw.slice(range.end);
-    return { text: lines.join("\n"), ok: true, error: "" };
+    return {
+        text: lines.join("\n"),
+        ok: true,
+        error: ""
+    };
 }
 
 /**
@@ -438,15 +580,27 @@ function editAction(luaText, lineIndex, action) {
 function editName(luaText, lineIndex, name) {
     var lines = luaText.split("\n");
     if (lineIndex < 0 || lineIndex >= lines.length)
-        return { text: luaText, ok: false, error: "invalid lineIndex" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "invalid lineIndex"
+        };
 
     var raw = lines[lineIndex];
     var open = raw.indexOf("hl.bind(");
     if (open === -1)
-        return { text: luaText, ok: false, error: "no hl.bind on line" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "no hl.bind on line"
+        };
     var close = closeParenIndex(raw, open);
     if (close === -1)
-        return { text: luaText, ok: false, error: "unterminated bind" };
+        return {
+            text: luaText,
+            ok: false,
+            error: "unterminated bind"
+        };
 
     var head = raw.slice(0, close + 1);
     var rest = raw.slice(close + 1).replace(/\s*--.*$/, "");
@@ -455,5 +609,9 @@ function editName(luaText, lineIndex, name) {
         line += " -- " + name;
 
     lines[lineIndex] = line;
-    return { text: lines.join("\n"), ok: true, error: "" };
+    return {
+        text: lines.join("\n"),
+        ok: true,
+        error: ""
+    };
 }

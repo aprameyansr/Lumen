@@ -51,14 +51,11 @@ Singleton {
     property real sendRate: 0
 
     property int uptimeSeconds: -1
-    readonly property string uptime: uptimeSeconds < 0 ? ""
-        : "UP " + Math.floor(uptimeSeconds / 86400) + "D "
-            + pad(Math.floor(uptimeSeconds / 3600) % 24) + ":" + pad(Math.floor(uptimeSeconds / 60) % 60)
+    readonly property string uptime: uptimeSeconds < 0 ? "" : "UP " + Math.floor(uptimeSeconds / 86400) + "D " + pad(Math.floor(uptimeSeconds / 3600) % 24) + ":" + pad(Math.floor(uptimeSeconds / 60) % 60)
     property real diskUsed: 0
     property real diskAvailable: 0
     property real diskTotal: 0
-    readonly property int diskPct: diskUsed + diskAvailable > 0
-        ? Math.ceil(100 * diskUsed / (diskUsed + diskAvailable)) : 0
+    readonly property int diskPct: diskUsed + diskAvailable > 0 ? Math.ceil(100 * diskUsed / (diskUsed + diskAvailable)) : 0
 
     property var cpuHistory: []
     property var memoryHistory: []
@@ -173,8 +170,7 @@ Singleton {
                     utilization = (value - (last[key] ?? 0)) / delta;
                 } else if (key.startsWith("engine-") && !key.startsWith("engine-capacity-")) {
                     engine = key.slice(7);
-                    if (counters["total-cycles-" + engine] !== undefined
-                        && counters["cycles-" + engine] !== undefined)
+                    if (counters["total-cycles-" + engine] !== undefined && counters["cycles-" + engine] !== undefined)
                         continue;
                     utilization = (value - (last[key] ?? 0)) / elapsed;
                 } else {
@@ -190,7 +186,11 @@ Singleton {
     function sampleSwap(inPages, outPages) {
         const now = Date.now();
         const previous = previousSwap;
-        previousSwap = swapTotalGb > 0 ? { time: now, input: inPages, output: outPages } : null;
+        previousSwap = swapTotalGb > 0 ? {
+            time: now,
+            input: inPages,
+            output: outPages
+        } : null;
         if (!previousSwap) {
             swapInRate = 0;
             swapOutRate = 0;
@@ -236,7 +236,6 @@ Singleton {
     }
 
     Process {
-        id: detectProc
         running: true
         command: ["python3", "-B", root.probe, "detect"]
         stdout: StdioCollector {
@@ -251,13 +250,7 @@ Singleton {
 
     Process {
         id: fastProc
-        command: ["sh", "-c",
-            "read -r _ a b c d e f g h _ < /proc/stat; echo \"CPU $((a+b+c+d+e+f+g+h)) $((d+e))\"; "
-            + "awk '/^MemTotal:/{mt=$2}/^MemAvailable:/{ma=$2}/^SwapTotal:/{st=$2}/^SwapFree:/{sf=$2}END{print \"MEM\",mt,ma,st,sf}' /proc/meminfo; "
-            + "awk '$1==\"pswpin\"{i=$2}$1==\"pswpout\"{o=$2}END{print \"SWAP\",i+0,o+0}' /proc/vmstat; "
-            + "awk -F: 'NR>2{gsub(/^[ \\t]+|[ \\t]+$/, \"\", $1); if($1!=\"lo\"){n=split($2,a,/[ \\t]+/); k=(a[1]==\"\"); print \"NET\", $1, a[1+k], a[9+k]}}' /proc/net/dev; "
-            + "if [ -n \"$1\" ] && [ -r \"$1\" ]; then echo \"TMP $(cat \"$1\")\"; else echo 'TMP -'; fi",
-            "_", root.hardware.sensor || ""]
+        command: ["sh", "-c", "read -r _ a b c d e f g h _ < /proc/stat; echo \"CPU $((a+b+c+d+e+f+g+h)) $((d+e))\"; " + "awk '/^MemTotal:/{mt=$2}/^MemAvailable:/{ma=$2}/^SwapTotal:/{st=$2}/^SwapFree:/{sf=$2}END{print \"MEM\",mt,ma,st,sf}' /proc/meminfo; " + "awk '$1==\"pswpin\"{i=$2}$1==\"pswpout\"{o=$2}END{print \"SWAP\",i+0,o+0}' /proc/vmstat; " + "awk -F: 'NR>2{gsub(/^[ \\t]+|[ \\t]+$/, \"\", $1); if($1!=\"lo\"){n=split($2,a,/[ \\t]+/); k=(a[1]==\"\"); print \"NET\", $1, a[1+k], a[9+k]}}' /proc/net/dev; " + "if [ -n \"$1\" ] && [ -r \"$1\" ]; then echo \"TMP $(cat \"$1\")\"; else echo 'TMP -'; fi", "_", root.hardware.sensor || ""]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (!root.open)
@@ -308,8 +301,7 @@ Singleton {
 
     Process {
         id: gpuProc
-        command: ["python3", "-B", root.probe, "gpu", root.gpuDevice.vendor || "",
-                  root.gpuDevice.path || "", root.gpuDevice.pci || "", root.gpuDevice.card || "", root.gpuPage]
+        command: ["python3", "-B", root.probe, "gpu", root.gpuDevice.vendor || "", root.gpuDevice.path || "", root.gpuDevice.pci || "", root.gpuDevice.card || "", root.gpuPage]
         stdout: StdioCollector {
             onStreamFinished: {
                 const data = root.unpack(text);
@@ -326,8 +318,7 @@ Singleton {
 
     Process {
         id: slowProc
-        command: ["python3", "-B", root.probe, "slow", root.slowPage,
-                  root.gpuDevice.pci || "", root.gpuDevice.path || ""]
+        command: ["python3", "-B", root.probe, "slow", root.slowPage, root.gpuDevice.pci || "", root.gpuDevice.path || ""]
         stdout: StdioCollector {
             onStreamFinished: {
                 const data = root.unpack(text);
@@ -348,14 +339,16 @@ Singleton {
                     root.gpuProperties = data.gpu;
             }
         }
-        onExited: if (root.open && root.slowPending) Qt.callLater(root.refreshSlow)
+        onExited: if (root.open && root.slowPending)
+            Qt.callLater(root.refreshSlow)
     }
 
     Timer {
         interval: 500
         running: root.open
         repeat: true
-        onTriggered: if (!fastProc.running) fastProc.running = true
+        onTriggered: if (!fastProc.running)
+            fastProc.running = true
     }
 
     Timer {

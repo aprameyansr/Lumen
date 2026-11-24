@@ -17,9 +17,7 @@ Item {
     property bool showBack: false
     property bool showAction: true
 
-    readonly property point soulPoint: glyphText.visible
-        ? Qt.point(glyphText.width / 2, glyphText.y + labels.y - 3 * s)
-        : Qt.point(-8 * s, height / 2)
+    readonly property point soulPoint: glyphText.visible ? Qt.point(glyphText.width / 2, glyphText.y + labels.y - 3 * s) : Qt.point(-8 * s, height / 2)
 
     width: parent ? parent.width : 0
     height: 22 * head.s

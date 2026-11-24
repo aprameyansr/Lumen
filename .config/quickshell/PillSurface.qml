@@ -22,7 +22,7 @@ Item {
     property real mRight: 0
     property real mBottom: 0
 
-    signal requestClose()
+    signal requestClose
 
     /**
      * Ame anchor. Each surface declares the flame's form and dock point (in
@@ -40,7 +40,8 @@ Item {
      * (a collapsible snapping its height) never dims the surface for a frame.
      */
     property bool settled: false
-    onMorphClosenessChanged: if (open && morphCloseness > 0.92) settled = true
+    onMorphClosenessChanged: if (open && morphCloseness > 0.92)
+        settled = true
 
     /**
      * Fade-in follows the open morph; the exit is cut loose from it. Before,
@@ -63,8 +64,16 @@ Item {
 
     SequentialAnimation {
         id: gateIn
-        PauseAnimation { duration: 90 }
-        NumberAnimation { target: surface; property: "gate"; to: 1; duration: 150; easing.type: Easing.OutCubic }
+        PauseAnimation {
+            duration: 90
+        }
+        NumberAnimation {
+            target: surface
+            property: "gate"
+            to: 1
+            duration: 150
+            easing.type: Easing.OutCubic
+        }
     }
 
     anchors.fill: parent
@@ -77,7 +86,8 @@ Item {
     opacity: open ? enter : exitFade
     visible: open || opacity > 0.01
 
-    onOpacityChanged: if (open) lastShown = opacity
+    onOpacityChanged: if (open)
+        lastShown = opacity
     onOpenChanged: {
         if (open) {
             fadeOut.stop();

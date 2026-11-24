@@ -54,16 +54,21 @@ Singleton {
 
     Connections {
         target: Flags
-        function onKeepAwakeChanged() { Qt.callLater(root.guard); }
+        function onKeepAwakeChanged() {
+            Qt.callLater(root.guard);
+        }
     }
 
     readonly property bool on: Flags.keepAwake
     readonly property bool timed: on && root.until > 0
     readonly property real remainingMs: timed ? Math.max(0, root.until - now) : 0
-    readonly property real frac: (timed && root.until > root.from)
-        ? Math.max(0, Math.min(1, remainingMs / (root.until - root.from))) : 0
+    readonly property real frac: (timed && root.until > root.from) ? Math.max(0, Math.min(1, remainingMs / (root.until - root.from))) : 0
 
-    readonly property var endLabels: ({ off: "turn off", sleep: "sleep", poweroff: "shut down" })
+    readonly property var endLabels: ({
+            off: "turn off",
+            sleep: "sleep",
+            poweroff: "shut down"
+        })
 
     /** "1h 30m", "45m", "∞" for a length in minutes. */
     function durLabel(mins) {
@@ -154,8 +159,15 @@ Singleton {
         var n = (name || "").trim();
         if (!n.length)
             return false;
-        var list = (Flags.awakePresets || []).filter(function (p) { return p.name.toLowerCase() !== n.toLowerCase(); });
-        list.push({ name: n, lid: Flags.awakeLid, mins: Flags.awakeMins, end: Flags.awakeEnd });
+        var list = (Flags.awakePresets || []).filter(function (p) {
+            return p.name.toLowerCase() !== n.toLowerCase();
+        });
+        list.push({
+            name: n,
+            lid: Flags.awakeLid,
+            mins: Flags.awakeMins,
+            end: Flags.awakeEnd
+        });
         Flags.awakePresets = list;
         return true;
     }
@@ -179,7 +191,7 @@ Singleton {
         var left = root.until - root.now;
         var end = Flags.awakeEnd;
         if (left <= 0) {
-            var missed = left < -120000;
+            const missed = left < -120000;
             root.stop();
             if (missed || end === "off") {
                 root.notify("Session ended. Idle and lid are back to normal.");
@@ -223,13 +235,11 @@ Singleton {
      */
     Process {
         running: Flags.keepAwake && Flags.awakeLid !== "sleep"
-        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=Lumen",
-                  "--why=keep awake", "--mode=block", "sleep", "infinity"]
+        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=Lumen", "--why=keep awake", "--mode=block", "sleep", "infinity"]
     }
 
     Process {
         running: Flags.keepAwake && Flags.awakeLid === "sleep"
-        command: ["systemd-inhibit", "--what=idle", "--who=Lumen",
-                  "--why=keep awake (lid sleeps)", "--mode=block", "sleep", "infinity"]
+        command: ["systemd-inhibit", "--what=idle", "--who=Lumen", "--why=keep awake (lid sleeps)", "--mode=block", "sleep", "infinity"]
     }
 }

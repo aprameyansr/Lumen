@@ -224,7 +224,11 @@ PillSurface {
                     color: Theme.faint
                     font.family: Theme.font
                     font.pixelSize: 9 * root.s
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
 
                 GlyphIcon {
@@ -237,7 +241,11 @@ PillSurface {
                     name: "close"
                     color: nrowXArea.containsMouse ? Theme.cream : Theme.dim
                     stroke: 1.9
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     MouseArea {
                         id: nrowXArea
@@ -308,8 +316,18 @@ PillSurface {
                         SequentialAnimation on opacity {
                             running: headerEmber.visible
                             loops: Animation.Infinite
-                            NumberAnimation { from: 0.55; to: 1; duration: 1200; easing.type: Easing.InOutSine }
-                            NumberAnimation { from: 1; to: 0.55; duration: 1200; easing.type: Easing.InOutSine }
+                            NumberAnimation {
+                                from: 0.55
+                                to: 1
+                                duration: 1200
+                                easing.type: Easing.InOutSine
+                            }
+                            NumberAnimation {
+                                from: 1
+                                to: 0.55
+                                duration: 1200
+                                easing.type: Easing.InOutSine
+                            }
                         }
                     }
 
@@ -506,9 +524,7 @@ PillSurface {
                                     anchors.right: headX.left
                                     anchors.rightMargin: 8 * root.s
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: group.modelData.preview.body.length > 0
-                                        ? group.modelData.preview.body
-                                        : group.modelData.preview.summary
+                                    text: group.modelData.preview.body.length > 0 ? group.modelData.preview.body : group.modelData.preview.summary
                                     color: Theme.dim
                                     font.family: Theme.font
                                     font.pixelSize: 10 * root.s
@@ -540,7 +556,11 @@ PillSurface {
                                     name: "close"
                                     color: headXArea.containsMouse ? Theme.cream : Theme.dim
                                     stroke: 1.9
-                                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                                    Behavior on opacity {
+                                        NumberAnimation {
+                                            duration: Motion.fast
+                                        }
+                                    }
 
                                     MouseArea {
                                         id: headXArea

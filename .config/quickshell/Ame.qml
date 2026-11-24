@@ -40,7 +40,11 @@ Item {
     property real wickDir: -1
 
     opacity: form === "off" ? 0 : 1
-    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+    Behavior on opacity {
+        NumberAnimation {
+            duration: Motion.fast
+        }
+    }
     visible: opacity > 0.001
 
     readonly property real restR: 5 * s
@@ -76,15 +80,23 @@ Item {
     readonly property bool blinking: activeForm === "caret"
     readonly property bool busy: timelineLive || gliding
 
-    function clamp01(u) { return Math.max(0, Math.min(1, u)); }
-    function smoothstep(u) { return u * u * (3 - 2 * u); }
-    function easeInOutQuint(u) { return u < 0.5 ? 16 * u * u * u * u * u : 1 - Math.pow(-2 * u + 2, 5) / 2; }
-    function easeOutBack(u) { const c = 1.70158; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); }
+    function clamp01(u) {
+        return Math.max(0, Math.min(1, u));
+    }
+    function smoothstep(u) {
+        return u * u * (3 - 2 * u);
+    }
+    function easeInOutQuint(u) {
+        return u < 0.5 ? 16 * u * u * u * u * u : 1 - Math.pow(-2 * u + 2, 5) / 2;
+    }
+    function easeOutBack(u) {
+        const c = 1.70158;
+        return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2);
+    }
 
     function bez(a, c, b, u) {
         const v = 1 - u;
-        return Qt.point(v * v * a.x + 2 * v * u * c.x + u * u * b.x,
-                        v * v * a.y + 2 * v * u * c.y + u * u * b.y);
+        return Qt.point(v * v * a.x + 2 * v * u * c.x + u * u * b.x, v * v * a.y + 2 * v * u * c.y + u * u * b.y);
     }
 
     /**
@@ -103,9 +115,11 @@ Item {
         flightAng = Math.atan2(dy, dx);
         let px = -dy / dd;
         let py = dx / dd;
-        if (arcFlip) { px = -px; py = -py; }
-        ctrlPoint = Qt.point((fromPoint.x + point.x) / 2 + px * dd * 0.22,
-                             (fromPoint.y + point.y) / 2 + py * dd * 0.22);
+        if (arcFlip) {
+            px = -px;
+            py = -py;
+        }
+        ctrlPoint = Qt.point((fromPoint.x + point.x) / 2 + px * dd * 0.22, (fromPoint.y + point.y) / 2 + py * dd * 0.22);
     }
 
     function stopGlide() {
@@ -364,9 +378,7 @@ Item {
             ctx.globalAlpha = (alpha === undefined ? 1 : alpha) * 0.35;
             for (let k = 0; k < 2; k++) {
                 ctx.beginPath();
-                ctx.arc(0, 0, R * (0.45 + k * 0.22),
-                        root.swirl * (0.5 + k * 0.25) + k * 2.6,
-                        root.swirl * (0.5 + k * 0.25) + k * 2.6 + 2.4);
+                ctx.arc(0, 0, R * (0.45 + k * 0.22), root.swirl * (0.5 + k * 0.25) + k * 2.6, root.swirl * (0.5 + k * 0.25) + k * 2.6 + 2.4);
                 ctx.strokeStyle = k ? Theme.flameBurn : Theme.flameTip;
                 ctx.lineWidth = 1.6 * root.s;
                 ctx.stroke();
@@ -398,8 +410,7 @@ Item {
             if (root.remnant > 0 && root.phase !== "antic") {
                 const rr = baseR * 0.5 * root.remnant;
                 if (rr > 0.4 * S)
-                    bead(ctx, root.remnantPoint.x + (1 - root.remnant) * 6 * S, root.remnantPoint.y,
-                         rr, 0, 0, root.remnant * 0.9);
+                    bead(ctx, root.remnantPoint.x + (1 - root.remnant) * 6 * S, root.remnantPoint.y, rr, 0, 0, root.remnant * 0.9);
             }
 
             if (root.phase === "antic") {

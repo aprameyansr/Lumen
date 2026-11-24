@@ -55,16 +55,37 @@ PillSurface {
     readonly property var glyphChoices: ["layers", "lock", "sparkles", "app-window", "waves", "moon", "sun", "palette", "mic", "speaker"]
 
     readonly property var spaces: [
-        { id: "stash", name: "Stash", key: "Super + S", note: "Background apps that open here", surface: "stash", glyph: "layers" },
-        { id: "private", name: "Private", key: "Super + P", note: "Hidden scratchpad", surface: "", glyph: "lock" },
-        { id: "minimized", name: "Minimized", key: "Super + Shift + M", note: "Minimized windows", surface: "", glyph: "chevron-down" }
+        {
+            id: "stash",
+            name: "Stash",
+            key: "Super + S",
+            note: "Background apps that open here",
+            surface: "stash",
+            glyph: "layers"
+        },
+        {
+            id: "private",
+            name: "Private",
+            key: "Super + P",
+            note: "Hidden scratchpad",
+            surface: "",
+            glyph: "lock"
+        },
+        {
+            id: "minimized",
+            name: "Minimized",
+            key: "Super + Shift + M",
+            note: "Minimized windows",
+            surface: "",
+            glyph: "chevron-down"
+        }
     ]
 
     /** Custom spaces only: built-in display-override entries stay out of the list. */
     readonly property var customSpaces: {
         var sl = Spaces.list;
         var out = [];
-        for (var i = 0; i < sl.length; i++)
+        for (let i = 0; i < sl.length; i++)
             if (!Spaces.reserved(sl[i].id))
                 out.push(sl[i]);
         return out;
@@ -73,7 +94,7 @@ PillSurface {
     /** The spaces.lua display-override entry for a built-in id, or null when unedited. */
     function builtinEntry(id) {
         var sl = Spaces.list;
-        for (var i = 0; i < sl.length; i++)
+        for (let i = 0; i < sl.length; i++)
             if (sl[i].id === id)
                 return sl[i];
         return null;
@@ -153,7 +174,7 @@ PillSurface {
      * With a rebind armed the letter goes to that row's key after a clash check
      * against every other space and bind; without one it seeds the create form.
      */
-    function capture(key, modifiers) {
+    function capture(key) {
         if (key === Qt.Key_Escape) {
             root.listening = false;
             root.rebindId = "";
@@ -194,14 +215,32 @@ PillSurface {
      */
     function create() {
         var name = root.formName.trim();
-        if (name.length === 0) { root.conflict = "name empty"; return; }
+        if (name.length === 0) {
+            root.conflict = "name empty";
+            return;
+        }
         var id = Spaces.slug(name);
-        if (id.length === 0) { root.conflict = "name needs a letter"; return; }
-        if (Spaces.reserved(id)) { root.conflict = name + " is reserved"; return; }
-        for (var i = 0; i < Spaces.list.length; i++)
-            if (Spaces.list[i].id === id) { root.conflict = name + " already exists"; return; }
-        if (!/^[A-Za-z]$/.test(root.formKey)) { root.conflict = "pick a key"; return; }
-        if (Spaces.keyTaken(root.formKey)) { root.conflict = "Super + " + root.formKey.toUpperCase() + " in use"; return; }
+        if (id.length === 0) {
+            root.conflict = "name needs a letter";
+            return;
+        }
+        if (Spaces.reserved(id)) {
+            root.conflict = name + " is reserved";
+            return;
+        }
+        for (let i = 0; i < Spaces.list.length; i++)
+            if (Spaces.list[i].id === id) {
+                root.conflict = name + " already exists";
+                return;
+            }
+        if (!/^[A-Za-z]$/.test(root.formKey)) {
+            root.conflict = "pick a key";
+            return;
+        }
+        if (Spaces.keyTaken(root.formKey)) {
+            root.conflict = "Super + " + root.formKey.toUpperCase() + " in use";
+            return;
+        }
         Spaces.addSpace(name, root.formDesc.trim(), root.formKey.toUpperCase());
         root.closeForm();
     }
@@ -215,7 +254,8 @@ PillSurface {
         conflictId = "";
     }
 
-    onFormOpenChanged: if (formOpen) Qt.callLater(nameField.forceActiveFocus)
+    onFormOpenChanged: if (formOpen)
+        Qt.callLater(nameField.forceActiveFocus)
 
     /**
      * Inline rename + glyph editor shared by every space row, built-in and
@@ -224,7 +264,6 @@ PillSurface {
      * directly. Enter saves, Escape cancels; a glyph tap re-picks.
      */
     component EditBlock: Column {
-        id: editBlock
 
         property alias field: nameEdit
 
@@ -243,9 +282,14 @@ PillSurface {
             selectionColor: Theme.verm
             text: root.editName
             onTextEdited: root.editName = text
-            Keys.onPressed: (e) => {
-                if (e.key === Qt.Key_Escape) { root.closeEdit(); e.accepted = true; }
-                else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.saveEdit(); e.accepted = true; }
+            Keys.onPressed: e => {
+                if (e.key === Qt.Key_Escape) {
+                    root.closeEdit();
+                    e.accepted = true;
+                } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                    root.saveEdit();
+                    e.accepted = true;
+                }
             }
         }
 
@@ -266,7 +310,11 @@ PillSurface {
                     color: gchip.on ? Qt.alpha(Theme.vermLit, 0.12) : (gArea.containsMouse ? Theme.frameBg : "transparent")
                     border.width: 1
                     border.color: gchip.on ? Qt.alpha(Theme.vermLit, 0.55) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     GlyphIcon {
                         anchors.centerIn: parent
@@ -292,11 +340,11 @@ PillSurface {
     Item {
         id: keyCatcher
         focus: root.listening
-        Keys.onPressed: (e) => {
+        Keys.onPressed: e => {
             if (!root.listening)
                 return;
             e.accepted = true;
-            root.capture(e.key, e.modifiers);
+            root.capture(e.key);
         }
     }
 
@@ -348,12 +396,14 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 8 * root.s }
+        Item {
+            width: 1
+            height: 8 * root.s
+        }
 
         /** ── list view ── */
 
         Column {
-            id: listCol
             width: parent.width
             visible: !root.formOpen
             spacing: 0
@@ -372,7 +422,8 @@ PillSurface {
                     width: parent.width
                     height: editing ? 80 * root.s : 50 * root.s
 
-                    onEditingChanged: if (editing) Qt.callLater(wEditBlock.field.forceActiveFocus)
+                    onEditingChanged: if (editing)
+                        Qt.callLater(wEditBlock.field.forceActiveFocus)
 
                     Rectangle {
                         anchors.fill: parent
@@ -382,16 +433,24 @@ PillSurface {
                         color: (wrow.editing || (wrow.nav && navHover.hovered)) ? Theme.frameBg : "transparent"
                         border.width: 1
                         border.color: (wrow.editing || (wrow.nav && navHover.hovered)) ? Theme.frameBorder : "transparent"
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
-                    HoverHandler { id: navHover; enabled: wrow.nav }
+                    HoverHandler {
+                        id: navHover
+                        enabled: wrow.nav
+                    }
 
                     MouseArea {
                         anchors.fill: parent
                         enabled: wrow.nav
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: if (!wrow.editing) root.requestSurface(wrow.modelData.surface)
+                        onClicked: if (!wrow.editing)
+                            root.requestSurface(wrow.modelData.surface)
                     }
 
                     GlyphIcon {
@@ -506,7 +565,11 @@ PillSurface {
                             height: 24 * root.s
                             radius: 7 * root.s
                             color: wSaveArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : "transparent"
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             GlyphIcon {
                                 anchors.centerIn: parent
@@ -553,7 +616,8 @@ PillSurface {
                     width: parent.width
                     height: editing ? 80 * root.s : (keyHint ? 66 * root.s : 50 * root.s)
 
-                    onEditingChanged: if (editing) Qt.callLater(cEditBlock.field.forceActiveFocus)
+                    onEditingChanged: if (editing)
+                        Qt.callLater(cEditBlock.field.forceActiveFocus)
 
                     Rectangle {
                         anchors.fill: parent
@@ -563,10 +627,16 @@ PillSurface {
                         color: (cHover.hovered || crow.editing) ? Theme.frameBg : "transparent"
                         border.width: 1
                         border.color: (cHover.hovered || crow.editing) ? Theme.frameBorder : "transparent"
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
 
-                    HoverHandler { id: cHover }
+                    HoverHandler {
+                        id: cHover
+                    }
 
                     MouseArea {
                         anchors.fill: parent
@@ -667,7 +737,6 @@ PillSurface {
                         spacing: 8 * root.s
 
                         Rectangle {
-                            id: cRemove
                             anchors.verticalCenter: parent.verticalCenter
                             visible: !crow.editing
                             width: 24 * root.s
@@ -675,8 +744,16 @@ PillSurface {
                             radius: 7 * root.s
                             opacity: cHover.hovered ? 1 : 0
                             color: cRemoveArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
-                            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             GlyphIcon {
                                 anchors.centerIn: parent
@@ -707,7 +784,11 @@ PillSurface {
                             color: crow.rebinding ? Qt.alpha(Theme.vermLit, 0.12) : Theme.frameBg
                             border.width: 1
                             border.color: crow.rebinding ? Qt.alpha(Theme.vermLit, 0.55) : Theme.hairSoft
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             Text {
                                 id: cKeyText
@@ -735,7 +816,11 @@ PillSurface {
                             height: 24 * root.s
                             radius: 7 * root.s
                             color: cSaveArea.containsMouse ? Qt.alpha(Theme.vermLit, 0.16) : "transparent"
-                            Behavior on color { ColorAnimation { duration: Motion.fast } }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.fast
+                                }
+                            }
 
                             GlyphIcon {
                                 anchors.centerIn: parent
@@ -777,7 +862,10 @@ PillSurface {
                 }
             }
 
-            Item { width: 1; height: 6 * root.s }
+            Item {
+                width: 1
+                height: 6 * root.s
+            }
 
             Item {
                 width: parent.width
@@ -945,9 +1033,14 @@ PillSurface {
                         selectionColor: Theme.verm
                         text: root.formName
                         onTextEdited: root.formName = text
-                        Keys.onPressed: (e) => {
-                            if (e.key === Qt.Key_Escape) { root.closeForm(); e.accepted = true; }
-                            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.create(); e.accepted = true; }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Escape) {
+                                root.closeForm();
+                                e.accepted = true;
+                            } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                                root.create();
+                                e.accepted = true;
+                            }
                         }
                     }
                 }
@@ -997,9 +1090,14 @@ PillSurface {
                         selectionColor: Theme.verm
                         text: root.formDesc
                         onTextEdited: root.formDesc = text
-                        Keys.onPressed: (e) => {
-                            if (e.key === Qt.Key_Escape) { root.closeForm(); e.accepted = true; }
-                            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { root.create(); e.accepted = true; }
+                        Keys.onPressed: e => {
+                            if (e.key === Qt.Key_Escape) {
+                                root.closeForm();
+                                e.accepted = true;
+                            } else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
+                                root.create();
+                                e.accepted = true;
+                            }
                         }
                     }
                 }
@@ -1030,16 +1128,18 @@ PillSurface {
                     color: root.listening ? Qt.alpha(Theme.vermLit, 0.12) : Theme.frameBg
                     border.width: 1
                     border.color: root.listening ? Qt.alpha(Theme.vermLit, 0.55) : Theme.hairSoft
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         anchors.left: parent.left
                         anchors.leftMargin: 11 * root.s
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.listening ? "press a letter…  esc cancels"
-                            : (root.formKey.length ? "Super + " + root.formKey : "tap to set a key")
-                        color: root.listening ? Theme.flameGlow
-                            : (root.formKey.length ? Theme.cream : Theme.faint)
+                        text: root.listening ? "press a letter…  esc cancels" : (root.formKey.length ? "Super + " + root.formKey : "tap to set a key")
+                        color: root.listening ? Theme.flameGlow : (root.formKey.length ? Theme.cream : Theme.faint)
                         font.family: Theme.font
                         font.pixelSize: 11.5 * root.s
                         font.weight: root.formKey.length ? Font.DemiBold : Font.Medium
@@ -1132,6 +1232,9 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 4 * root.s }
+        Item {
+            width: 1
+            height: 4 * root.s
+        }
     }
 }

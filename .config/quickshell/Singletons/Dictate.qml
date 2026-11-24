@@ -76,10 +76,19 @@ Singleton {
     property string keyLabel: "Right Alt"
 
     readonly property var keyNames: ({
-        "Alt_R": "Right Alt", "Alt_L": "Left Alt", "Control_R": "Right Ctrl", "Control_L": "Left Ctrl",
-        "Shift_R": "Right Shift", "Shift_L": "Left Shift", "Super_R": "Right Super", "Super_L": "Left Super",
-        "SUPER": "Super", "CTRL": "Ctrl", "ALT": "Alt", "SHIFT": "Shift"
-    })
+            "Alt_R": "Right Alt",
+            "Alt_L": "Left Alt",
+            "Control_R": "Right Ctrl",
+            "Control_L": "Left Ctrl",
+            "Shift_R": "Right Shift",
+            "Shift_L": "Left Shift",
+            "Super_R": "Right Super",
+            "Super_L": "Left Super",
+            "SUPER": "Super",
+            "CTRL": "Ctrl",
+            "ALT": "Alt",
+            "SHIFT": "Shift"
+        })
 
     function prettyCombo(combo) {
         return combo.split("+").map(function (p) {
@@ -162,7 +171,8 @@ Singleton {
     Timer {
         id: engineRestart
         interval: 400
-        onTriggered: if (Flags.dictateEnabled && root.installed) svc.running = true
+        onTriggered: if (Flags.dictateEnabled && root.installed)
+            svc.running = true
     }
 
     /** Last thing typed, for anything that wants to show it. */
@@ -176,7 +186,7 @@ Singleton {
     Process {
         running: true
         command: ["test", "-x", root.svcDir + "/venv/bin/python"]
-        onExited: (code) => root.installed = (code === 0)
+        onExited: code => root.installed = (code === 0)
     }
 
     Process {
@@ -184,11 +194,16 @@ Singleton {
         running: Flags.dictateEnabled && root.installed
         stdinEnabled: true
         command: [root.svcDir + "/venv/bin/python", "-u", root.svcDir + "/dictated.py", "--engine", Flags.dictateEngine]
-        onRunningChanged: if (!running) root.ready = false
+        onRunningChanged: if (!running)
+            root.ready = false
         stdout: SplitParser {
-            onRead: (line) => {
+            onRead: line => {
                 let m;
-                try { m = JSON.parse(line); } catch (e) { return; }
+                try {
+                    m = JSON.parse(line);
+                } catch (e) {
+                    return;
+                }
                 if (m.event === "engine") {
                     root.engine = m.name;
                     root.engineNote = m.note || "";
@@ -215,16 +230,20 @@ Singleton {
             }
         }
         /** A crash while still wanted earns one relaunch after a beat, never a tight loop. */
-        onExited: if (Flags.dictateEnabled && root.installed) relaunch.restart()
+        onExited: if (Flags.dictateEnabled && root.installed)
+            relaunch.restart()
     }
 
     Timer {
         id: relaunch
         interval: 3000
-        onTriggered: if (Flags.dictateEnabled && root.installed && !svc.running) svc.running = true
+        onTriggered: if (Flags.dictateEnabled && root.installed && !svc.running)
+            svc.running = true
     }
 
-    Process { id: notify }
+    Process {
+        id: notify
+    }
 
     function notifyUser(msg) {
         notify.command = ["notify-send", "-a", "Dictation", "-i", "audio-input-microphone", "Dictation", msg];
@@ -276,7 +295,14 @@ Singleton {
         root.takes += 1;
         if (!root.since)
             root.since = now;
-        root.history = [{ t: now, text: text, raw: raw || "", words: n }].concat(root.history).slice(0, root.historyCap);
+        root.history = [
+            {
+                t: now,
+                text: text,
+                raw: raw || "",
+                words: n
+            }
+        ].concat(root.history).slice(0, root.historyCap);
         root.saveHistory();
     }
 
@@ -298,12 +324,17 @@ Singleton {
 
     function saveHistory() {
         historyWriter.setText(JSON.stringify({
-            totalWords: root.totalWords, takes: root.takes, since: root.since,
-            days: root.days, items: root.history
+            totalWords: root.totalWords,
+            takes: root.takes,
+            since: root.since,
+            days: root.days,
+            items: root.history
         }, null, 1) + "\n");
     }
 
-    Process { id: copyProc }
+    Process {
+        id: copyProc
+    }
 
     FileView {
         path: root.historyPath
@@ -338,7 +369,10 @@ Singleton {
 
     function finish() {
         root.state = "working";
-        root.send({ cmd: "stop", mode: root.teaching ? "teach" : "type" });
+        root.send({
+            cmd: "stop",
+            mode: root.teaching ? "teach" : "type"
+        });
         work.restart();
     }
 
@@ -346,7 +380,9 @@ Singleton {
         holdTimer.stop();
         work.stop();
         if (root.state !== "" && root.state !== "working")
-            root.send({ cmd: "cancel" });
+            root.send({
+                cmd: "cancel"
+            });
         root.state = "";
         root.down = false;
         root.consumed = false;
@@ -365,7 +401,10 @@ Singleton {
             return;
         }
         root.micHot = false;
-        root.send({ cmd: "start", mic: Flags.dictateMic });
+        root.send({
+            cmd: "start",
+            mic: Flags.dictateMic
+        });
         if (Date.now() - root.lastTapEnd < root.tapGapMs) {
             root.consumed = true;
             root.lastTapEnd = 0;
@@ -385,7 +424,9 @@ Singleton {
         }
         if (holdTimer.running) {
             holdTimer.stop();
-            root.send({ cmd: "cancel" });
+            root.send({
+                cmd: "cancel"
+            });
             root.lastTapEnd = Date.now();
             return;
         }
@@ -419,7 +460,8 @@ Singleton {
     Timer {
         id: holdTimer
         interval: root.holdMs
-        onTriggered: if (root.down) root.begin("listening")
+        onTriggered: if (root.down)
+            root.begin("listening")
     }
 
     /** Safety net: never leave the spinner up if the service goes quiet. */
@@ -437,14 +479,7 @@ Singleton {
         onReleased: root.release()
     }
 
-    readonly property string config: "[general]\n"
-        + "bars = " + (bars / 2) + "\nframerate = 60\nautosens = 0\nsensitivity = 300\n"
-        + "lower_cutoff_freq = 90\nhigher_cutoff_freq = 4000\n"
-        + "[input]\nmethod = pipewire\nsource = SRC\n"
-        + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\n"
-        + "ascii_max_range = 100000\nbar_delimiter = 59\nframe_delimiter = 10\n"
-        + "channels = mono\nmono_option = average\n"
-        + "[smoothing]\nnoise_reduction = 0.6\n"
+    readonly property string config: "[general]\n" + "bars = " + (bars / 2) + "\nframerate = 60\nautosens = 0\nsensitivity = 300\n" + "lower_cutoff_freq = 90\nhigher_cutoff_freq = 4000\n" + "[input]\nmethod = pipewire\nsource = SRC\n" + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\n" + "ascii_max_range = 100000\nbar_delimiter = 59\nframe_delimiter = 10\n" + "channels = mono\nmono_option = average\n" + "[smoothing]\nnoise_reduction = 0.6\n"
 
     /**
      * Half the bands, mirrored outward from the centre, so the strip reads as a
@@ -452,14 +487,9 @@ Singleton {
      */
     Process {
         id: cavaProc
-        command: ["sh", "-c",
-            "if [ \"$2\" != builtin ] && [ \"$2\" != default ] && pactl list sources short 2>/dev/null | awk '{print $2}' | grep -qxF -- \"$2\"; then src=$2; "
-            + "elif [ \"$2\" != default ]; then src=$(pactl list sources short 2>/dev/null | awk '$2 ~ /^alsa_input\\./ && $2 !~ /monitor/ {print $2; exit}'); fi; "
-            + "[ -n \"$src\" ] || src=$(pactl get-default-source 2>/dev/null); [ -n \"$src\" ] || src=auto; "
-            + "printf '%s' \"$1\" | sed \"s|^source = SRC$|source = $src|\" | exec cava -p /dev/stdin",
-            "_", root.config, Flags.dictateMic]
+        command: ["sh", "-c", "if [ \"$2\" != builtin ] && [ \"$2\" != default ] && pactl list sources short 2>/dev/null | awk '{print $2}' | grep -qxF -- \"$2\"; then src=$2; " + "elif [ \"$2\" != default ]; then src=$(pactl list sources short 2>/dev/null | awk '$2 ~ /^alsa_input\\./ && $2 !~ /monitor/ {print $2; exit}'); fi; " + "[ -n \"$src\" ] || src=$(pactl get-default-source 2>/dev/null); [ -n \"$src\" ] || src=auto; " + "printf '%s' \"$1\" | sed \"s|^source = SRC$|source = $src|\" | exec cava -p /dev/stdin", "_", root.config, Flags.dictateMic]
         stdout: SplitParser {
-            onRead: (line) => {
+            onRead: line => {
                 if (!line || !root.live)
                     return;
                 const parts = line.split(";");
@@ -482,8 +512,7 @@ Singleton {
                     if (e > top)
                         top = e;
                 }
-                root.peak = top > root.peak ? root.peak * 0.4 + top * 0.6
-                    : Math.max(root.minSpan, root.peak * 0.994);
+                root.peak = top > root.peak ? root.peak * 0.4 + top * 0.6 : Math.max(root.minSpan, root.peak * 0.994);
                 for (let i = 0; i < half; i++)
                     h.push(Math.min(1, Math.sqrt(ex[i] / root.peak) * 0.95));
                 const out = [];

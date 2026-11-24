@@ -96,22 +96,19 @@ PillSurface {
             spacing: 9 * root.s
 
             Text {
-                id: pctText
                 text: Battery.pct + "%"
                 color: Battery.low ? Theme.vermLit : (Battery.charging ? Theme.flameGlow : Theme.cream)
                 font.family: Theme.font
                 font.pixelSize: 46 * root.s
                 font.weight: Font.Bold
                 font.letterSpacing: -1 * root.s
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
 
             Text {
-                readonly property string body: Battery.full
-                    ? "Plugged in"
-                    : (Battery.hasTime
-                        ? Battery.timeStr + (Battery.charging ? " to full" : " remaining")
-                        : "")
+                readonly property string body: Battery.full ? "Plugged in" : (Battery.hasTime ? Battery.timeStr + (Battery.charging ? " to full" : " remaining") : "")
                 visible: body.length > 0
                 text: body
                 color: Battery.charging ? Theme.flameCore : Theme.subtle
@@ -136,8 +133,14 @@ PillSurface {
                 radius: parent.radius
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Battery.charging ? Theme.vermLit : Theme.vermDeep }
-                    GradientStop { position: 1.0; color: Battery.charging ? Theme.flameGlow : Theme.vermLit }
+                    GradientStop {
+                        position: 0.0
+                        color: Battery.charging ? Theme.vermLit : Theme.vermDeep
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Battery.charging ? Theme.flameGlow : Theme.vermLit
+                    }
                 }
             }
         }
@@ -146,38 +149,6 @@ PillSurface {
             width: parent.width
             topPadding: 16 * root.s
             spacing: 10 * root.s
-
-            component StatRow: Item {
-                id: stat
-                width: parent ? parent.width : 0
-                height: vText.implicitHeight
-                property string label: ""
-                property string value: ""
-                property bool warm: false
-
-                Text {
-                    anchors.left: parent.left
-                    anchors.baseline: vText.baseline
-                    text: stat.label
-                    color: Theme.faint
-                    font.family: Theme.font
-                    font.pixelSize: 10 * root.s
-                    font.weight: Font.Medium
-                    font.capitalization: Font.AllUppercase
-                    font.letterSpacing: 0.8 * root.s
-                }
-
-                Text {
-                    id: vText
-                    anchors.right: parent.right
-                    text: stat.value
-                    color: stat.warm ? Theme.flameGlow : Theme.cream
-                    font.family: Theme.font
-                    font.pixelSize: 12.5 * root.s
-                    font.weight: Font.DemiBold
-                    font.features: { "tnum": 1 }
-                }
-            }
 
             StatRow {
                 visible: Math.abs(Battery.rateW) >= 0.05
@@ -197,6 +168,40 @@ PillSurface {
                 visible: Battery.capacityWh >= 1
                 label: "Capacity"
                 value: Battery.capacityWh.toFixed(1) + " Wh"
+            }
+        }
+    }
+
+    component StatRow: Item {
+        id: stat
+        width: parent ? parent.width : 0
+        height: vText.implicitHeight
+        property string label: ""
+        property string value: ""
+        property bool warm: false
+
+        Text {
+            anchors.left: parent.left
+            anchors.baseline: vText.baseline
+            text: stat.label
+            color: Theme.faint
+            font.family: Theme.font
+            font.pixelSize: 10 * root.s
+            font.weight: Font.Medium
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.8 * root.s
+        }
+
+        Text {
+            id: vText
+            anchors.right: parent.right
+            text: stat.value
+            color: stat.warm ? Theme.flameGlow : Theme.cream
+            font.family: Theme.font
+            font.pixelSize: 12.5 * root.s
+            font.weight: Font.DemiBold
+            font.features: {
+                "tnum": 1
             }
         }
     }

@@ -18,12 +18,71 @@ SettingsSurface {
     readonly property var dateStyles: ["ddd d MMM", "ddd d", "d MMM", "dd.MM."]
 
     rows: [
-        { item: timeRow, kind: "seg", vals: [false, true], get: function () { return Flags.time12h; }, set: function (v) { Flags.time12h = v; } },
-        { item: secRow, kind: "toggle", get: function () { return Flags.clockSeconds; }, set: function (v) { Flags.clockSeconds = v; } },
-        { item: dateRow, kind: "seg", vals: root.dateStyles, get: function () { return Flags.dateStyle; }, set: function (v) { Flags.dateStyle = v; } },
-        { item: langRow, kind: "seg", vals: ["en", "de"], get: function () { return Flags.dateLang; }, set: function (v) { Flags.dateLang = v; } },
-        { item: weekRow, kind: "seg", vals: [1, 0], get: function () { return Flags.weekStart; }, set: function (v) { Flags.weekStart = v; } },
-        { item: unitRow, kind: "seg", vals: ["c", "f"], get: function () { return Flags.weatherUnit; }, set: function (v) { Flags.weatherUnit = v; } }
+        {
+            item: timeRow,
+            kind: "seg",
+            vals: [false, true],
+            get: function () {
+                return Flags.time12h;
+            },
+            set: function (v) {
+                Flags.time12h = v;
+            }
+        },
+        {
+            item: secRow,
+            kind: "toggle",
+            get: function () {
+                return Flags.clockSeconds;
+            },
+            set: function (v) {
+                Flags.clockSeconds = v;
+            }
+        },
+        {
+            item: dateRow,
+            kind: "seg",
+            vals: root.dateStyles,
+            get: function () {
+                return Flags.dateStyle;
+            },
+            set: function (v) {
+                Flags.dateStyle = v;
+            }
+        },
+        {
+            item: langRow,
+            kind: "seg",
+            vals: ["en", "de"],
+            get: function () {
+                return Flags.dateLang;
+            },
+            set: function (v) {
+                Flags.dateLang = v;
+            }
+        },
+        {
+            item: weekRow,
+            kind: "seg",
+            vals: [1, 0],
+            get: function () {
+                return Flags.weekStart;
+            },
+            set: function (v) {
+                Flags.weekStart = v;
+            }
+        },
+        {
+            item: unitRow,
+            kind: "seg",
+            vals: ["c", "f"],
+            get: function () {
+                return Flags.weatherUnit;
+            },
+            set: function (v) {
+                Flags.weatherUnit = v;
+            }
+        }
     ]
 
     component GroupLabel: Text {
@@ -52,7 +111,9 @@ SettingsSurface {
             showBack: true
         }
 
-        GroupLabel { text: "Clock" }
+        GroupLabel {
+            text: "Clock"
+        }
 
         SettingsRow {
             id: timeRow
@@ -62,9 +123,18 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "24H", value: false }, { label: "12H", value: true }]
+                options: [
+                    {
+                        label: "24H",
+                        value: false
+                    },
+                    {
+                        label: "12H",
+                        value: true
+                    }
+                ]
                 value: Flags.time12h
-                onPicked: (v) => Flags.time12h = v
+                onPicked: v => Flags.time12h = v
             }
         }
 
@@ -91,9 +161,14 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: root.dateStyles.map(function (st) { return { label: Clocks.dateFor(st, Flags.dateLang, new Date()), value: st }; })
+                options: root.dateStyles.map(function (st) {
+                    return {
+                        label: Clocks.dateFor(st, Flags.dateLang, new Date()),
+                        value: st
+                    };
+                })
                 value: Flags.dateStyle
-                onPicked: (v) => Flags.dateStyle = v
+                onPicked: v => Flags.dateStyle = v
             }
         }
 
@@ -107,9 +182,18 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "English", value: "en" }, { label: "Deutsch", value: "de" }]
+                options: [
+                    {
+                        label: "English",
+                        value: "en"
+                    },
+                    {
+                        label: "Deutsch",
+                        value: "de"
+                    }
+                ]
                 value: Flags.dateLang
-                onPicked: (v) => Flags.dateLang = v
+                onPicked: v => Flags.dateLang = v
             }
         }
 
@@ -122,13 +206,24 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "Monday", value: 1 }, { label: "Sunday", value: 0 }]
+                options: [
+                    {
+                        label: "Monday",
+                        value: 1
+                    },
+                    {
+                        label: "Sunday",
+                        value: 0
+                    }
+                ]
                 value: Flags.weekStart
-                onPicked: (v) => Flags.weekStart = v
+                onPicked: v => Flags.weekStart = v
             }
         }
 
-        GroupLabel { text: "Weather" }
+        GroupLabel {
+            text: "Weather"
+        }
 
         SettingsRow {
             id: unitRow
@@ -139,12 +234,24 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "°C", value: "c" }, { label: "°F", value: "f" }]
+                options: [
+                    {
+                        label: "°C",
+                        value: "c"
+                    },
+                    {
+                        label: "°F",
+                        value: "f"
+                    }
+                ]
                 value: Flags.weatherUnit
-                onPicked: (v) => Flags.weatherUnit = v
+                onPicked: v => Flags.weatherUnit = v
             }
         }
 
-        Item { width: 1; height: 6 * root.s }
+        Item {
+            width: 1
+            height: 6 * root.s
+        }
     }
 }

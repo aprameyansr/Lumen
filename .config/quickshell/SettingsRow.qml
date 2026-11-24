@@ -30,7 +30,8 @@ Item {
 
     HoverHandler {
         id: srowHover
-        onHoveredChanged: if (srow.surface) srow.surface.reportRowHover(srow, hovered)
+        onHoveredChanged: if (srow.surface)
+            srow.surface.reportRowHover(srow, hovered)
     }
 
     Rectangle {
@@ -39,13 +40,18 @@ Item {
         anchors.bottomMargin: 3 * srow.s
         radius: 9 * srow.s
         color: (srowHover.hovered || srow.focused) ? Theme.frameBg : "transparent"
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: if (srow.surface) srow.surface.activateRow(srow)
+        onClicked: if (srow.surface)
+            srow.surface.activateRow(srow)
     }
 
     Text {

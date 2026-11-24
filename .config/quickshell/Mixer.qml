@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell.Io
 import Quickshell.Services.Pipewire
@@ -28,8 +30,8 @@ PillSurface {
         void Pipewire.nodes.values;
         var out = [];
         var all = Pipewire.nodes.values;
-        for (var i = 0; i < all.length; i++) {
-            var n = all[i];
+        for (let i = 0; i < all.length; i++) {
+            const n = all[i];
             if (n && n.isSink && !n.isStream && n.audio && n.name !== "lumen_eq" && !Sound.unplugged(n))
                 out.push(n);
         }
@@ -46,8 +48,8 @@ PillSurface {
         void Pipewire.nodes.values;
         var out = [];
         var all = Pipewire.nodes.values;
-        for (var i = 0; i < all.length; i++) {
-            var n = all[i];
+        for (let i = 0; i < all.length; i++) {
+            const n = all[i];
             if (n && !n.isSink && !n.isStream && n.audio && !/monitor/i.test(n.name || "") && n.name !== "lumen_mic" && !Sound.unplugged(n))
                 out.push(n);
         }
@@ -73,8 +75,8 @@ PillSurface {
         void root.brItems;
         void blLoader.item;
         var out = [];
-        for (var i = 0; i < brRep.count; i++) {
-            var f = brRep.itemAt(i);
+        for (let i = 0; i < brRep.count; i++) {
+            const f = brRep.itemAt(i);
             if (f)
                 out.push(f);
         }
@@ -111,11 +113,9 @@ PillSurface {
      * Off while a device dropdown is open: the pointer is over the list, not
      * the faders underneath it.
      */
-    readonly property int hoverIndex: surfaceHovered && root.openPicker === "" && width > 0 && faders.length > 0
-        && hoverTracker.point.position.y >= faderRow.y
-        ? Math.max(0, Math.min(faders.length - 1, Math.floor(hoverTracker.point.position.x / (width / faders.length))))
-        : -1
-    onHoverIndexChanged: if (hoverIndex >= 0 && !keyLatch.running) focusIndex = hoverIndex
+    readonly property int hoverIndex: surfaceHovered && root.openPicker === "" && width > 0 && faders.length > 0 && hoverTracker.point.position.y >= faderRow.y ? Math.max(0, Math.min(faders.length - 1, Math.floor(hoverTracker.point.position.x / (width / faders.length)))) : -1
+    onHoverIndexChanged: if (hoverIndex >= 0 && !keyLatch.running)
+        focusIndex = hoverIndex
 
     HoverHandler {
         id: hoverTracker
@@ -154,8 +154,7 @@ PillSurface {
      * (right) or -1 (left); a fresh focus lands on the first or last fader.
      */
     function moveFocus(dir) {
-        focusIndex = focusIndex < 0 ? (dir > 0 ? 0 : faders.length - 1)
-                                    : (focusIndex + dir + faders.length) % faders.length;
+        focusIndex = focusIndex < 0 ? (dir > 0 ? 0 : faders.length - 1) : (focusIndex + dir + faders.length) % faders.length;
         keyLatch.restart();
     }
 
@@ -182,7 +181,7 @@ PillSurface {
         property bool on: false
         property string tipTitle: ""
         property string tipDesc: ""
-        signal toggled()
+        signal toggled
 
         width: 26 * root.s
         height: 26 * root.s
@@ -227,16 +226,19 @@ PillSurface {
         property string glyph: ""
         property bool open: false
         property string tip: ""
-        signal toggled()
+        signal toggled
 
         width: 26 * root.s
         height: 26 * root.s
         radius: 8 * root.s
-        color: dchip.open ? Qt.alpha(Theme.onGlow, 0.14)
-            : (dchipHover.hovered ? Theme.frameBg : "transparent")
+        color: dchip.open ? Qt.alpha(Theme.onGlow, 0.14) : (dchipHover.hovered ? Theme.frameBg : "transparent")
         border.width: 1
         border.color: dchip.open ? Qt.alpha(Theme.onGlow, 0.5) : Theme.border
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.fast
+            }
+        }
 
         GlyphIcon {
             anchors.centerIn: parent
@@ -347,7 +349,7 @@ PillSurface {
         anchors.right: parent.right
         model: root.outputSinks
         current: root.sink
-        onPick: (node) => Pipewire.preferredDefaultAudioSink = node
+        onPick: node => Pipewire.preferredDefaultAudioSink = node
     }
 
     DeviceMenu {
@@ -358,7 +360,7 @@ PillSurface {
         anchors.right: parent.right
         model: root.inputSources
         current: root.source
-        onPick: (node) => Pipewire.preferredDefaultAudioSource = node
+        onPick: node => Pipewire.preferredDefaultAudioSource = node
     }
 
     Row {
@@ -395,8 +397,8 @@ PillSurface {
                 focused: root.focusIndex === index
                 value: pct / 100
                 valueLabel: pct + "%"
-                onMoved: (v) => pct = Math.max(5, Math.min(100, Math.round(v * 100)))
-                onCommitted: (v) => {
+                onMoved: v => pct = Math.max(5, Math.min(100, Math.round(v * 100)))
+                onCommitted: v => {
                     pendingPct = Math.max(5, Math.min(100, Math.round(v * 100)));
                     brCommit.restart();
                 }
@@ -411,7 +413,6 @@ PillSurface {
                 }
 
                 Process {
-                    id: brRead
                     command: ["timeout", "3", "ddcutil", "getvcp", "10", "--bus", brFader.modelData.bus, "--brief"]
                     running: true
                     stdout: StdioCollector {
@@ -440,8 +441,11 @@ PillSurface {
                 focused: root.focusIndex === brRep.count
                 value: Devices.backlightPct / 100
                 valueLabel: Devices.backlightPct + "%"
-                onMoved: (v) => Devices.setBacklightLive(v * 100)
-                onCommitted: (v) => { root.pendingBacklight = Math.max(1, Math.min(100, Math.round(v * 100))); blDebounce.restart(); }
+                onMoved: v => Devices.setBacklightLive(v * 100)
+                onCommitted: v => {
+                    root.pendingBacklight = Math.max(1, Math.min(100, Math.round(v * 100)));
+                    blDebounce.restart();
+                }
             }
         }
 
@@ -455,7 +459,10 @@ PillSurface {
             focused: root.focusIndex === root.faderCount - 2
             value: root.sink && root.sink.audio ? root.sink.audio.volume : 0
             valueLabel: Math.round((root.sink && root.sink.audio ? root.sink.audio.volume : 0) * 100) + "%"
-            onMoved: (v) => { if (root.sink && root.sink.audio) root.sink.audio.volume = v; }
+            onMoved: v => {
+                if (root.sink && root.sink.audio)
+                    root.sink.audio.volume = v;
+            }
         }
         VFader {
             id: micFader
@@ -466,19 +473,22 @@ PillSurface {
             subPersistent: false
             focused: root.focusIndex === root.faderCount - 1
             value: root.source && root.source.audio ? root.source.audio.volume : 0
-            valueLabel: (root.source && root.source.audio && root.source.audio.muted)
-                ? "off"
-                : (Math.round((root.source && root.source.audio ? root.source.audio.volume : 0) * 100) + "%")
-            onMoved: (v) => { if (root.source && root.source.audio) root.source.audio.volume = v; }
+            valueLabel: (root.source && root.source.audio && root.source.audio.muted) ? "off" : (Math.round((root.source && root.source.audio ? root.source.audio.volume : 0) * 100) + "%")
+            onMoved: v => {
+                if (root.source && root.source.audio)
+                    root.source.audio.volume = v;
+            }
 
             MouseArea {
-                id: micMute
                 anchors.bottom: parent.bottom
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 24 * root.s
                 height: 22 * root.s
                 cursorShape: Qt.PointingHandCursor
-                onClicked: { if (root.source && root.source.audio) root.source.audio.muted = !root.source.audio.muted; }
+                onClicked: {
+                    if (root.source && root.source.audio)
+                        root.source.audio.muted = !root.source.audio.muted;
+                }
             }
         }
     }
@@ -488,7 +498,7 @@ PillSurface {
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
         property real acc: 0
-        onWheel: (event) => {
+        onWheel: event => {
             acc += event.angleDelta.y / 120;
             const notches = Math.trunc(acc);
             if (notches !== 0 && root.stepFocused(notches * 5))

@@ -30,7 +30,9 @@ SettingsSurface {
     readonly property color accentColor: Qt.hsla(Flags.manualHue / 360, Flags.manualSat, Flags.manualDark ? 0.5 : 0.62, 1)
     readonly property string currentHex: {
         var c = accentColor;
-        function h(x) { return ("0" + Math.round(x * 255).toString(16)).slice(-2); }
+        function h(x) {
+            return ("0" + Math.round(x * 255).toString(16)).slice(-2);
+        }
         return ("#" + h(c.r) + h(c.g) + h(c.b)).toUpperCase();
     }
 
@@ -75,15 +77,12 @@ SettingsSurface {
 
     Process {
         id: paletteProc
-        command: ["sh", "-c",
-            "python3 \"$HOME/.config/hypr/scripts/wallcolors.py\" --hue \"$1\" \"$2\" \"$3\" && hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true",
-            "sh", root.hueArg, root.modeArg, root.satArg]
+        command: ["sh", "-c", "python3 \"$HOME/.config/hypr/scripts/wallcolors.py\" --hue \"$1\" \"$2\" \"$3\" && hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true", "sh", root.hueArg, root.modeArg, root.satArg]
     }
 
     Process {
         id: dynamicProc
-        command: ["sh", "-c",
-            "f=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen/lumen-wallpaper\"; pic=$(cat \"$f\" 2>/dev/null); case \"$pic\" in *.[Mm][Pp]4|*.[Ww][Ee][Bb][Mm]|*.[Mm][Kk][Vv]|*.[Mm][Oo][Vv]) pic=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen/lumen-wallpaper-still.png\";; esac; [ -f \"$pic\" ] && python3 \"$HOME/.config/hypr/scripts/wallcolors.py\" \"$pic\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true"]
+        command: ["sh", "-c", "f=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen/lumen-wallpaper\"; pic=$(cat \"$f\" 2>/dev/null); case \"$pic\" in *.[Mm][Pp]4|*.[Ww][Ee][Bb][Mm]|*.[Mm][Kk][Vv]|*.[Mm][Oo][Vv]) pic=\"${XDG_STATE_HOME:-$HOME/.local/state}/lumen/lumen-wallpaper-still.png\";; esac; [ -f \"$pic\" ] && python3 \"$HOME/.config/hypr/scripts/wallcolors.py\" \"$pic\" >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1; busctl --user call com.mitchellh.ghostty /com/mitchellh/ghostty org.gtk.Actions Activate \"sava{sv}\" reload-config 0 0 >/dev/null 2>&1 || true"]
     }
 
     Connections {
@@ -99,17 +98,97 @@ SettingsSurface {
     }
 
     rows: [
-        { item: glyphRow, kind: "toggle", get: function () { return Flags.showGlyphs; }, set: function (v) { Flags.showGlyphs = v; } },
-        { item: vizRow, kind: "toggle", get: function () { return Flags.musicViz; }, set: function (v) { Flags.musicViz = v; } },
-        { item: paletteRow, kind: "seg", vals: ["static", "dynamic", "manual"], get: function () { return Flags.paletteMode; }, set: function (v) { root.applyMode(v); } },
-        { item: appThemeRow, kind: "toggle", get: function () { return Flags.appTheme; }, set: function (v) { root.setAppTheme(v); } },
+        {
+            item: glyphRow,
+            kind: "toggle",
+            get: function () {
+                return Flags.showGlyphs;
+            },
+            set: function (v) {
+                Flags.showGlyphs = v;
+            }
+        },
+        {
+            item: vizRow,
+            kind: "toggle",
+            get: function () {
+                return Flags.musicViz;
+            },
+            set: function (v) {
+                Flags.musicViz = v;
+            }
+        },
+        {
+            item: paletteRow,
+            kind: "seg",
+            vals: ["static", "dynamic", "manual"],
+            get: function () {
+                return Flags.paletteMode;
+            },
+            set: function (v) {
+                root.applyMode(v);
+            }
+        },
+        {
+            item: appThemeRow,
+            kind: "toggle",
+            get: function () {
+                return Flags.appTheme;
+            },
+            set: function (v) {
+                root.setAppTheme(v);
+            }
+        },
     ].concat(Flags.paletteMode === "dynamic" ? [
-        { item: vibrancyRow, kind: "seg", vals: [0, 0.5, 1], get: function () { return Flags.paletteVibrancy; }, set: function (v) { root.setVibrancy(v); } }
+        {
+            item: vibrancyRow,
+            kind: "seg",
+            vals: [0, 0.5, 1],
+            get: function () {
+                return Flags.paletteVibrancy;
+            },
+            set: function (v) {
+                root.setVibrancy(v);
+            }
+        }
     ] : []).concat([
-        { item: randomRow, kind: "seg", vals: ["all", "cursor"], get: function () { return Flags.randomScope; }, set: function (v) { Flags.randomScope = v; } },
-        { item: scaleRow, kind: "seg", vals: [0.9, 1.0, 1.1, 1.25], get: function () { return Flags.uiScale; }, set: function (v) { Flags.uiScale = v; } },
-        { item: motionRow, kind: "toggle", get: function () { return Flags.reduceMotion; }, set: function (v) { Flags.reduceMotion = v; } },
-        { item: fontRow, kind: "nav", surface: "fontpicker" }
+        {
+            item: randomRow,
+            kind: "seg",
+            vals: ["all", "cursor"],
+            get: function () {
+                return Flags.randomScope;
+            },
+            set: function (v) {
+                Flags.randomScope = v;
+            }
+        },
+        {
+            item: scaleRow,
+            kind: "seg",
+            vals: [0.9, 1.0, 1.1, 1.25],
+            get: function () {
+                return Flags.uiScale;
+            },
+            set: function (v) {
+                Flags.uiScale = v;
+            }
+        },
+        {
+            item: motionRow,
+            kind: "toggle",
+            get: function () {
+                return Flags.reduceMotion;
+            },
+            set: function (v) {
+                Flags.reduceMotion = v;
+            }
+        },
+        {
+            item: fontRow,
+            kind: "nav",
+            surface: "fontpicker"
+        }
     ])
 
     Column {
@@ -126,7 +205,10 @@ SettingsSurface {
             showBack: true
         }
 
-        Item { width: 1; height: 12 * root.s }
+        Item {
+            width: 1
+            height: 12 * root.s
+        }
 
         SettingsRow {
             id: glyphRow
@@ -162,9 +244,22 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "Static", value: "static" }, { label: "Dynamic", value: "dynamic" }, { label: "Manual", value: "manual" }]
+                options: [
+                    {
+                        label: "Static",
+                        value: "static"
+                    },
+                    {
+                        label: "Dynamic",
+                        value: "dynamic"
+                    },
+                    {
+                        label: "Manual",
+                        value: "manual"
+                    }
+                ]
                 value: Flags.paletteMode
-                onPicked: (v) => root.applyMode(v)
+                onPicked: v => root.applyMode(v)
             }
         }
 
@@ -194,9 +289,22 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "Muted", value: 0 }, { label: "Natural", value: 0.5 }, { label: "Vivid", value: 1 }]
+                options: [
+                    {
+                        label: "Muted",
+                        value: 0
+                    },
+                    {
+                        label: "Natural",
+                        value: 0.5
+                    },
+                    {
+                        label: "Vivid",
+                        value: 1
+                    }
+                ]
                 value: Flags.paletteVibrancy
-                onPicked: (v) => root.setVibrancy(v)
+                onPicked: v => root.setVibrancy(v)
             }
         }
 
@@ -208,11 +316,15 @@ SettingsSurface {
          * stays out of the keyboard row registry.
          */
         Item {
-            id: manualSection
             width: parent.width
             height: Flags.paletteMode === "manual" ? manualCol.implicitHeight : 0
             clip: true
-            Behavior on height { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+            Behavior on height {
+                NumberAnimation {
+                    duration: Motion.standard
+                    easing.type: Motion.easeStandard
+                }
+            }
 
             Column {
                 id: manualCol
@@ -235,17 +347,37 @@ SettingsSurface {
                         radius: 7 * root.s
                         gradient: Gradient {
                             orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: Qt.hsla(0.0, 0.7, 0.5, 1) }
-                            GradientStop { position: 1 / 6; color: Qt.hsla(1 / 6, 0.7, 0.5, 1) }
-                            GradientStop { position: 2 / 6; color: Qt.hsla(2 / 6, 0.7, 0.5, 1) }
-                            GradientStop { position: 3 / 6; color: Qt.hsla(3 / 6, 0.7, 0.5, 1) }
-                            GradientStop { position: 4 / 6; color: Qt.hsla(4 / 6, 0.7, 0.5, 1) }
-                            GradientStop { position: 5 / 6; color: Qt.hsla(5 / 6, 0.7, 0.5, 1) }
-                            GradientStop { position: 1.0; color: Qt.hsla(1.0, 0.7, 0.5, 1) }
+                            GradientStop {
+                                position: 0.0
+                                color: Qt.hsla(0.0, 0.7, 0.5, 1)
+                            }
+                            GradientStop {
+                                position: 1 / 6
+                                color: Qt.hsla(1 / 6, 0.7, 0.5, 1)
+                            }
+                            GradientStop {
+                                position: 2 / 6
+                                color: Qt.hsla(2 / 6, 0.7, 0.5, 1)
+                            }
+                            GradientStop {
+                                position: 3 / 6
+                                color: Qt.hsla(3 / 6, 0.7, 0.5, 1)
+                            }
+                            GradientStop {
+                                position: 4 / 6
+                                color: Qt.hsla(4 / 6, 0.7, 0.5, 1)
+                            }
+                            GradientStop {
+                                position: 5 / 6
+                                color: Qt.hsla(5 / 6, 0.7, 0.5, 1)
+                            }
+                            GradientStop {
+                                position: 1.0
+                                color: Qt.hsla(1.0, 0.7, 0.5, 1)
+                            }
                         }
 
                         Rectangle {
-                            id: hueThumb
                             width: 16 * root.s
                             height: 16 * root.s
                             radius: width / 2
@@ -264,8 +396,8 @@ SettingsSurface {
                                     Flags.manualSat = 0.5;
                                 Flags.manualHue = Math.round(Math.max(0, Math.min(1, mx / hueStrip.width)) * 359);
                             }
-                            onPressed: (mouse) => setHue(mouse.x)
-                            onPositionChanged: (mouse) => setHue(mouse.x)
+                            onPressed: mouse => setHue(mouse.x)
+                            onPositionChanged: mouse => setHue(mouse.x)
                         }
                     }
                 }
@@ -306,7 +438,9 @@ SettingsSurface {
                             color: Theme.faint
                             font.family: Theme.font
                             font.pixelSize: 10.5 * root.s
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                             elide: Text.ElideRight
                             width: parent.width
                         }
@@ -317,9 +451,21 @@ SettingsSurface {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         s: root.s
-                        options: [{ label: "Dark", value: true }, { label: "Light", value: false }]
+                        options: [
+                            {
+                                label: "Dark",
+                                value: true
+                            },
+                            {
+                                label: "Light",
+                                value: false
+                            }
+                        ]
                         value: Flags.manualDark
-                        onPicked: (v) => { Flags.manualDark = v; root.applyManual(); }
+                        onPicked: v => {
+                            Flags.manualDark = v;
+                            root.applyManual();
+                        }
                     }
                 }
 
@@ -351,20 +497,23 @@ SettingsSurface {
                         color: Theme.cream
                         font.family: Theme.font
                         font.pixelSize: 13 * root.s
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                         placeholderText: root.currentHex
                         placeholderTextColor: Theme.faint
                         selectByMouse: true
                         selectionColor: Theme.verm
                         maximumLength: 7
 
-                        onActiveFocusChanged: if (!activeFocus) text = "";
+                        onActiveFocusChanged: if (!activeFocus)
+                            text = ""
 
                         function commit() {
                             var raw = text.trim();
                             var clean = raw.charAt(0) === "#" ? raw.slice(1) : raw;
                             if (/^[0-9a-fA-F]{6}$/.test(clean)) {
-                                var c = Qt.color("#" + clean);
+                                const c = Qt.color("#" + clean);
                                 if (c.hslHue >= 0) {
                                     Flags.manualHue = Math.round(c.hslHue * 359);
                                     Flags.manualSat = c.hslSaturation;
@@ -389,7 +538,12 @@ SettingsSurface {
                         height: 1
                         color: Theme.faint
                         opacity: hexField.activeFocus ? 0.7 : 0.18
-                        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Motion.standard
+                                easing.type: Motion.easeStandard
+                            }
+                        }
                     }
                 }
             }
@@ -403,9 +557,18 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "All screens", value: "all" }, { label: "Cursor screen", value: "cursor" }]
+                options: [
+                    {
+                        label: "All screens",
+                        value: "all"
+                    },
+                    {
+                        label: "Cursor screen",
+                        value: "cursor"
+                    }
+                ]
                 value: Flags.randomScope
-                onPicked: (v) => Flags.randomScope = v
+                onPicked: v => Flags.randomScope = v
             }
         }
 
@@ -417,9 +580,26 @@ SettingsSurface {
 
             SettingsSeg {
                 s: root.s
-                options: [{ label: "90%", value: 0.9 }, { label: "100%", value: 1.0 }, { label: "110%", value: 1.1 }, { label: "125%", value: 1.25 }]
+                options: [
+                    {
+                        label: "90%",
+                        value: 0.9
+                    },
+                    {
+                        label: "100%",
+                        value: 1.0
+                    },
+                    {
+                        label: "110%",
+                        value: 1.1
+                    },
+                    {
+                        label: "125%",
+                        value: 1.25
+                    }
+                ]
                 value: Flags.uiScale
-                onPicked: (v) => Flags.uiScale = v
+                onPicked: v => Flags.uiScale = v
             }
         }
 

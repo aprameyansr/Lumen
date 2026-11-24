@@ -40,8 +40,14 @@ PillSurface {
     readonly property var shareCandidates: root.outputSinks.filter(n => !SoundCombine.isCombined(n))
     readonly property int sharePicked: root.shareCandidates.filter(n => root.sharePick[n.name] === true).length
     /** The ticked set already exists as a combined output. */
-    readonly property var shareDup: { void SoundCombine.combos; return root.sharePicked >= 2 ? SoundCombine.existing(root.shareCandidates.filter(n => root.sharePick[n.name] === true)) : null; }
-    readonly property bool shareDupOn: { void Pipewire.defaultAudioSink; return SoundCombine.isDefault(root.shareDup); }
+    readonly property var shareDup: {
+        void SoundCombine.combos;
+        return root.sharePicked >= 2 ? SoundCombine.existing(root.shareCandidates.filter(n => root.sharePick[n.name] === true)) : null;
+    }
+    readonly property bool shareDupOn: {
+        void Pipewire.defaultAudioSink;
+        return SoundCombine.isDefault(root.shareDup);
+    }
 
     function combinePicked() {
         if (root.sharePicked < 2)
@@ -131,14 +137,9 @@ PillSurface {
     Process {
         id: spectrum
         running: root.open && root.tab === "eq" && Cava.available
-        command: ["sh", "-c", "printf '%s' \"$1\" | cava -p /dev/stdin", "_",
-            "[general]\nbars = 40\nframerate = 60\nautosens = 0\nsensitivity = 5500\n"
-            + "[input]\nmethod = pipewire\nsource = auto\n"
-            + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\n"
-            + "ascii_max_range = 1000\nbar_delimiter = 59\nframe_delimiter = 10\n"
-            + "channels = mono\nmono_option = average\n[smoothing]\nnoise_reduction = 0.7\n"]
+        command: ["sh", "-c", "printf '%s' \"$1\" | cava -p /dev/stdin", "_", "[general]\nbars = 40\nframerate = 60\nautosens = 0\nsensitivity = 5500\n" + "[input]\nmethod = pipewire\nsource = auto\n" + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\n" + "ascii_max_range = 1000\nbar_delimiter = 59\nframe_delimiter = 10\n" + "channels = mono\nmono_option = average\n[smoothing]\nnoise_reduction = 0.7\n"]
         stdout: SplitParser {
-            onRead: (line) => {
+            onRead: line => {
                 const parts = line.split(";");
                 const out = [];
                 for (let i = 0; i < 40; i++)
@@ -146,12 +147,13 @@ PillSurface {
                 root.levels = out;
             }
         }
-        onRunningChanged: if (!running) root.levels = []
+        onRunningChanged: if (!running)
+            root.levels = []
     }
 
     component TextButton: Text {
         id: tb
-        signal clicked()
+        signal clicked
         color: tbArea.containsMouse ? Theme.cream : Theme.subtle
         font.family: Theme.font
         font.pixelSize: 10.5 * root.s
@@ -188,9 +190,15 @@ PillSurface {
         color: chip.current ? Qt.alpha(Theme.onGlow, 0.16) : (chipHover.hovered ? Theme.frameBg : "transparent")
         border.width: 1
         border.color: chip.current ? Qt.alpha(Theme.onGlow, 0.4) : Theme.border
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.fast
+            }
+        }
 
-        HoverHandler { id: chipHover }
+        HoverHandler {
+            id: chipHover
+        }
 
         Text {
             id: chipLabel
@@ -215,9 +223,16 @@ PillSurface {
             font.pixelSize: 10 * root.s
             font.weight: Font.Bold
             maximumLength: 18
-            onVisibleChanged: if (visible) { forceActiveFocus(); selectAll(); }
-            onAccepted: { Sound.rename(chip.name, text); root.renaming = ""; }
-            onActiveFocusChanged: if (!activeFocus && chip.editingName) root.renaming = ""
+            onVisibleChanged: if (visible) {
+                forceActiveFocus();
+                selectAll();
+            }
+            onAccepted: {
+                Sound.rename(chip.name, text);
+                root.renaming = "";
+            }
+            onActiveFocusChanged: if (!activeFocus && chip.editingName)
+                root.renaming = ""
             Keys.onEscapePressed: root.renaming = ""
         }
 
@@ -225,7 +240,8 @@ PillSurface {
             anchors.fill: parent
             enabled: !chip.editingName
             cursorShape: Qt.PointingHandCursor
-            onClicked: if (!root.editing) Sound.pick(chip.name)
+            onClicked: if (!root.editing)
+                Sound.pick(chip.name)
             onDoubleClicked: root.renaming = chip.name
         }
 
@@ -295,7 +311,9 @@ PillSurface {
             font.family: Theme.font
             font.pixelSize: 8.5 * root.s
             font.weight: Font.DemiBold
-            font.features: { "tnum": 1 }
+            font.features: {
+                "tnum": 1
+            }
         }
 
         Item {
@@ -328,8 +346,20 @@ PillSurface {
                 y: Math.min(band.tickY, band.trackH / 2)
                 height: Math.abs(band.tickY - band.trackH / 2)
                 color: band.lit ? Theme.vermLit : Theme.vermDim
-                Behavior on y { enabled: !bandDrag.pressed; NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-                Behavior on height { enabled: !bandDrag.pressed; NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                Behavior on y {
+                    enabled: !bandDrag.pressed
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
+                Behavior on height {
+                    enabled: !bandDrag.pressed
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
             }
 
             Rectangle {
@@ -340,8 +370,18 @@ PillSurface {
                 radius: 2 * root.s
                 color: Theme.tickRest
                 opacity: band.lit ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                Behavior on y { enabled: !bandDrag.pressed; NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Motion.fast
+                    }
+                }
+                Behavior on y {
+                    enabled: !bandDrag.pressed
+                    NumberAnimation {
+                        duration: Motion.standard
+                        easing.type: Motion.easeStandard
+                    }
+                }
             }
 
             MouseArea {
@@ -354,10 +394,13 @@ PillSurface {
                     const t = Math.max(0, Math.min(1, (my - 8 * root.s) / band.trackH));
                     Sound.setBand(band.index, Math.round((1 - 2 * t) * Sound.range * 2) / 2);
                 }
-                onPressed: (e) => setFromY(e.y)
-                onPositionChanged: (e) => { if (pressed) setFromY(e.y); }
+                onPressed: e => setFromY(e.y)
+                onPositionChanged: e => {
+                    if (pressed)
+                        setFromY(e.y);
+                }
                 onDoubleClicked: Sound.setBand(band.index, 0)
-                onWheel: (w) => Sound.setBand(band.index, Math.max(-Sound.range, Math.min(Sound.range, band.db + (w.angleDelta.y > 0 ? 0.5 : -0.5))))
+                onWheel: w => Sound.setBand(band.index, Math.max(-Sound.range, Math.min(Sound.range, band.db + (w.angleDelta.y > 0 ? 0.5 : -0.5))))
             }
         }
 
@@ -384,7 +427,9 @@ PillSurface {
         width: appsList.width
         height: 42 * root.s
 
-        HoverHandler { id: appHover }
+        HoverHandler {
+            id: appHover
+        }
 
         Column {
             id: appText
@@ -448,7 +493,7 @@ PillSurface {
             readout: Math.round(app.vol * 100) + "%"
             focused: appHover.hovered
             on: !app.muted
-            onMoved: (v) => Sound.setNodeVolume(app.modelData, Math.round(v * 200) / 100, "app" + app.modelData.id, "App volume")
+            onMoved: v => Sound.setNodeVolume(app.modelData, Math.round(v * 200) / 100, "app" + app.modelData.id, "App volume")
         }
 
         Rectangle {
@@ -501,7 +546,9 @@ PillSurface {
 
         height: 30 * root.s
 
-        HoverHandler { id: shelfHover }
+        HoverHandler {
+            id: shelfHover
+        }
 
         Text {
             anchors.left: parent.left
@@ -521,7 +568,9 @@ PillSurface {
             font.family: Theme.font
             font.pixelSize: 9.5 * root.s
             font.weight: Font.DemiBold
-            font.features: { "tnum": 1 }
+            font.features: {
+                "tnum": 1
+            }
         }
 
         Rectangle {
@@ -561,8 +610,11 @@ PillSurface {
                 function setFromX(mx) {
                     shelf.moved(Math.max(0, Math.min(1, (mx - 8 * root.s) / shelfTrack.width)));
                 }
-                onPressed: (e) => setFromX(e.x)
-                onPositionChanged: (e) => { if (pressed) setFromX(e.x); }
+                onPressed: e => setFromX(e.x)
+                onPositionChanged: e => {
+                    if (pressed)
+                        setFromX(e.x);
+                }
                 onDoubleClicked: shelf.moved(shelf.bipolar ? 0.5 : 0)
             }
         }
@@ -607,11 +659,26 @@ PillSurface {
             SettingsSeg {
                 id: soundTabs
                 anchors.verticalCenter: parent.verticalCenter
-                x: Math.max(soundTitle.width + 8 * root.s,
-                    Math.min((parent.width - width) / 2, soundActions.x - width - 8 * root.s))
+                x: Math.max(soundTitle.width + 8 * root.s, Math.min((parent.width - width) / 2, soundActions.x - width - 8 * root.s))
                 s: root.s
-                options: [{ label: "Apps", value: "apps" }, { label: "Mic", value: "mic" },
-                          { label: "EQ", value: "eq" }, { label: "Combine", value: "share" }]
+                options: [
+                    {
+                        label: "Apps",
+                        value: "apps"
+                    },
+                    {
+                        label: "Mic",
+                        value: "mic"
+                    },
+                    {
+                        label: "EQ",
+                        value: "eq"
+                    },
+                    {
+                        label: "Combine",
+                        value: "share"
+                    }
+                ]
                 value: root.tab
                 onPicked: value => {
                     root.tab = value;
@@ -710,9 +777,19 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 9 * root.s }
-        Rectangle { width: parent.width; height: 1; color: Theme.hair }
-        Item { width: 1; height: 10 * root.s }
+        Item {
+            width: 1
+            height: 9 * root.s
+        }
+        Rectangle {
+            width: parent.width
+            height: 1
+            color: Theme.hair
+        }
+        Item {
+            width: 1
+            height: 10 * root.s
+        }
 
         Item {
             id: deviceRow
@@ -747,7 +824,9 @@ PillSurface {
                     font.family: Theme.font
                     font.pixelSize: 10 * root.s
                     font.weight: Font.Bold
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
 
                 MouseArea {
@@ -755,7 +834,10 @@ PillSurface {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: { root.boostOpen = !root.boostOpen; root.pickerOpen = false; }
+                    onClicked: {
+                        root.boostOpen = !root.boostOpen;
+                        root.pickerOpen = false;
+                    }
                 }
 
                 Tooltip {
@@ -779,9 +861,15 @@ PillSurface {
                 color: root.pickerOpen ? Qt.alpha(Theme.onGlow, 0.14) : (fieldHover.hovered ? Theme.frameBg : "transparent")
                 border.width: 1
                 border.color: root.pickerOpen ? Qt.alpha(Theme.onGlow, 0.5) : Theme.border
-                Behavior on color { ColorAnimation { duration: Motion.fast } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.fast
+                    }
+                }
 
-                HoverHandler { id: fieldHover }
+                HoverHandler {
+                    id: fieldHover
+                }
 
                 Text {
                     anchors.left: parent.left
@@ -812,12 +900,18 @@ PillSurface {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: { root.pickerOpen = !root.pickerOpen; root.boostOpen = false; }
+                    onClicked: {
+                        root.pickerOpen = !root.pickerOpen;
+                        root.boostOpen = false;
+                    }
                 }
             }
         }
 
-        Item { width: 1; height: root.micTab ? 10 * root.s : 0 }
+        Item {
+            width: 1
+            height: root.micTab ? 10 * root.s : 0
+        }
 
         Column {
             visible: root.micTab
@@ -846,8 +940,10 @@ PillSurface {
                     value: vol / 2
                     readout: Math.round(vol * 100) + "%"
                     focused: gainHover.hovered
-                    onMoved: (v) => Sound.setNodeVolume(Sound.source, Math.round(v * 200) / 100, "micvol", "Mic volume")
-                    HoverHandler { id: gainHover }
+                    onMoved: v => Sound.setNodeVolume(Sound.source, Math.round(v * 200) / 100, "micvol", "Mic volume")
+                    HoverHandler {
+                        id: gainHover
+                    }
                 }
             }
 
@@ -870,8 +966,7 @@ PillSurface {
                     }
                     Text {
                         width: parent.width
-                        text: Sound.denoiseAvailable ? "Cleans background noise out of the mic for every app"
-                            : "Needs the noise-suppression-for-voice package"
+                        text: Sound.denoiseAvailable ? "Cleans background noise out of the mic for every app" : "Needs the noise-suppression-for-voice package"
                         elide: Text.ElideRight
                         color: Theme.faint
                         font.family: Theme.font
@@ -892,7 +987,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 10 * root.s }
+        Item {
+            width: 1
+            height: 10 * root.s
+        }
 
         Item {
             id: eqBody
@@ -900,7 +998,11 @@ PillSurface {
             width: parent.width
             height: eqCol.implicitHeight
             opacity: Sound.eq ? 1 : 0.5
-            Behavior on opacity { NumberAnimation { duration: Motion.standard } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.standard
+                }
+            }
 
             Column {
                 id: eqCol
@@ -932,7 +1034,9 @@ PillSurface {
                             border.width: 1
                             border.color: Theme.border
 
-                            HoverHandler { id: addHover }
+                            HoverHandler {
+                                id: addHover
+                            }
 
                             Text {
                                 anchors.centerIn: parent
@@ -973,13 +1077,21 @@ PillSurface {
                             anchors.verticalCenter: parent.verticalCenter
                             text: root.editing ? "Done" : "Edit"
                             color: root.editing ? Theme.vermLit : (tbHover.hovered ? Theme.cream : Theme.subtle)
-                            onClicked: { root.editing = !root.editing; root.renaming = ""; }
-                            HoverHandler { id: tbHover }
+                            onClicked: {
+                                root.editing = !root.editing;
+                                root.renaming = "";
+                            }
+                            HoverHandler {
+                                id: tbHover
+                            }
                         }
                     }
                 }
 
-                Item { width: 1; height: 10 * root.s }
+                Item {
+                    width: 1
+                    height: 10 * root.s
+                }
 
                 Item {
                     width: parent.width
@@ -1007,10 +1119,21 @@ PillSurface {
                                 radius: width / 2
                                 height: Math.max(1, (root.levels[index] || 0) * barsRow.height)
                                 gradient: Gradient {
-                                    GradientStop { position: 0.0; color: Theme.flameGlow }
-                                    GradientStop { position: 1.0; color: Theme.vermLit }
+                                    GradientStop {
+                                        position: 0.0
+                                        color: Theme.flameGlow
+                                    }
+                                    GradientStop {
+                                        position: 1.0
+                                        color: Theme.vermLit
+                                    }
                                 }
-                                Behavior on height { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutQuad } }
+                                Behavior on height {
+                                    NumberAnimation {
+                                        duration: Motion.fast
+                                        easing.type: Easing.OutQuad
+                                    }
+                                }
                             }
                         }
                     }
@@ -1027,7 +1150,10 @@ PillSurface {
                     }
                 }
 
-                Item { width: 1; height: 8 * root.s }
+                Item {
+                    width: 1
+                    height: 8 * root.s
+                }
 
                 Row {
                     width: parent.width
@@ -1038,14 +1164,14 @@ PillSurface {
                         label: "Bass"
                         value: (Sound.current.bass + Sound.range) / (2 * Sound.range)
                         readout: root.fmtDb(Sound.current.bass) + " dB"
-                        onMoved: (v) => Sound.setValue("bass", Math.round((v * 2 - 1) * Sound.range * 2) / 2)
+                        onMoved: v => Sound.setValue("bass", Math.round((v * 2 - 1) * Sound.range * 2) / 2)
                     }
                     MiniShelf {
                         width: (parent.width - 28 * root.s) / 3
                         label: "Treble"
                         value: (Sound.current.treble + Sound.range) / (2 * Sound.range)
                         readout: root.fmtDb(Sound.current.treble) + " dB"
-                        onMoved: (v) => Sound.setValue("treble", Math.round((v * 2 - 1) * Sound.range * 2) / 2)
+                        onMoved: v => Sound.setValue("treble", Math.round((v * 2 - 1) * Sound.range * 2) / 2)
                     }
                     MiniShelf {
                         width: (parent.width - 28 * root.s) / 3
@@ -1053,11 +1179,14 @@ PillSurface {
                         bipolar: false
                         value: Sound.current.widen / 100
                         readout: Math.round(Sound.current.widen) + "%"
-                        onMoved: (v) => Sound.setValue("widen", Math.round(v * 100))
+                        onMoved: v => Sound.setValue("widen", Math.round(v * 100))
                     }
                 }
 
-                Item { width: 1; height: 10 * root.s }
+                Item {
+                    width: 1
+                    height: 10 * root.s
+                }
 
                 Item {
                     id: aeqRow
@@ -1074,9 +1203,15 @@ PillSurface {
                         color: root.aeqOpen ? Qt.alpha(Theme.onGlow, 0.14) : (aeqHover.hovered ? Theme.frameBg : "transparent")
                         border.width: 1
                         border.color: root.aeqOpen ? Qt.alpha(Theme.onGlow, 0.5) : Theme.border
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
-                        HoverHandler { id: aeqHover }
+                        HoverHandler {
+                            id: aeqHover
+                        }
 
                         Text {
                             id: aeqTag
@@ -1148,7 +1283,9 @@ PillSurface {
                         font.pixelSize: 10 * root.s
                         font.weight: Font.DemiBold
 
-                        HoverHandler { id: nightHover }
+                        HoverHandler {
+                            id: nightHover
+                        }
 
                         Tooltip {
                             s: root.s
@@ -1211,7 +1348,10 @@ PillSurface {
                 delegate: Item {
                     id: crow
                     required property var modelData
-                    readonly property int here: { void SoundCombine.nodes; return SoundCombine.presentCount(crow.modelData); }
+                    readonly property int here: {
+                        void SoundCombine.nodes;
+                        return SoundCombine.presentCount(crow.modelData);
+                    }
 
                     width: shareTab.width
                     height: 46 * root.s
@@ -1245,7 +1385,10 @@ PillSurface {
                         }
                         Text {
                             width: parent.width
-                            text: { void SoundCombine.nodes; return crow.modelData.members.map(m => SoundCombine.memberPresent(m) ? m.label : m.label + " (not connected)").join(" · "); }
+                            text: {
+                                void SoundCombine.nodes;
+                                return crow.modelData.members.map(m => SoundCombine.memberPresent(m) ? m.label : m.label + " (not connected)").join(" · ");
+                            }
                             color: Theme.faint
                             font.family: Theme.font
                             font.pixelSize: 9.5 * root.s
@@ -1262,7 +1405,11 @@ PillSurface {
                         height: 24 * root.s
                         radius: 7 * root.s
                         color: crmArea.containsMouse ? Qt.alpha(Theme.verm, 0.16) : "transparent"
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         GlyphIcon {
                             anchors.centerIn: parent
@@ -1284,11 +1431,19 @@ PillSurface {
                 }
             }
 
-            Item { width: 1; height: SoundCombine.combos.length ? 8 * root.s : 0 }
+            Item {
+                width: 1
+                height: SoundCombine.combos.length ? 8 * root.s : 0
+            }
 
-            Caps { text: "Play to several at once" }
+            Caps {
+                text: "Play to several at once"
+            }
 
-            Item { width: 1; height: 4 * root.s }
+            Item {
+                width: 1
+                height: 4 * root.s
+            }
 
             Repeater {
                 model: root.shareCandidates
@@ -1305,9 +1460,15 @@ PillSurface {
                         anchors.fill: parent
                         radius: 8 * root.s
                         color: phover.hovered ? Theme.frameBg : "transparent"
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
                     }
-                    HoverHandler { id: phover }
+                    HoverHandler {
+                        id: phover
+                    }
 
                     Rectangle {
                         id: tick
@@ -1320,7 +1481,11 @@ PillSurface {
                         color: prow.picked ? Theme.vermLit : "transparent"
                         border.width: prow.picked ? 0 : 1
                         border.color: Theme.hair
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Motion.fast
+                            }
+                        }
 
                         /** Drawn in the box's own coordinates so it sits dead centre. */
                         Shape {
@@ -1333,9 +1498,16 @@ PillSurface {
                                 fillColor: "transparent"
                                 capStyle: ShapePath.RoundCap
                                 joinStyle: ShapePath.RoundJoin
-                                startX: tick.width * 0.26; startY: tick.height * 0.52
-                                PathLine { x: tick.width * 0.43; y: tick.height * 0.69 }
-                                PathLine { x: tick.width * 0.75; y: tick.height * 0.33 }
+                                startX: tick.width * 0.26
+                                startY: tick.height * 0.52
+                                PathLine {
+                                    x: tick.width * 0.43
+                                    y: tick.height * 0.69
+                                }
+                                PathLine {
+                                    x: tick.width * 0.75
+                                    y: tick.height * 0.33
+                                }
                             }
                         }
                     }
@@ -1364,7 +1536,10 @@ PillSurface {
                 }
             }
 
-            Item { width: 1; height: 6 * root.s }
+            Item {
+                width: 1
+                height: 6 * root.s
+            }
 
             Item {
                 width: parent.width
@@ -1376,8 +1551,7 @@ PillSurface {
                     anchors.right: combineBtn.left
                     anchors.rightMargin: 8 * root.s
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.sharePicked < 2 ? "Tick two or more"
-                        : (root.shareDup ? "Already combined above" : "Shows up as one output in every app")
+                    text: root.sharePicked < 2 ? "Tick two or more" : (root.shareDup ? "Already combined above" : "Shows up as one output in every app")
                     color: Theme.faint
                     font.family: Theme.font
                     font.pixelSize: 9.5 * root.s
@@ -1394,7 +1568,11 @@ PillSurface {
                     radius: 8 * root.s
                     opacity: ready ? 1 : 0.4
                     color: combineArea.containsMouse && ready ? Theme.vermLit : Qt.alpha(Theme.vermLit, 0.85)
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.fast
+                        }
+                    }
 
                     Text {
                         id: combineText
@@ -1416,7 +1594,10 @@ PillSurface {
                 }
             }
 
-            Item { width: 1; height: 4 * root.s }
+            Item {
+                width: 1
+                height: 4 * root.s
+            }
         }
     }
 
@@ -1450,8 +1631,14 @@ PillSurface {
             height: aeqCol.implicitHeight + 8 * root.s
             radius: 9 * root.s
             gradient: Gradient {
-                GradientStop { position: 0.0; color: Theme.cardTop }
-                GradientStop { position: 1.0; color: Theme.cardBot }
+                GradientStop {
+                    position: 0.0
+                    color: Theme.cardTop
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Theme.cardBot
+                }
             }
             border.width: 1
             border.color: Theme.frameBorder
@@ -1474,7 +1661,9 @@ PillSurface {
                         radius: 7 * root.s
                         color: aeqResHover.hovered ? Theme.frameBg : "transparent"
 
-                        HoverHandler { id: aeqResHover }
+                        HoverHandler {
+                            id: aeqResHover
+                        }
 
                         Text {
                             anchors.left: parent.left
@@ -1512,7 +1701,12 @@ PillSurface {
                     }
                 }
 
-                Rectangle { width: parent.width; height: 1; color: Theme.hair; visible: aeqPanel.results.length > 0 }
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: Theme.hair
+                    visible: aeqPanel.results.length > 0
+                }
 
                 Item {
                     width: parent.width
@@ -1530,7 +1724,10 @@ PillSurface {
                         font.pixelSize: 10.5 * root.s
                         onTextChanged: root.aeqQuery = text
                         Keys.onEscapePressed: root.aeqOpen = false
-                        Keys.onReturnPressed: if (aeqPanel.results.length) { Sound.pickAeq(aeqPanel.results[0]); root.aeqOpen = false; }
+                        Keys.onReturnPressed: if (aeqPanel.results.length) {
+                            Sound.pickAeq(aeqPanel.results[0]);
+                            root.aeqOpen = false;
+                        }
                         Connections {
                             target: root
                             function onAeqOpenChanged() {
@@ -1553,7 +1750,6 @@ PillSurface {
     }
 
     Rectangle {
-        id: boostMenu
         z: 7
         visible: root.boostOpen
         anchors.top: parent.top
@@ -1563,8 +1759,14 @@ PillSurface {
         height: boostCol.implicitHeight + 4 * root.s
         radius: 9 * root.s
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.cardTop }
-            GradientStop { position: 1.0; color: Theme.cardBot }
+            GradientStop {
+                position: 0.0
+                color: Theme.cardTop
+            }
+            GradientStop {
+                position: 1.0
+                color: Theme.cardBot
+            }
         }
         border.width: 1
         border.color: Theme.frameBorder
@@ -1583,10 +1785,11 @@ PillSurface {
                     width: boostCol.width
                     height: 24 * root.s
                     radius: 7 * root.s
-                    color: boostOptHover.hovered ? Theme.frameBg
-                        : ((Sound.current.boost || 100) === modelData ? Qt.alpha(Theme.onGlow, 0.16) : "transparent")
+                    color: boostOptHover.hovered ? Theme.frameBg : ((Sound.current.boost || 100) === modelData ? Qt.alpha(Theme.onGlow, 0.16) : "transparent")
 
-                    HoverHandler { id: boostOptHover }
+                    HoverHandler {
+                        id: boostOptHover
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -1619,7 +1822,7 @@ PillSurface {
         width: 240 * root.s
         model: root.outputSinks
         current: root.routeStream ? Sound.targetOf(root.routeStream) : null
-        onPick: (node) => {
+        onPick: node => {
             Sound.route(root.routeStream, node);
             root.routeStream = null;
         }
@@ -1635,7 +1838,7 @@ PillSurface {
         width: deviceField.width
         model: root.micTab ? root.inputSources : root.outputSinks
         current: root.micTab ? Sound.source : Sound.sink
-        onPick: (node) => {
+        onPick: node => {
             if (root.micTab)
                 Pipewire.preferredDefaultAudioSource = node;
             else

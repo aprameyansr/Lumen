@@ -27,7 +27,7 @@ Singleton {
     property real now: Date.now()
 
     /** A timer just ran out (the resting pill pulses its outline). */
-    signal finished()
+    signal finished
 
     // ── date formatting ──
 
@@ -179,8 +179,7 @@ Singleton {
         var total = Flags.tmTotal;
         root.tmReset();
         var late = t - end > 120000;
-        var body = root.fmtDur(total) + " timer is done"
-            + (late ? " (ran out at " + root.wallTime(end) + ")" : "");
+        var body = root.fmtDur(total) + " timer is done" + (late ? " (ran out at " + root.wallTime(end) + ")" : "");
         Quickshell.execDetached(["notify-send", "-u", "critical", "-a", "Timer", "-i", "alarm-symbolic", "Timer", body]);
         root.finished();
         root.alarmSeen = false;
@@ -207,18 +206,25 @@ Singleton {
         appid: "quickshell"
         name: "superRelease"
         description: "Silence a ringing timer"
-        onPressed: if (root.ringing || root.timerPopupUp) root.dismissAlarm()
-        onReleased: if (root.ringing || root.timerPopupUp) root.dismissAlarm()
+        onPressed: if (root.ringing || root.timerPopupUp)
+            root.dismissAlarm()
+        onReleased: if (root.ringing || root.timerPopupUp)
+            root.dismissAlarm()
     }
 
     /** A Timer notification is still up in the pill. */
-    readonly property bool timerPopupUp: Notifs.popups.some(function (p) { return p && p.appName === "Timer"; })
+    readonly property bool timerPopupUp: Notifs.popups.some(function (p) {
+        return p && p.appName === "Timer";
+    })
 
     /** Super: silence the alarm and clear the Timer notification from the pill, like its ×; it stays in the inbox. */
     function dismissAlarm() {
         root.stopAlarm();
-        Notifs.popups.filter(function (p) { return p && p.appName === "Timer"; })
-            .forEach(function (p) { Notifs.removePopup(p); });
+        Notifs.popups.filter(function (p) {
+            return p && p.appName === "Timer";
+        }).forEach(function (p) {
+            Notifs.removePopup(p);
+        });
     }
 
     Process {
@@ -233,7 +239,9 @@ Singleton {
         function onPopupsChanged() {
             if (!root.ringing)
                 return;
-            var up = Notifs.popups.some(function (p) { return p && p.appName === "Timer"; });
+            var up = Notifs.popups.some(function (p) {
+                return p && p.appName === "Timer";
+            });
             if (up)
                 root.alarmSeen = true;
             else if (root.alarmSeen)
@@ -318,15 +326,17 @@ Singleton {
         if (/^\d+(\.\d+)?$/.test(t))
             return Math.round(parseFloat(t) * 60000);
         if (/^\d+(:\d{1,2}){1,2}$/.test(t)) {
-            var p = t.split(":").map(function (x) { return parseInt(x, 10); });
-            var secs = p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+            const p = t.split(":").map(function (x) {
+                return parseInt(x, 10);
+            });
+            const secs = p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
             return secs * 1000;
         }
         var re = /(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|s|sec|secs|second|seconds)(?![a-z])/g;
         var total = 0, seen = 0, m;
         while ((m = re.exec(t)) !== null) {
-            var v = parseFloat(m[1]);
-            var u = m[2].charAt(0);
+            const v = parseFloat(m[1]);
+            const u = m[2].charAt(0);
             total += v * (u === "h" ? 3600000 : (u === "m" ? 60000 : 1000));
             seen += m[0].length;
         }
@@ -363,7 +373,9 @@ Singleton {
 
     Connections {
         target: Flags
-        function onWorldZonesChanged() { root.refreshOffsets(); }
+        function onWorldZonesChanged() {
+            root.refreshOffsets();
+        }
     }
 
     Timer {
@@ -404,7 +416,9 @@ Singleton {
     }
 
     function addZone(zone) {
-        var list = (Flags.worldZones || []).filter(function (z) { return z !== zone; });
+        var list = (Flags.worldZones || []).filter(function (z) {
+            return z !== zone;
+        });
         list.push(zone);
         Flags.worldZones = list;
     }
@@ -433,7 +447,9 @@ Singleton {
     }
 
     function removeZone(zone) {
-        Flags.worldZones = (Flags.worldZones || []).filter(function (z) { return z !== zone; });
+        Flags.worldZones = (Flags.worldZones || []).filter(function (z) {
+            return z !== zone;
+        });
     }
 
     /** Searchable zone catalogue from the system tz database: [{ zone, city, country }]. Loaded on first use. */
@@ -459,9 +475,15 @@ Singleton {
             if (c.length < 3 || c[2].indexOf("/") < 0)
                 return;
             var cc = c[0].split(",")[0];
-            out.push({ zone: c[2], city: root.cityOf(c[2]), country: names[cc] || cc });
+            out.push({
+                zone: c[2],
+                city: root.cityOf(c[2]),
+                country: names[cc] || cc
+            });
         });
-        out.sort(function (a, b) { return a.city.localeCompare(b.city); });
+        out.sort(function (a, b) {
+            return a.city.localeCompare(b.city);
+        });
         root.countries = names;
         root.catalogue = out;
     }
@@ -480,8 +502,7 @@ Singleton {
             var city = e.city.toLowerCase();
             if (city.indexOf(s) === 0)
                 first.push(e);
-            else if (city.indexOf(s) >= 0 || e.country.toLowerCase().indexOf(s) >= 0
-                     || e.zone.toLowerCase().replace(/_/g, " ").indexOf(s) >= 0)
+            else if (city.indexOf(s) >= 0 || e.country.toLowerCase().indexOf(s) >= 0 || e.zone.toLowerCase().replace(/_/g, " ").indexOf(s) >= 0)
                 rest.push(e);
         });
         return first.concat(rest).slice(0, limit || 6);

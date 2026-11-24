@@ -1,17 +1,16 @@
 """Private, boot-local copies of files held by the pill."""
 
 import ctypes
-from functools import cache
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import stat
 import sys
-from urllib.parse import unquote, urlsplit
+from functools import cache
+from pathlib import Path
 from tempfile import TemporaryDirectory
-
+from urllib.parse import unquote, urlsplit
 
 try:
     import gi
@@ -58,7 +57,11 @@ TEMP_ROOT = Path("/tmp")
 
 def is_private_directory(path):
     info = path.lstat()
-    return stat.S_ISDIR(info.st_mode) and info.st_uid == os.getuid() and stat.S_IMODE(info.st_mode) == 0o700
+    return (
+        stat.S_ISDIR(info.st_mode)
+        and info.st_uid == os.getuid()
+        and stat.S_IMODE(info.st_mode) == 0o700
+    )
 
 
 def shelf_directory():
@@ -135,10 +138,17 @@ def entries(directory):
             continue
         is_folder = stat.S_ISDIR(info.st_mode)
         if is_folder or stat.S_ISREG(info.st_mode):
-            results.append({
-                "id": f"{info.st_ino}:{file.name}", "name": file.name, "url": file.as_uri(),
-                "size": info.st_size, "directory": is_folder, "added": info.st_ctime_ns, "icon": file_icon(file),
-            })
+            results.append(
+                {
+                    "id": f"{info.st_ino}:{file.name}",
+                    "name": file.name,
+                    "url": file.as_uri(),
+                    "size": info.st_size,
+                    "directory": is_folder,
+                    "added": info.st_ctime_ns,
+                    "icon": file_icon(file),
+                }
+            )
     results.sort(key=lambda item: item["added"], reverse=True)
     return results
 
@@ -222,15 +232,21 @@ def main(action, values):
                 else:
                     files += 1
             except (OSError, ValueError, RuntimeError) as error:
-                errors.append(error.strerror if isinstance(error, OSError) and error.strerror else str(error))
+                message = error.strerror if isinstance(error, OSError) else None
+                errors.append(message or str(error))
     elif action == "remove":
         for identifier in values:
             try:
                 remove(directory, identifier)
             except OSError as error:
                 errors.append(error.strerror or str(error))
-    return {"entries": entries(directory), "stored": files + folders,
-            "files": files, "folders": folders, "errors": errors}
+    return {
+        "entries": entries(directory),
+        "stored": files + folders,
+        "files": files,
+        "folders": folders,
+        "errors": errors,
+    }
 
 
 if __name__ == "__main__":

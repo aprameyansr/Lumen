@@ -44,7 +44,9 @@ Item {
     readonly property bool overMinus: scrub.containsMouse && scrub.mouseX < width * 0.4
     readonly property bool overPlus: scrub.containsMouse && scrub.mouseX > width * 0.6
 
-    HoverHandler { id: hh }
+    HoverHandler {
+        id: hh
+    }
 
     implicitWidth: Math.max(64 * root.s, content.implicitWidth + 14 * root.s)
     implicitHeight: content.implicitHeight + 8 * root.s
@@ -69,7 +71,11 @@ Item {
         anchors.fill: parent
         radius: Motion.rSmall * root.s
         color: Qt.alpha(Theme.onGlow, root.hovered ? 0.14 : 0)
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.fast
+            }
+        }
     }
 
     /**
@@ -129,11 +135,11 @@ Item {
         acceptedButtons: Qt.NoButton
         cursorShape: Qt.SizeHorCursor
         property real acc: 0
-        onWheel: (event) => {
+        onWheel: event => {
             acc += event.angleDelta.y / 120;
             const notches = Math.trunc(acc);
             if (notches !== 0) {
-                var cand = root.snap(root.value + notches * root.step);
+                const cand = root.snap(root.value + notches * root.step);
                 if (cand !== root.value)
                     root.edited(cand);
                 acc -= notches;
@@ -148,7 +154,6 @@ Item {
         spacing: 6 * root.s
 
         GlyphIcon {
-            id: undoG
             anchors.verticalCenter: parent.verticalCenter
             name: "undo"
             height: 14 * root.s
@@ -157,8 +162,17 @@ Item {
             clip: true
             stroke: 1.9
             color: undoMA.containsMouse ? Theme.bright : Qt.alpha(Theme.onGlow, 0.55)
-            Behavior on width { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on width {
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
 
             MouseArea {
                 id: undoMA
@@ -172,7 +186,6 @@ Item {
         }
 
         Text {
-            id: minusG
             anchors.verticalCenter: parent.verticalCenter
             text: "−"
             width: root.hovered ? implicitWidth : 0
@@ -182,12 +195,20 @@ Item {
             font.family: Theme.font
             font.pixelSize: 15 * root.s
             font.weight: Font.Medium
-            Behavior on width { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on width {
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         Item {
-            id: valueWrap
             anchors.verticalCenter: parent.verticalCenter
             implicitWidth: Math.max(28 * root.s, vrow.implicitWidth)
             implicitHeight: vrow.implicitHeight
@@ -219,7 +240,6 @@ Item {
         }
 
         Text {
-            id: plusG
             anchors.verticalCenter: parent.verticalCenter
             text: "+"
             width: root.hovered ? implicitWidth : 0
@@ -229,8 +249,17 @@ Item {
             font.family: Theme.font
             font.pixelSize: 15 * root.s
             font.weight: Font.Medium
-            Behavior on width { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on width {
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
     }
 }

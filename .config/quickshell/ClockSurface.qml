@@ -77,9 +77,26 @@ PillSurface {
             Clocks.loadCatalogue();
     }
 
-    readonly property real swElapsed: { void root.liveNow; void Flags.swStart; void Flags.swAccum; return Clocks.swElapsedAt(root.liveNow); }
-    readonly property real tmRemain: { void root.liveNow; void Flags.tmEnd; void Flags.tmLeft; void Flags.tmDur; return Clocks.tmRemainAt(root.liveNow); }
-    readonly property real tmFrac: { void root.liveNow; void Flags.tmEnd; void Flags.tmLeft; void Flags.tmTotal; return Clocks.tmFracAt(root.liveNow); }
+    readonly property real swElapsed: {
+        void root.liveNow;
+        void Flags.swStart;
+        void Flags.swAccum;
+        return Clocks.swElapsedAt(root.liveNow);
+    }
+    readonly property real tmRemain: {
+        void root.liveNow;
+        void Flags.tmEnd;
+        void Flags.tmLeft;
+        void Flags.tmDur;
+        return Clocks.tmRemainAt(root.liveNow);
+    }
+    readonly property real tmFrac: {
+        void root.liveNow;
+        void Flags.tmEnd;
+        void Flags.tmLeft;
+        void Flags.tmTotal;
+        return Clocks.tmFracAt(root.liveNow);
+    }
 
     // ── keyboard ──
 
@@ -102,7 +119,7 @@ PillSurface {
     function key(k, mods) {
         if (root.searching || root.typingDur) {
             if (root.searching && (k === Qt.Key_Up || k === Qt.Key_Down)) {
-                var n = root.results.length;
+                const n = root.results.length;
                 if (n)
                     root.searchIndex = Math.max(0, Math.min(n - 1, root.searchIndex + (k === Qt.Key_Down ? 1 : -1)));
                 return true;
@@ -116,14 +133,30 @@ PillSurface {
         }
         var go = k === Qt.Key_Space || k === Qt.Key_Return || k === Qt.Key_Enter;
         if (root.tab === "stopwatch") {
-            if (go) { Clocks.swToggle(); return true; }
-            if (k === Qt.Key_L) { Clocks.swLap(); return true; }
-            if (k === Qt.Key_R) { if (!Clocks.swRunning) Clocks.swReset(); return true; }
+            if (go) {
+                Clocks.swToggle();
+                return true;
+            }
+            if (k === Qt.Key_L) {
+                Clocks.swLap();
+                return true;
+            }
+            if (k === Qt.Key_R) {
+                if (!Clocks.swRunning)
+                    Clocks.swReset();
+                return true;
+            }
             return false;
         }
         if (root.tab === "timer") {
-            if (go) { Clocks.tmToggle(); return true; }
-            if (k === Qt.Key_R) { Clocks.tmReset(); return true; }
+            if (go) {
+                Clocks.tmToggle();
+                return true;
+            }
+            if (k === Qt.Key_R) {
+                Clocks.tmReset();
+                return true;
+            }
             if (k === Qt.Key_Up || k === Qt.Key_Down) {
                 if (Clocks.tmIdle)
                     Clocks.tmSet(Flags.tmDur + (k === Qt.Key_Up ? 60000 : -60000));
@@ -135,10 +168,9 @@ PillSurface {
         }
         // world
         var dir = k === Qt.Key_Down ? 1 : -1;
-        if ((k === Qt.Key_Up || k === Qt.Key_Down) && (mods & Qt.ControlModifier)
-            && root.worldIndex >= 0 && root.worldIndex < root.worldCount - 1) {
-            var zone = Flags.worldZones[root.worldIndex];
-            var to = root.worldIndex + dir;
+        if ((k === Qt.Key_Up || k === Qt.Key_Down) && (mods & Qt.ControlModifier) && root.worldIndex >= 0 && root.worldIndex < root.worldCount - 1) {
+            const zone = Flags.worldZones[root.worldIndex];
+            const to = root.worldIndex + dir;
             if (to >= 0 && to < root.worldCount - 1) {
                 Clocks.moveZone(zone, dir);
                 root.worldIndex = to;
@@ -146,8 +178,7 @@ PillSurface {
             return true;
         }
         if (k === Qt.Key_Up || k === Qt.Key_Down) {
-            root.worldIndex = Math.max(0, Math.min(root.worldCount - 1,
-                root.worldIndex < 0 ? 0 : root.worldIndex + (k === Qt.Key_Down ? 1 : -1)));
+            root.worldIndex = Math.max(0, Math.min(root.worldCount - 1, root.worldIndex < 0 ? 0 : root.worldIndex + (k === Qt.Key_Down ? 1 : -1)));
             return true;
         }
         if (go && root.worldIndex === root.worldCount - 1) {
@@ -206,7 +237,10 @@ PillSurface {
 
     // ── world helpers ──
 
-    readonly property int localOff: { void root.liveNow; return Clocks.localOffset(); }
+    readonly property int localOff: {
+        void root.liveNow;
+        return Clocks.localOffset();
+    }
 
     function zoneTime(zone) {
         void root.liveNow;
@@ -225,15 +259,15 @@ PillSurface {
         if (diff === 0) {
             label = "Same time";
         } else {
-            var a = Math.abs(diff);
-            var h = Math.floor(a / 60), m = a % 60;
+            const a = Math.abs(diff);
+            const h = Math.floor(a / 60);
+            const m = a % 60;
             label = (diff > 0 ? "+" : "−") + h + (m ? ":" + Clocks.pad2(m) : "h") + (diff > 0 ? " ahead" : " behind");
         }
         var here = new Date(root.liveNow);
         var there = Clocks.zoneDate(zone, root.liveNow);
         if (there) {
-            var dd = Math.round((new Date(there.getFullYear(), there.getMonth(), there.getDate())
-                - new Date(here.getFullYear(), here.getMonth(), here.getDate())) / 86400000);
+            const dd = Math.round((new Date(there.getFullYear(), there.getMonth(), there.getDate()) - new Date(here.getFullYear(), here.getMonth(), here.getDate())) / 86400000);
             if (dd > 0)
                 label += " · Tomorrow";
             else if (dd < 0)
@@ -244,19 +278,17 @@ PillSurface {
 
     function countryOf(zone) {
         void Clocks.catalogue;
-        var hit = Clocks.catalogue.find(function (e) { return e.zone === zone; });
+        var hit = Clocks.catalogue.find(function (e) {
+            return e.zone === zone;
+        });
         return hit ? hit.country : "";
     }
 
     // ── seam ──
 
-    readonly property Item focusedWorldRow: root.tab !== "world" ? null
-        : (root.searching ? searchBox
-        : (root.worldIndex >= 0 ? (root.worldIndex < root.worldCount - 1 ? worldRepeater.itemAt(root.worldIndex) : addRow) : null))
+    readonly property Item focusedWorldRow: root.tab !== "world" ? null : (root.searching ? searchBox : (root.worldIndex >= 0 ? (root.worldIndex < root.worldCount - 1 ? worldRepeater.itemAt(root.worldIndex) : addRow) : null))
 
-    ameForm: clockTabs.pointedOption ? "soul" : root.tab === "stopwatch" ? (Clocks.swIdle ? "off" : "seam")
-        : (root.tab === "timer" ? (Clocks.tmIdle ? "off" : "seam")
-        : (root.focusedWorldRow ? "rowseam" : "off"))
+    ameForm: clockTabs.pointedOption ? "soul" : root.tab === "stopwatch" ? (Clocks.swIdle ? "off" : "seam") : (root.tab === "timer" ? (Clocks.tmIdle ? "off" : "seam") : (root.focusedWorldRow ? "rowseam" : "off"))
 
     amePoint: {
         void root.width;
@@ -301,16 +333,19 @@ PillSurface {
         property string label: ""
         property bool primary: false
         property bool can: true
-        signal clicked()
+        signal clicked
 
         height: 30 * root.s
         radius: 8 * root.s
         opacity: btn.can ? 1 : 0.4
-        color: btn.primary ? Qt.alpha(Theme.onGlow, btnArea.containsMouse && btn.can ? 0.24 : 0.16)
-            : (btnArea.containsMouse && btn.can ? Theme.frameBg : "transparent")
+        color: btn.primary ? Qt.alpha(Theme.onGlow, btnArea.containsMouse && btn.can ? 0.24 : 0.16) : (btnArea.containsMouse && btn.can ? Theme.frameBg : "transparent")
         border.width: btn.primary ? 0 : 1
         border.color: Theme.hairSoft
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.fast
+            }
+        }
 
         Text {
             anchors.centerIn: parent
@@ -327,7 +362,8 @@ PillSurface {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: btn.can ? Qt.PointingHandCursor : Qt.ArrowCursor
-            onClicked: if (btn.can) btn.clicked()
+            onClicked: if (btn.can)
+                btn.clicked()
         }
     }
 
@@ -358,8 +394,14 @@ PillSurface {
             radius: parent.radius
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Theme.vermLit }
-                GradientStop { position: 1.0; color: Theme.flameGlow }
+                GradientStop {
+                    position: 0.0
+                    color: Theme.vermLit
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Theme.flameGlow
+                }
             }
         }
     }
@@ -374,15 +416,16 @@ PillSurface {
         property bool removable: false
         /** Being dragged: lifted above the list, brighter, with an accent edge. */
         property bool lifted: false
-        signal removed()
-        signal hovered()
+        signal removed
+        signal hovered
 
         width: parent ? parent.width : 0
         height: 44 * root.s
 
         HoverHandler {
             id: wrowHover
-            onHoveredChanged: if (hovered) wrow.hovered()
+            onHoveredChanged: if (hovered)
+                wrow.hovered()
         }
 
         Rectangle {
@@ -390,11 +433,14 @@ PillSurface {
             anchors.topMargin: 3 * root.s
             anchors.bottomMargin: 3 * root.s
             radius: 9 * root.s
-            color: wrow.lifted ? Qt.alpha(Theme.onGlow, 0.14)
-                : ((wrowHover.hovered || wrow.focused) ? Theme.frameBg : "transparent")
+            color: wrow.lifted ? Qt.alpha(Theme.onGlow, 0.14) : ((wrowHover.hovered || wrow.focused) ? Theme.frameBg : "transparent")
             border.width: wrow.lifted ? 1 : 0
             border.color: Qt.alpha(Theme.vermLit, 0.45)
-            Behavior on color { ColorAnimation { duration: Motion.fast } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.fast
+                }
+            }
         }
 
         Column {
@@ -434,7 +480,11 @@ PillSurface {
             width: 14 * root.s
             height: 14 * root.s
             opacity: (wrowHover.hovered || wrow.focused) ? (delArea.containsMouse ? 1 : 0.6) : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
 
             GlyphIcon {
                 anchors.fill: parent
@@ -462,7 +512,11 @@ PillSurface {
             columns: 2
             spacing: 2.5 * root.s
             opacity: (wrowHover.hovered || wrow.focused) ? 0.6 : 0
-            Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.fast
+                }
+            }
 
             Repeater {
                 model: 6
@@ -485,7 +539,9 @@ PillSurface {
             font.family: Theme.font
             font.pixelSize: 17 * root.s
             font.weight: Font.Bold
-            font.features: { "tnum": 1 }
+            font.features: {
+                "tnum": 1
+            }
         }
     }
 
@@ -533,9 +589,20 @@ PillSurface {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
                 s: root.s
-                options: [{ label: "Stopwatch", value: "stopwatch" },
-                          { label: "Timer", value: "timer" },
-                          { label: "World", value: "world" }]
+                options: [
+                    {
+                        label: "Stopwatch",
+                        value: "stopwatch"
+                    },
+                    {
+                        label: "Timer",
+                        value: "timer"
+                    },
+                    {
+                        label: "World",
+                        value: "world"
+                    }
+                ]
                 value: root.tab
                 onPicked: value => Flags.clockTab = value
             }
@@ -582,7 +649,9 @@ PillSurface {
                     font.pixelSize: 40 * root.s
                     font.weight: Font.Bold
                     font.letterSpacing: -1 * root.s
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
                 Text {
                     anchors.baseline: swBig.baseline
@@ -591,7 +660,9 @@ PillSurface {
                     font.family: Theme.font
                     font.pixelSize: 20 * root.s
                     font.weight: Font.Bold
-                    font.features: { "tnum": 1 }
+                    font.features: {
+                        "tnum": 1
+                    }
                 }
             }
 
@@ -629,7 +700,9 @@ PillSurface {
                 }
             }
 
-            Hint { text: "Space start / pause  ·  L lap  ·  R reset  ·  ← → tabs" }
+            Hint {
+                text: "Space start / pause  ·  L lap  ·  R reset  ·  ← → tabs"
+            }
 
             /** Laps, newest first; the fastest of two or more is marked warm. Capped and scrollable. */
             Item {
@@ -650,7 +723,7 @@ PillSurface {
                 readonly property var splits: {
                     var l = Flags.swLaps || [];
                     var out = [];
-                    for (var i = 0; i < l.length; i++)
+                    for (let i = 0; i < l.length; i++)
                         out.push(l[i] - (i ? l[i - 1] : 0));
                     return out;
                 }
@@ -690,19 +763,22 @@ PillSurface {
                                 font.family: Theme.font
                                 font.pixelSize: 11.5 * root.s
                                 font.weight: Font.DemiBold
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                             Text {
                                 anchors.right: parent.right
                                 anchors.rightMargin: 4 * root.s
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: Clocks.fmtClock((Flags.swLaps || [])[lapRow.lapNo - 1] || 0, false)
-                                    + "." + Clocks.fmtCenti((Flags.swLaps || [])[lapRow.lapNo - 1] || 0)
+                                text: Clocks.fmtClock((Flags.swLaps || [])[lapRow.lapNo - 1] || 0, false) + "." + Clocks.fmtCenti((Flags.swLaps || [])[lapRow.lapNo - 1] || 0)
                                 color: Theme.faint
                                 font.family: Theme.font
                                 font.pixelSize: 10.5 * root.s
                                 font.weight: Font.Medium
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                             Rectangle {
                                 anchors.bottom: parent.bottom
@@ -733,14 +809,19 @@ PillSurface {
                     id: tmBig
                     visible: !root.typingDur
                     text: Clocks.fmtClock(root.tmRemain, true)
-                    color: Clocks.tmIdle ? (tmBigArea.containsMouse ? Theme.cream : Theme.subtle)
-                        : (Clocks.tmPaused ? Theme.subtle : Theme.cream)
+                    color: Clocks.tmIdle ? (tmBigArea.containsMouse ? Theme.cream : Theme.subtle) : (Clocks.tmPaused ? Theme.subtle : Theme.cream)
                     font.family: Theme.font
                     font.pixelSize: 40 * root.s
                     font.weight: Font.Bold
                     font.letterSpacing: -1 * root.s
-                    font.features: { "tnum": 1 }
-                    Behavior on color { ColorAnimation { duration: Motion.fast } }
+                    font.features: {
+                        "tnum": 1
+                    }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.fast
+                        }
+                    }
                 }
                 MouseArea {
                     id: tmBigArea
@@ -775,15 +856,15 @@ PillSurface {
                         root.typingDur = false;
                         root.forceActiveFocus();
                     }
-                    onActiveFocusChanged: if (!activeFocus) root.typingDur = false
+                    onActiveFocusChanged: if (!activeFocus)
+                        root.typingDur = false
                 }
             }
 
             Text {
                 topPadding: 4 * root.s
                 bottomPadding: 12 * root.s
-                text: Clocks.ringing ? "Time's up" : Clocks.tmRunning ? "Ends at " + Clocks.wallTime(Flags.tmEnd)
-                    : (Clocks.tmPaused ? "Paused" : (root.typingDur ? "Enter to set, Esc to cancel" : "Click the time to type a length"))
+                text: Clocks.ringing ? "Time's up" : Clocks.tmRunning ? "Ends at " + Clocks.wallTime(Flags.tmEnd) : (Clocks.tmPaused ? "Paused" : (root.typingDur ? "Enter to set, Esc to cancel" : "Click the time to type a length"))
                 color: (Clocks.ringing || Clocks.tmRunning) ? Theme.flameCore : (root.durBad ? Theme.vermLit : Theme.subtle)
                 font.family: Theme.font
                 font.pixelSize: 11 * root.s
@@ -803,17 +884,39 @@ PillSurface {
                     anchors.centerIn: parent
                     s: root.s
                     visible: Clocks.tmIdle
-                    options: [1, 3, 5, 10, 15, 30, 60].map(function (m) { return { label: m < 60 ? m + "m" : "1h", value: m * 60000 }; })
+                    options: [1, 3, 5, 10, 15, 30, 60].map(function (m) {
+                        return {
+                            label: m < 60 ? m + "m" : "1h",
+                            value: m * 60000
+                        };
+                    })
                     value: Flags.tmDur
-                    onPicked: (v) => Clocks.tmSet(v)
+                    onPicked: v => Clocks.tmSet(v)
                 }
                 SettingsSeg {
                     anchors.centerIn: parent
                     s: root.s
                     visible: !Clocks.tmIdle
-                    options: [{ label: "+30s", value: 30000 }, { label: "+1m", value: 60000 }, { label: "+5m", value: 300000 }, { label: "+10m", value: 600000 }]
+                    options: [
+                        {
+                            label: "+30s",
+                            value: 30000
+                        },
+                        {
+                            label: "+1m",
+                            value: 60000
+                        },
+                        {
+                            label: "+5m",
+                            value: 300000
+                        },
+                        {
+                            label: "+10m",
+                            value: 600000
+                        }
+                    ]
                     value: -1
-                    onPicked: (v) => Clocks.tmAdd(v)
+                    onPicked: v => Clocks.tmAdd(v)
                 }
             }
 
@@ -836,7 +939,9 @@ PillSurface {
                 }
             }
 
-            Hint { text: Clocks.tmIdle ? "Space start  ·  ↑ ↓ ±1 min  ·  ← → tabs" : "Space pause / resume  ·  ↑ +1 min  ·  R reset" }
+            Hint {
+                text: Clocks.tmIdle ? "Space start  ·  ↑ ↓ ±1 min  ·  ← → tabs" : "Space pause / resume  ·  ↑ +1 min  ·  R reset"
+            }
         }
 
         // ── world ──
@@ -850,7 +955,10 @@ PillSurface {
                 city: Clocks.localZone.length ? Clocks.cityOf(Clocks.localZone) : "Local time"
                 sub: "Here"
                 local: true
-                time: { void root.liveNow; return Qt.formatTime(new Date(root.liveNow), Flags.time12h ? "h:mm AP" : "HH:mm"); }
+                time: {
+                    void root.liveNow;
+                    return Qt.formatTime(new Date(root.liveNow), Flags.time12h ? "h:mm AP" : "HH:mm");
+                }
             }
 
             Rectangle {
@@ -933,37 +1041,47 @@ PillSurface {
                     }
                 }
 
-            Repeater {
-                id: worldRepeater
-                model: Flags.worldZones || []
+                Repeater {
+                    id: worldRepeater
+                    model: Flags.worldZones || []
 
-                WorldRow {
-                    required property string modelData
-                    required property int index
-                    city: Clocks.cityOf(modelData)
-                    sub: {
-                        var c = root.countryOf(modelData);
-                        var d = root.zoneSub(modelData);
-                        return c.length ? c + " · " + d : d;
-                    }
-                    time: root.zoneTime(modelData)
-                    removable: true
-                    focused: root.worldIndex === index
-                    lifted: zoneCol.dragFrom === index
-                    z: lifted ? 10 : 0
-                    scale: lifted ? 1.02 : 1
-                    Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
-                    transform: Translate {
-                        y: zoneCol.offsetFor(index)
-                        Behavior on y {
-                            enabled: zoneCol.slide && zoneCol.dragFrom !== index
-                            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                    WorldRow {
+                        id: zoneRow
+                        required property string modelData
+                        required property int index
+                        city: Clocks.cityOf(modelData)
+                        sub: {
+                            var c = root.countryOf(modelData);
+                            var d = root.zoneSub(modelData);
+                            return c.length ? c + " · " + d : d;
                         }
+                        time: root.zoneTime(modelData)
+                        removable: true
+                        focused: root.worldIndex === index
+                        lifted: zoneCol.dragFrom === index
+                        z: lifted ? 10 : 0
+                        scale: lifted ? 1.02 : 1
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: Motion.fast
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                        transform: Translate {
+                            y: zoneCol.offsetFor(zoneRow.index)
+                            Behavior on y {
+                                enabled: zoneCol.slide && zoneCol.dragFrom !== zoneRow.index
+                                NumberAnimation {
+                                    duration: 160
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+                        onHovered: if (zoneCol.dragFrom < 0)
+                            root.worldIndex = index
+                        onRemoved: Clocks.removeZone(modelData)
                     }
-                    onHovered: if (zoneCol.dragFrom < 0) root.worldIndex = index
-                    onRemoved: Clocks.removeZone(modelData)
                 }
-            }
             }
 
             Item {
@@ -980,7 +1098,8 @@ PillSurface {
                 readonly property bool focused: root.worldIndex === root.worldCount - 1
 
                 HoverHandler {
-                    onHoveredChanged: if (hovered) root.worldIndex = root.worldCount - 1
+                    onHoveredChanged: if (hovered)
+                        root.worldIndex = root.worldCount - 1
                 }
 
                 Canvas {
@@ -1139,7 +1258,9 @@ PillSurface {
                     }
                 }
 
-                Hint { text: "↑ ↓ choose  ·  Enter add  ·  Esc cancel" }
+                Hint {
+                    text: "↑ ↓ choose  ·  Enter add  ·  Esc cancel"
+                }
             }
 
             Hint {

@@ -28,14 +28,29 @@ Item {
         id: barRow
         anchors.centerIn: parent
         anchors.horizontalCenterOffset: root.locked ? -8.5 * root.s : 0
-        Behavior on anchors.horizontalCenterOffset { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on anchors.horizontalCenterOffset {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
         height: root.span * root.s
         spacing: 2 * root.s
         /** Dim, gently breathing, until the mic actually delivers sound. */
         opacity: root.live ? (Dictate.micHot ? 1 : waitPulse.value) : (root.idle && !root.working ? 0.3 : 0)
         scale: root.live || (root.idle && !root.working) ? 1 : 0.6
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-        Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
+        Behavior on scale {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         Repeater {
             model: Dictate.bars
@@ -49,13 +64,25 @@ Item {
                 height: Math.max(2 * root.s, (Dictate.levels[index] || 0) * root.span * root.s)
 
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Theme.flameGlow }
-                    GradientStop { position: 0.5; color: Theme.vermLit }
-                    GradientStop { position: 1.0; color: Theme.flameGlow }
+                    GradientStop {
+                        position: 0.0
+                        color: Theme.flameGlow
+                    }
+                    GradientStop {
+                        position: 0.5
+                        color: Theme.vermLit
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Theme.flameGlow
+                    }
                 }
 
                 Behavior on height {
-                    NumberAnimation { duration: Motion.fast; easing.type: Easing.OutQuad }
+                    NumberAnimation {
+                        duration: Motion.fast
+                        easing.type: Easing.OutQuad
+                    }
                 }
             }
         }
@@ -69,8 +96,22 @@ Item {
         running: root.live && !Dictate.micHot
         loops: Animation.Infinite
         onStopped: waitPulse.value = 0.35
-        NumberAnimation { target: waitPulse; property: "value"; from: 0.25; to: 0.55; duration: 420; easing.type: Easing.InOutSine }
-        NumberAnimation { target: waitPulse; property: "value"; from: 0.55; to: 0.25; duration: 420; easing.type: Easing.InOutSine }
+        NumberAnimation {
+            target: waitPulse
+            property: "value"
+            from: 0.25
+            to: 0.55
+            duration: 420
+            easing.type: Easing.InOutSine
+        }
+        NumberAnimation {
+            target: waitPulse
+            property: "value"
+            from: 0.55
+            to: 0.25
+            duration: 420
+            easing.type: Easing.InOutSine
+        }
     }
 
     GlyphIcon {
@@ -84,8 +125,18 @@ Item {
         stroke: 1.8
         opacity: root.locked ? 1 : 0
         scale: root.locked ? 1 : 0.6
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-        Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Easing.OutBack } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
+        Behavior on scale {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Easing.OutBack
+            }
+        }
     }
 
     Shape {
@@ -97,8 +148,18 @@ Item {
         opacity: root.working ? 1 : 0
         scale: root.working ? 1 : 0.6
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
-        Behavior on scale { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
+        Behavior on scale {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         readonly property real lw: 1.7 * root.s
 

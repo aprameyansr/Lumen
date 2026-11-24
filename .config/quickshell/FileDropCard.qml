@@ -16,7 +16,11 @@ Rectangle {
     color: current ? Qt.alpha(Theme.onGlow, 0.13) : Theme.frameBg
     border.color: current ? Qt.alpha(Theme.onGlow, 0.43) : Theme.frameBorder
     border.width: 1
-    Behavior on color { ColorAnimation { duration: Motion.fast } }
+    Behavior on color {
+        ColorAnimation {
+            duration: Motion.fast
+        }
+    }
 
     GlyphIcon {
         id: symbol

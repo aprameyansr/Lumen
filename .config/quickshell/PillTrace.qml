@@ -40,8 +40,7 @@ Item {
     /** Outline geometry shared by the paint and the repaint pacing. */
     readonly property real lw: 1.4 * trace.s
     readonly property real inset: trace.lw / 2 + 0.5
-    readonly property real r: Math.max(0, Math.min(trace.radius - trace.inset,
-        (trace.height - 2 * trace.inset) / 2, (trace.width - 2 * trace.inset) / 2))
+    readonly property real r: Math.max(0, Math.min(trace.radius - trace.inset, (trace.height - 2 * trace.inset) / 2, (trace.width - 2 * trace.inset) / 2))
     readonly property real perimeter: {
         var w = trace.width - 2 * trace.inset, h = trace.height - 2 * trace.inset;
         return Math.max(0, 2 * (w - 2 * trace.r) + 2 * (h - 2 * trace.r) + 2 * Math.PI * trace.r);
@@ -60,9 +59,15 @@ Item {
 
     Connections {
         target: Flags
-        function onTmEndChanged() { trace.sync(); }
-        function onTmLeftChanged() { trace.sync(); }
-        function onTmTotalChanged() { trace.sync(); }
+        function onTmEndChanged() {
+            trace.sync();
+        }
+        function onTmLeftChanged() {
+            trace.sync();
+        }
+        function onTmTotalChanged() {
+            trace.sync();
+        }
     }
 
     /** Repaint about every half pixel of drain, between 30 fps and once a second. */
@@ -76,13 +81,27 @@ Item {
 
     SequentialAnimation {
         id: pulseAnim
-        NumberAnimation { target: trace; property: "pulse"; to: 1; duration: 220; easing.type: Easing.OutCubic }
-        NumberAnimation { target: trace; property: "pulse"; to: 0; duration: 1100; easing.type: Easing.InOutSine }
+        NumberAnimation {
+            target: trace
+            property: "pulse"
+            to: 1
+            duration: 220
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: trace
+            property: "pulse"
+            to: 0
+            duration: 1100
+            easing.type: Easing.InOutSine
+        }
     }
 
     Connections {
         target: Clocks
-        function onFinished() { pulseAnim.restart(); }
+        function onFinished() {
+            pulseAnim.restart();
+        }
     }
 
     Canvas {
@@ -90,7 +109,12 @@ Item {
         anchors.fill: parent
         opacity: trace.timerShown || trace.pulse > 0 ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         /** Rounded-rect outline from the top centre, clockwise. */
         function outline(ctx) {
@@ -116,7 +140,7 @@ Item {
             ctx.lineCap = "round";
 
             if (trace.timerShown && trace.frac > 0) {
-                var len = trace.frac * trace.perimeter;
+                const len = trace.frac * trace.perimeter;
                 ctx.setLineDash([len, trace.perimeter + 1]);
                 outline(ctx);
                 ctx.shadowColor = Qt.alpha(Theme.vermLit, 0.5);
@@ -155,8 +179,12 @@ Item {
 
     Connections {
         target: Flags
-        function onSwStartChanged() { trace.armBeat(); }
-        function onSwAccumChanged() { trace.armBeat(); }
+        function onSwStartChanged() {
+            trace.armBeat();
+        }
+        function onSwAccumChanged() {
+            trace.armBeat();
+        }
     }
 
     Timer {
@@ -178,19 +206,61 @@ Item {
     ParallelAnimation {
         id: beatAnim
         SequentialAnimation {
-            NumberAnimation { target: trace; property: "beat"; to: 1; duration: 600; easing.type: Easing.InOutSine }
-            NumberAnimation { target: trace; property: "beat"; to: 0; duration: 2400; easing.type: Easing.InOutSine }
+            NumberAnimation {
+                target: trace
+                property: "beat"
+                to: 1
+                duration: 600
+                easing.type: Easing.InOutSine
+            }
+            NumberAnimation {
+                target: trace
+                property: "beat"
+                to: 0
+                duration: 2400
+                easing.type: Easing.InOutSine
+            }
         }
         SequentialAnimation {
-            PropertyAction { target: trace; property: "ring1"; value: 0 }
-            NumberAnimation { target: trace; property: "ring1"; to: 1; duration: 2800; easing.type: Easing.OutQuad }
-            PropertyAction { target: trace; property: "ring1"; value: 0 }
+            PropertyAction {
+                target: trace
+                property: "ring1"
+                value: 0
+            }
+            NumberAnimation {
+                target: trace
+                property: "ring1"
+                to: 1
+                duration: 2800
+                easing.type: Easing.OutQuad
+            }
+            PropertyAction {
+                target: trace
+                property: "ring1"
+                value: 0
+            }
         }
         SequentialAnimation {
-            PropertyAction { target: trace; property: "ring2"; value: 0 }
-            PauseAnimation { duration: 700 }
-            NumberAnimation { target: trace; property: "ring2"; to: 1; duration: 2800; easing.type: Easing.OutQuad }
-            PropertyAction { target: trace; property: "ring2"; value: 0 }
+            PropertyAction {
+                target: trace
+                property: "ring2"
+                value: 0
+            }
+            PauseAnimation {
+                duration: 700
+            }
+            NumberAnimation {
+                target: trace
+                property: "ring2"
+                to: 1
+                duration: 2800
+                easing.type: Easing.OutQuad
+            }
+            PropertyAction {
+                target: trace
+                property: "ring2"
+                value: 0
+            }
         }
     }
 
@@ -202,7 +272,12 @@ Item {
         height: width
         opacity: trace.dotShown ? 1 : 0
         visible: opacity > 0.01
-        Behavior on opacity { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.standard
+                easing.type: Motion.easeStandard
+            }
+        }
 
         Rectangle {
             readonly property real t: trace.ring1

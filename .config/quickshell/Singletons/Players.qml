@@ -27,7 +27,7 @@ Singleton {
 
     function otherPlaying(self) {
         var l = root.list;
-        for (var i = 0; i < l.length; i++)
+        for (let i = 0; i < l.length; i++)
             if (l[i] !== self && l[i].isPlaying)
                 return true;
         return false;
@@ -36,7 +36,7 @@ Singleton {
     readonly property var list: {
         var all = Mpris.players.values;
         var out = [];
-        for (var i = 0; i < all.length; i++)
+        for (let i = 0; i < all.length; i++)
             if (all[i] && !isProxy(all[i]))
                 out.push(all[i]);
         return out;
@@ -45,7 +45,7 @@ Singleton {
     readonly property var pickable: {
         var l = root.list;
         var out = [];
-        for (var i = 0; i < l.length; i++)
+        for (let i = 0; i < l.length; i++)
             if (!isIdle(l[i]))
                 out.push(l[i]);
         return out;
@@ -80,12 +80,12 @@ Singleton {
             return null;
         if (preferred && l.indexOf(preferred) >= 0 && preferred.isPlaying)
             return preferred;
-        for (var i = 0; i < l.length; i++)
+        for (let i = 0; i < l.length; i++)
             if (l[i].isPlaying && !isIdle(l[i]))
                 return l[i];
         if (preferred && l.indexOf(preferred) >= 0 && !isIdle(preferred))
             return preferred;
-        for (var j = 0; j < l.length; j++)
+        for (let j = 0; j < l.length; j++)
             if (!isIdle(l[j]) && l[j].trackTitle)
                 return l[j];
         return l[0];
@@ -139,8 +139,7 @@ Singleton {
     /** A bogus near-INT64 length is how live streams report "no end". */
     readonly property bool live: has && (lengthSec <= 0 || lengthSec > 86400)
     readonly property string source: serviceOf(active)
-    readonly property string serviceLabel: source.length > 0
-        ? source.charAt(0).toUpperCase() + source.slice(1) : ""
+    readonly property string serviceLabel: source.length > 0 ? source.charAt(0).toUpperCase() + source.slice(1) : ""
 
     /** Browsers reuse one art path per video, so fold player and title in to catch a new song. */
     function keyFor(p) {
@@ -194,8 +193,8 @@ Singleton {
         if (id.length === 0)
             return "";
         var apps = DesktopEntries.applications.values;
-        for (var i = 0; i < apps.length; i++) {
-            var e = apps[i];
+        for (let i = 0; i < apps.length; i++) {
+            const e = apps[i];
             if (e && e.id && e.id.toLowerCase() === id.toLowerCase() && e.icon)
                 return Quickshell.iconPath(e.icon, "application-x-executable");
         }
@@ -233,13 +232,18 @@ Singleton {
         if (!m)
             return "";
         var s = m[1].toLowerCase();
-        var known = { youtube: 1, spotify: 1, twitch: 1, soundcloud: 1, bandcamp: 1 };
+        var known = {
+            youtube: 1,
+            spotify: 1,
+            twitch: 1,
+            soundcloud: 1,
+            bandcamp: 1
+        };
         return known[s] ? s : "";
     }
 
     function youtubeId(url) {
-        var m = url.match(/^https?:\/\/(?:www\.|m\.|music\.)?youtube\.com\/watch\?(?:.*&)?v=([\w-]{11})/)
-            || url.match(/^https?:\/\/youtu\.be\/([\w-]{11})/);
+        var m = url.match(/^https?:\/\/(?:www\.|m\.|music\.)?youtube\.com\/watch\?(?:.*&)?v=([\w-]{11})/) || url.match(/^https?:\/\/youtu\.be\/([\w-]{11})/);
         return m ? m[1] : "";
     }
 
@@ -248,7 +252,16 @@ Singleton {
         if (!m)
             return "";
         var ch = m[1].toLowerCase();
-        var reserved = { videos: 1, directory: 1, u: 1, p: 1, settings: 1, subscriptions: 1, following: 1, downloads: 1 };
+        var reserved = {
+            videos: 1,
+            directory: 1,
+            u: 1,
+            p: 1,
+            settings: 1,
+            subscriptions: 1,
+            following: 1,
+            downloads: 1
+        };
         return reserved[ch] ? "" : ch;
     }
 
@@ -292,7 +305,7 @@ Singleton {
             return;
         var xhr = new XMLHttpRequest();
         xhr.timeout = 8000;
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
             if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200 || root.netflixId !== id)
                 return;
             var t = xhr.responseText.match(/property="og:title"\s+content="([^"]+)"|og:title"\s+content="([^"]+)"/);
@@ -311,9 +324,7 @@ Singleton {
 
     /** Swaps a stub browser title for the resolved show name where one exists. */
     function refineTitle(p, raw) {
-        if (p && netflixId.length > 0 && netflixName.length > 0
-            && netflixIdOf(urlOf(p)) === netflixId
-            && (!raw || raw === "Netflix"))
+        if (p && netflixId.length > 0 && netflixName.length > 0 && netflixIdOf(urlOf(p)) === netflixId && (!raw || raw === "Netflix"))
             return netflixName;
         return raw;
     }
@@ -335,9 +346,9 @@ Singleton {
         if (ch.length === 0)
             return;
         var xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                var r = xhr.responseText.trim();
+                const r = xhr.responseText.trim();
                 if (r.indexOf("https:") === 0 && r.length > 12 && root.twitchChannel === ch)
                     root.twitchAvatar = r;
             }
@@ -350,18 +361,30 @@ Singleton {
         appid: "quickshell"
         name: "mediaToggle"
         description: "Play or pause the active media player"
-        onPressed: { var a = root.active; if (a && a.canTogglePlaying) a.togglePlaying(); }
+        onPressed: {
+            var a = root.active;
+            if (a && a.canTogglePlaying)
+                a.togglePlaying();
+        }
     }
     GlobalShortcut {
         appid: "quickshell"
         name: "mediaNext"
         description: "Skip to the next track"
-        onPressed: { var a = root.active; if (a && a.canGoNext) a.next(); }
+        onPressed: {
+            var a = root.active;
+            if (a && a.canGoNext)
+                a.next();
+        }
     }
     GlobalShortcut {
         appid: "quickshell"
         name: "mediaPrev"
         description: "Skip to the previous track"
-        onPressed: { var a = root.active; if (a && a.canGoPrevious) a.previous(); }
+        onPressed: {
+            var a = root.active;
+            if (a && a.canGoPrevious)
+                a.previous();
+        }
     }
 }

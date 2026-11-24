@@ -32,8 +32,7 @@ Singleton {
     }
 
     function setBrightness(bus, pct) {
-        Quickshell.execDetached(["timeout", "3", "ddcutil", "setvcp", "10",
-            String(pct), "--bus", bus, "--noverify"]);
+        Quickshell.execDetached(["timeout", "3", "ddcutil", "setvcp", "10", String(pct), "--bus", bus, "--noverify"]);
     }
 
     /**
@@ -92,11 +91,14 @@ Singleton {
             onStreamFinished: {
                 var mons = [];
                 var blocks = this.text.split(/\bDisplay \d+/);
-                for (var i = 0; i < blocks.length; i++) {
-                    var bus = /I2C bus:\s+\/dev\/i2c-(\d+)/.exec(blocks[i]);
-                    var conn = /DRM connector:\s+card\d+-(\S+)/.exec(blocks[i]);
+                for (let i = 0; i < blocks.length; i++) {
+                    const bus = /I2C bus:\s+\/dev\/i2c-(\d+)/.exec(blocks[i]);
+                    const conn = /DRM connector:\s+card\d+-(\S+)/.exec(blocks[i]);
                     if (bus && (!conn || !conn[1].startsWith("eDP-")))
-                        mons.push({ bus: bus[1], label: conn ? conn[1] : "BUS " + bus[1] });
+                        mons.push({
+                            bus: bus[1],
+                            label: conn ? conn[1] : "BUS " + bus[1]
+                        });
                 }
                 root.ddcMonitors = mons;
             }

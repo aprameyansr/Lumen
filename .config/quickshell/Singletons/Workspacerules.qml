@@ -29,21 +29,23 @@ Singleton {
             onStreamFinished: {
                 var map = {};
                 try {
-                    var rules = JSON.parse(this.text);
-                    for (var i = 0; i < rules.length; i++) {
-                        var ws = parseInt(rules[i].workspaceString);
-                        var mon = rules[i].monitor;
+                    const rules = JSON.parse(this.text);
+                    for (let i = 0; i < rules.length; i++) {
+                        const ws = parseInt(rules[i].workspaceString);
+                        let mon = rules[i].monitor;
                         if (!mon || isNaN(ws))
                             continue;
                         if (!map[mon])
                             map[mon] = [];
                         map[mon].push(ws);
                     }
-                } catch (e) {
+                } catch (_error) {
                     return;
                 }
-                for (var k in map)
-                    map[k].sort(function (a, b) { return a - b; });
+                for (const k in map)
+                    map[k].sort(function (a, b) {
+                        return a - b;
+                    });
                 root.byMonitor = map;
             }
         }

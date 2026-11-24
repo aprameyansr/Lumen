@@ -121,7 +121,12 @@ PillSurface {
         onArcChanged: display = arc
         Component.onCompleted: display = arc
         onDisplayChanged: face.requestPaint()
-        Behavior on display { NumberAnimation { duration: Math.round(700 * Motion.mult); easing.type: Easing.OutCubic } }
+        Behavior on display {
+            NumberAnimation {
+                duration: Math.round(700 * Motion.mult)
+                easing.type: Easing.OutCubic
+            }
+        }
 
         width: 110 * root.s
         height: 110 * root.s
@@ -182,7 +187,9 @@ PillSurface {
                 font.pixelSize: (dial.shrink ? 16 : 20) * root.s
                 font.weight: Font.ExtraBold
                 font.letterSpacing: -0.5 * root.s
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
             Text {
                 anchors.baseline: bigText.baseline
@@ -229,7 +236,9 @@ PillSurface {
                 font.family: Theme.font
                 font.pixelSize: 10.5 * root.s
                 font.weight: Font.Bold
-                font.features: { "tnum": 1 }
+                font.features: {
+                    "tnum": 1
+                }
             }
         }
     }
@@ -243,7 +252,7 @@ PillSurface {
 
         Item {
             width: parent.width
-            height: 24 * root.s
+            height: 30 * root.s
 
             Row {
                 anchors.left: parent.left
@@ -252,7 +261,8 @@ PillSurface {
 
                 Text {
                     id: kanji
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenter: headerLabels.verticalCenter
+                    anchors.verticalCenterOffset: (sysLabel.height - headerLabels.height) / 2
                     visible: Flags.showGlyphs
                     text: "系"
                     color: Theme.cream
@@ -261,7 +271,9 @@ PillSurface {
                     font.pixelSize: 16 * root.s
                 }
                 Column {
+                    id: headerLabels
                     anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenterOffset: 1.5 * root.s
                     spacing: 2 * root.s
 
                     Text {
@@ -269,7 +281,7 @@ PillSurface {
                         text: "SYSTEM"
                         color: Theme.subtle
                         font.family: Theme.font
-                        font.pixelSize: 10 * root.s
+                        font.pixelSize: 12 * root.s
                         font.weight: Font.DemiBold
                         font.letterSpacing: 1.8 * root.s
                     }
@@ -280,7 +292,9 @@ PillSurface {
                         font.pixelSize: 8.5 * root.s
                         font.weight: Font.Bold
                         font.letterSpacing: 0.7 * root.s
-                        font.features: { "tnum": 1 }
+                        font.features: {
+                            "tnum": 1
+                        }
                     }
                 }
             }
@@ -324,7 +338,10 @@ PillSurface {
             }
         }
 
-        Item { width: 1; height: 16 * root.s }
+        Item {
+            width: 1
+            height: 16 * root.s
+        }
 
         Item {
             width: parent.width
@@ -346,9 +363,7 @@ PillSurface {
                     }
                     readonly property int val: key === "cpu" ? Sysmon.cpu : key === "gpu" ? Sysmon.gpu : Sysmon.memPct
 
-                    x: root.dialKeys.length > 1
-                        ? index * (parent.width - width) / (root.dialKeys.length - 1)
-                        : (parent.width - width) / 2
+                    x: root.dialKeys.length > 1 ? index * (parent.width - width) / (root.dialKeys.length - 1) : (parent.width - width) / 2
 
                     width: 110 * root.s
                     height: parent.height
@@ -361,15 +376,16 @@ PillSurface {
                         unit: tile.key === "mem" || tile.val < 0 ? "" : "%"
                         shrink: tile.key !== "mem" && tile.val >= 100
                         label: tile.key
-                        sub: tile.key === "cpu" ? (Sysmon.cpuTemp >= 0 ? Sysmon.cpuTemp + "°" : "")
-                            : tile.key === "gpu" ? (Sysmon.gpuTemp >= 0 ? Sysmon.gpuTemp + "°" : "")
-                            : "/ " + Sysmon.memTotalGb.toFixed(0) + " GB"
+                        sub: tile.key === "cpu" ? (Sysmon.cpuTemp >= 0 ? Sysmon.cpuTemp + "°" : "") : tile.key === "gpu" ? (Sysmon.gpuTemp >= 0 ? Sysmon.gpuTemp + "°" : "") : "/ " + Sysmon.memTotalGb.toFixed(0) + " GB"
                     }
                 }
             }
         }
 
-        Item { width: 1; height: 18 * root.s }
+        Item {
+            width: 1
+            height: 18 * root.s
+        }
 
         Rectangle {
             width: parent.width
@@ -377,7 +393,10 @@ PillSurface {
             color: Theme.hair
         }
 
-        Item { width: 1; height: 13 * root.s }
+        Item {
+            width: 1
+            height: 13 * root.s
+        }
 
         Item {
             width: parent.width
@@ -422,10 +441,7 @@ PillSurface {
                             anchors.horizontalCenter: parent.horizontalCenter
                             spacing: 3 * root.s
                             Text {
-                                text: cell.key === "net" ? "Net · " + (Math.max(Sysmon.netDown, Sysmon.netUp) >= 1 ? "MB/S" : "KB/S")
-                                    : cell.key === "disk" ? "Disk · %"
-                                    : cell.key === "swap" ? "Swap · GB"
-                                    : "VRAM · GB"
+                                text: cell.key === "net" ? "Net · " + (Math.max(Sysmon.netDown, Sysmon.netUp) >= 1 ? "MB/S" : "KB/S") : cell.key === "disk" ? "Disk · %" : cell.key === "swap" ? "Swap · GB" : "VRAM · GB"
                                 color: Theme.faint
                                 font.family: Theme.font
                                 font.pixelSize: 8 * root.s
@@ -449,38 +465,38 @@ PillSurface {
                             visible: cell.key === "net"
 
                             Text {
-                              text: "↓" + (Math.max(Sysmon.netDown,Sysmon.netUp)>=1
-                                  ? Sysmon.netDown.toFixed(1)
-                                  : (Sysmon.netDown*1024).toFixed(1))
+                                text: "↓" + (Math.max(Sysmon.netDown, Sysmon.netUp) >= 1 ? Sysmon.netDown.toFixed(1) : (Sysmon.netDown * 1024).toFixed(1))
                                 color: Theme.cream
                                 font.family: Theme.font
                                 font.pixelSize: 13 * root.s
                                 font.weight: Font.ExtraBold
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                             Text {
-                              text: "↑" + (Math.max(Sysmon.netDown,Sysmon.netUp)>=1
-                                  ? Sysmon.netUp.toFixed(1)
-                                  : (Sysmon.netUp*1024).toFixed(1))
+                                text: "↑" + (Math.max(Sysmon.netDown, Sysmon.netUp) >= 1 ? Sysmon.netUp.toFixed(1) : (Sysmon.netUp * 1024).toFixed(1))
                                 color: Theme.vermLit
                                 font.family: Theme.font
                                 font.pixelSize: 13 * root.s
                                 font.weight: Font.ExtraBold
-                                font.features: { "tnum": 1 }
+                                font.features: {
+                                    "tnum": 1
+                                }
                             }
                         }
 
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             visible: cell.key !== "net"
-                            text: cell.key === "disk" ? "" + Sysmon.diskPct
-                                : cell.key === "swap" ? Sysmon.swapUsedGb.toFixed(1)
-                                : Sysmon.vramUsedGb.toFixed(1) + " / " + Sysmon.vramTotalGb.toFixed(0)
+                            text: cell.key === "disk" ? "" + Sysmon.diskPct : cell.key === "swap" ? Sysmon.swapUsedGb.toFixed(1) : Sysmon.vramUsedGb.toFixed(1) + " / " + Sysmon.vramTotalGb.toFixed(0)
                             color: Theme.cream
                             font.family: Theme.font
                             font.pixelSize: 13 * root.s
                             font.weight: Font.ExtraBold
-                            font.features: { "tnum": 1 }
+                            font.features: {
+                                "tnum": 1
+                            }
                         }
                     }
                 }

@@ -1,5 +1,7 @@
 //@ pragma UseQApplication
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -8,23 +10,8 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import "Singletons"
 
-/**
- * Washi pill top shell. Each monitor carries two layer-shell windows:
- *
- *  - `reserve` is a zero-content strip that only claims an exclusive zone the
- *    height of the rest pill, so tiled windows always sit below the pill even
- *    while it is expanded or a surface is open.
- *  - `overlay` is a full-screen transparent Overlay layer hosting the single
- *    morphing pill anchored at top-centre. The pill never moves windows and is
- *    never re-parented; it just grows in place, so every surface grows out of
- *    the rest pill instead of popping up as a separate panel.
- *
- * Input is routed by the window mask. While the pill is collapsed the mask is
- * the pill rect only, so the rest of the screen clicks through to windows.
- * While the pill is expanded (hovered/pinned) or a surface is open the mask is
- * cleared so the whole layer catches clicks. A backdrop press dismisses, and
- * keyboard focus is taken on demand so Escape closes the open surface.
- */
+// Each monitor has a reserved strip for tiled windows and an overlay for the pill.
+// The overlay's input mask expands when a page, pin, or quick chooser needs it.
 ShellRoot {
     id: root
 
@@ -50,20 +37,19 @@ ShellRoot {
     }
 
     Component.onCompleted: {
+        // Restore saved keep-awake and audio settings by instantiating the singletons.
+        void Awake.on;
+        void Sound.eq;
         refresh();
     }
-        Connections {
+
+    Connections {
         target: Quickshell
 
         function onReloadCompleted() {
             Quickshell.inhibitReloadPopup();
 
-            Quickshell.execDetached([
-                "notify-send",
-                "-a", "Quickshell",
-                "Quickshell",
-                "Configuration reloaded successfully"
-            ]);
+            Quickshell.execDetached(["notify-send", "-a", "Quickshell", "Quickshell", "Configuration reloaded successfully"]);
         }
     }
 
@@ -77,33 +63,39 @@ ShellRoot {
         WlrLayershell.layer: WlrLayer.Background
         WlrLayershell.namespace: "pill-inhibit"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-        anchors { top: true; left: true }
-        IdleInhibitor { window: inhibitWin; enabled: Flags.keepAwake }
+        anchors {
+            top: true
+            left: true
+        }
+        IdleInhibitor {
+            window: inhibitWin
+            enabled: Flags.keepAwake
+        }
     }
 
-    /** The logind half of keep-awake (lid mode, timer, end action) lives in Singletons/Awake.qml; reading it here instantiates the lazy singleton at startup so a persisted session resumes. */
-    readonly property bool awakeReady: Awake.on
-    /** Instantiates the sound engine at startup so a saved EQ or mic filter comes back on. */
-    readonly property bool soundReady: Sound.eq
-
-    /**
-     * Only these raw events can change what the pill renders (per-monitor
-     * active workspace, minimized toplevels, monitor hotplug). Everything
-     * else (window drags, resizes, title spam) must not trigger the triple
-     * model refresh, which costs three Hyprland IPC round-trips.
-     */
+    // Refresh Hyprland models only for events that can affect the pill.
     readonly property var refreshEvents: ({
-        workspace: true, workspacev2: true,
-        createworkspace: true, createworkspacev2: true,
-        destroyworkspace: true, destroyworkspacev2: true,
-        moveworkspace: true, moveworkspacev2: true,
-        renameworkspace: true, activespecial: true,
-        focusedmon: true, focusedmonv2: true,
-        openwindow: true, closewindow: true,
-        movewindow: true, movewindowv2: true,
-        fullscreen: true,
-        monitoradded: true, monitoraddedv2: true, monitorremoved: true
-    })
+            workspace: true,
+            workspacev2: true,
+            createworkspace: true,
+            createworkspacev2: true,
+            destroyworkspace: true,
+            destroyworkspacev2: true,
+            moveworkspace: true,
+            moveworkspacev2: true,
+            renameworkspace: true,
+            activespecial: true,
+            focusedmon: true,
+            focusedmonv2: true,
+            openwindow: true,
+            closewindow: true,
+            movewindow: true,
+            movewindowv2: true,
+            fullscreen: true,
+            monitoradded: true,
+            monitoraddedv2: true,
+            monitorremoved: true
+        })
 
     Connections {
         target: Hyprland
@@ -141,35 +133,81 @@ ShellRoot {
     /** Dictation key, driveable without the bind: `qs ipc call dictate press` / `release` / `cancel`. */
     IpcHandler {
         target: "dictate"
-        function press(): void { Dictate.press(); }
-        function release(): void { Dictate.release(); }
-        function cancel(): void { Dictate.cancel(); }
-        function settings(mon: string): void { root.toggleSurface(mon, "dictation"); }
+        function press(): void {
+            Dictate.press();
+        }
+        function release(): void {
+            Dictate.release();
+        }
+        function cancel(): void {
+            Dictate.cancel();
+        }
+        function settings(mon: string): void {
+            root.toggleSurface(mon, "dictation");
+        }
     }
 
     IpcHandler {
         target: "pill"
-        function mixer(mon: string): void { root.toggleSurface(mon, "mixer"); }
-        function calendar(mon: string): void { root.toggleSurface(mon, "calendar"); }
-        function clock(mon: string): void { root.toggleSurface(mon, "clock"); }
-        function sound(mon: string): void { root.toggleSurface(mon, "sound"); }
-        function eq(): void { Sound.setEq(!Sound.eq); }
-        function eqMode(name: string): void { Sound.pick(name); }
-        function micFilter(): void { Sound.setDenoise(!Sound.denoise); }
+        function mixer(mon: string): void {
+            root.toggleSurface(mon, "mixer");
+        }
+        function calendar(mon: string): void {
+            root.toggleSurface(mon, "calendar");
+        }
+        function clock(mon: string): void {
+            root.toggleSurface(mon, "clock");
+        }
+        function sound(mon: string): void {
+            root.toggleSurface(mon, "sound");
+        }
+        function eq(): void {
+            Sound.setEq(!Sound.eq);
+        }
+        function eqMode(name: string): void {
+            Sound.pick(name);
+        }
+        function micFilter(): void {
+            Sound.setDenoise(!Sound.denoise);
+        }
         /** Start a timer of `minutes` on the clock page's timer; 0 cancels it. */
-        function timer(minutes: string): void { Clocks.tmStartMinutes(Number(minutes) || 0); }
-        function launcher(mon: string): void { root.toggleSurface(mon, "launcher"); }
-        function fileShelf(mon: string): void { root.toggleSurface(mon, "file-shelf"); }
-        function emoji(mon: string): void { root.toggleSurface(mon, "emoji"); }
-        function power(mon: string): void { root.toggleSurface(mon, "power"); }
-        function link(mon: string): void { root.toggleSurface(mon, "link"); }
-        function battery(mon: string): void { root.toggleSurface(mon, "battery"); }
-        function settings(mon: string): void { root.toggleSurface(mon, "settings"); }
-        function keybinds(mon: string): void { root.toggleSurface(mon, "keybinds"); }
-        function recorder(mon: string): void { root.toggleSurface(mon, "recorder"); }
-        function screenrec(mon: string): void { root.toggleSurface(mon, "recorder"); }
-        function record(mon: string): void { root.toggleSurface(mon, "recorder"); }
-        
+        function timer(minutes: string): void {
+            Clocks.tmStartMinutes(Number(minutes) || 0);
+        }
+        function launcher(mon: string): void {
+            root.toggleSurface(mon, "launcher");
+        }
+        function fileShelf(mon: string): void {
+            root.toggleSurface(mon, "file-shelf");
+        }
+        function emoji(mon: string): void {
+            root.toggleSurface(mon, "emoji");
+        }
+        function power(mon: string): void {
+            root.toggleSurface(mon, "power");
+        }
+        function link(mon: string): void {
+            root.toggleSurface(mon, "link");
+        }
+        function battery(mon: string): void {
+            root.toggleSurface(mon, "battery");
+        }
+        function settings(mon: string): void {
+            root.toggleSurface(mon, "settings");
+        }
+        function keybinds(mon: string): void {
+            root.toggleSurface(mon, "keybinds");
+        }
+        function recorder(mon: string): void {
+            root.toggleSurface(mon, "recorder");
+        }
+        function screenrec(mon: string): void {
+            root.toggleSurface(mon, "recorder");
+        }
+        function record(mon: string): void {
+            root.toggleSurface(mon, "recorder");
+        }
+
         /**
          * Quick-record keybind (SUPER+D): one button cycles the whole flow with no
          * surface. Recording → stop. Counting down → cancel. A chooser already up
@@ -190,22 +228,42 @@ ShellRoot {
                 ScreenRec.quickChoosing = true;
             }
         }
-        function dnd(mon: string): void { Flags.dnd = !Flags.dnd; }
-        function awake(mon: string): void { root.toggleSurface(mon, "awake"); }
-        function keepAwake(mon: string): void { Awake.toggle(); }
-        function sysmon(mon: string): void { root.toggleSurface(mon, "sysmon"); }
-        function system(mon: string): void { root.toggleSurface(mon, "sysmon"); }
-        function clipboard(mon: string): void { root.toggleSurface(mon, "clipboard"); }
-        function wallpaper(mon: string): void { root.toggleSurface(mon, "wallpaper"); }
+        function dnd(mon: string): void {
+            Flags.dnd = !Flags.dnd;
+        }
+        function awake(mon: string): void {
+            root.toggleSurface(mon, "awake");
+        }
+        function keepAwake(mon: string): void {
+            Awake.toggle();
+        }
+        function sysmon(mon: string): void {
+            root.toggleSurface(mon, "sysmon");
+        }
+        function system(mon: string): void {
+            root.toggleSurface(mon, "sysmon");
+        }
+        function clipboard(mon: string): void {
+            root.toggleSurface(mon, "clipboard");
+        }
+        function wallpaper(mon: string): void {
+            root.toggleSurface(mon, "wallpaper");
+        }
         function media(mon: string): void {
             if (Players.list.length > 0)
                 root.toggleSurface(mon, "media");
         }
-        function peek(mon: string): void { root.peek(mon); }
-        function hide(): void { root.close(); }
+        function peek(mon: string): void {
+            root.peek(mon);
+        }
+        function hide(): void {
+            root.close();
+        }
 
         /** Opens any surface by name, settings sub-pages included; dev and scripting door. */
-        function page(mon: string, name: string): void { root.toggleSurface(mon, name); }
+        function page(mon: string, name: string): void {
+            root.toggleSurface(mon, name);
+        }
 
         /**
          * The two halves of the SUPER+M minimize toggle, driven by the
@@ -239,18 +297,23 @@ ShellRoot {
             /** Trimming the reserved band below the pill's bottom lets windows climb, so App gap sets the pill-to-window air without touching the desktop gaps_out. */
             readonly property real reservedH: Math.max(0, restHeight + topGap - 12 * (1 - Flags.appGap) * s)
 
-
             screen: modelData
             color: "transparent"
             exclusionMode: ExclusionMode.Normal
             exclusiveZone: reservedH
             aboveWindows: true
 
-            anchors { top: true; left: true; right: true }
+            anchors {
+                top: true
+                left: true
+                right: true
+            }
             implicitHeight: reservedH
 
             mask: emptyReserve
-            Region { id: emptyReserve }
+            Region {
+                id: emptyReserve
+            }
         }
     }
 
@@ -266,65 +329,31 @@ ShellRoot {
             readonly property bool surfaceOpen: surface.length > 0
             readonly property bool modal: surfaceOpen || pill.held || pill.quickChoosing
 
-            /**
-             * True while this monitor's active workspace reports a fullscreen
-             * client. The pill retracts off the top edge and the layer is
-             * click-through so fullscreen content owns the screen, until a
-             * surface or a peek summons it back over the content.
-             */
             readonly property bool monFullscreen: {
-                var mons = Hyprland.monitors.values;
-
-                for (var i = 0; i < mons.length; i++) {
-                    if (mons[i].name !== modelData.name)
-                        continue;
-
-                    var ws = mons[i].activeWorkspace;
-                    if (ws) {
-                        var windows = ws.toplevels.values;
-
-                        for (var j = 0; j < windows.length; j++) {
-                            var o = windows[j].lastIpcObject;
-
-                            if (o && o.fullscreen === 2)
-                                return true;
-                        }
-                    }
-
-                    var mo = mons[i].lastIpcObject;
-                    var sw = (mo && mo.specialWorkspace) ? mo.specialWorkspace.name : "";
-
-                    if (sw && sw.indexOf("special:") === 0) {
-                        var wss = Hyprland.workspaces.values;
-
-                        for (var k = 0; k < wss.length; k++) {
-                            if (!wss[k] || wss[k].name !== sw)
-                                continue;
-
-                            var specialWindows = wss[k].toplevels.values;
-
-                            for (var l = 0; l < specialWindows.length; l++) {
-                                var so = specialWindows[l].lastIpcObject;
-
-                                if (so && so.fullscreen === 2)
-                                    return true;
-                            }
-
-                            break;
-                        }
-                    }
-
+                const monitor = Hyprland.monitors.values.find(monitor => monitor.name === modelData.name);
+                if (!monitor)
                     return false;
-                }
-
-                return false;
+                if (workspaceFullscreen(monitor.activeWorkspace))
+                    return true;
+                const special = monitor.lastIpcObject?.specialWorkspace?.name;
+                if (!special?.startsWith("special:"))
+                    return false;
+                const workspace = Hyprland.workspaces.values.find(workspace => workspace?.name === special);
+                return workspaceFullscreen(workspace);
             }
+
+            function workspaceFullscreen(workspace) {
+                return workspace?.toplevels.values.some(window => window.lastIpcObject?.fullscreen === 2) ?? false;
+            }
+
             readonly property bool summoned: modal || root.peekMon === modelData.name
             readonly property bool pillHidden: monFullscreen && !summoned
 
             onMonFullscreenChanged: if (monFullscreen) {
-                if (root.openMon === modelData.name) root.close();
-                if (root.peekMon === modelData.name) root.peekMon = "";
+                if (root.openMon === modelData.name)
+                    root.close();
+                if (root.peekMon === modelData.name)
+                    root.peekMon = "";
                 pill.pinned = false;
             }
 
@@ -335,10 +364,17 @@ ShellRoot {
             WlrLayershell.keyboardFocus: (surfaceOpen || pill.quickChoosing) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             WlrLayershell.namespace: "pill"
 
-            anchors { top: true; left: true; right: true; bottom: true }
+            anchors {
+                top: true
+                left: true
+                right: true
+                bottom: true
+            }
 
             mask: modal && !pill.shelfDragging ? fullRegion : (pillHidden ? hiddenRegion : pillRegion)
-            Region { id: hiddenRegion }
+            Region {
+                id: hiddenRegion
+            }
             Region {
                 id: pillRegion
                 readonly property real baseW: Math.max(pill.width, pill.targetW)
@@ -357,13 +393,12 @@ ShellRoot {
                 anchors.fill: parent
                 enabled: overlay.modal
                 acceptedButtons: Qt.AllButtons
-                onPressed: (mouse) => {
+                onPressed: mouse => {
                     if (pill.quickChoosing) {
                         ScreenRec.quickChoosing = false;
                         ScreenRec.quickScreenChoosing = false;
                     } else if (overlay.surfaceOpen) {
-                        var inside = mouse.x >= pillRegion.x && mouse.x <= pillRegion.x + pillRegion.width
-                            && mouse.y >= pillRegion.y && mouse.y <= pillRegion.y + pillRegion.height;
+                        const inside = mouse.x >= pillRegion.x && mouse.x <= pillRegion.x + pillRegion.width && mouse.y >= pillRegion.y && mouse.y <= pillRegion.y + pillRegion.height;
                         if (!inside)
                             root.close();
                         else if (mouse.y <= pillRegion.y + 40 * pill.s)
@@ -393,47 +428,49 @@ ShellRoot {
                         root.close();
                     }
                 }
-                Keys.onUpPressed: (e) => {
-                    if (pill.criticalToast) { e.accepted = true; return; }
-                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
-                    if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(-1); e.accepted = true; return; }
-                    e.accepted = pill.fileShelfMove(-1) || pill.sysmonMove(0, -1) || pill.mixerStep(1) || pill.recorderStep(5) || pill.settingsMove(-1);
-                }
-                Keys.onDownPressed: (e) => {
-                    if (pill.criticalToast) { e.accepted = true; return; }
-                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
-                    if (pill.keybindsOpen && !pill.keybindsListening) { pill.keybindsMove(1); e.accepted = true; return; }
-                    e.accepted = pill.fileShelfMove(1) || pill.sysmonMove(0, 1) || pill.mixerStep(-1) || pill.recorderStep(-5) || pill.settingsMove(1);
-                }
-                Keys.onLeftPressed: (e) => {
-                    if (pill.criticalToast) { e.accepted = true; return; }
-                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
-                    if (pill.mixerOpen) { pill.mixerFocusMove(-1); e.accepted = true; }
-                    else if (pill.wallpaperOpen) { pill.wallpaperMove(-1); e.accepted = true; }
-                    else if (pill.powerOpen) { pill.powerMove(-1); e.accepted = true; }
-                    else if (pill.sysmonOpen) { e.accepted = pill.sysmonMove(-1, 0); }
-                    else if (pill.recorderOpen) { e.accepted = pill.recorderStep(-5); }
-                    else if (pill.settingsLike) { pill.settingsAdjust(-1); e.accepted = true; }
-                }
-                Keys.onRightPressed: (e) => {
-                    if (pill.criticalToast) { e.accepted = true; return; }
-                    if (pill.clockOpen) { e.accepted = pill.clockKey(e.key, e.modifiers); return; }
-                    if (pill.mixerOpen) { pill.mixerFocusMove(1); e.accepted = true; }
-                    else if (pill.wallpaperOpen) { pill.wallpaperMove(1); e.accepted = true; }
-                    else if (pill.powerOpen) { pill.powerMove(1); e.accepted = true; }
-                    else if (pill.sysmonOpen) { e.accepted = pill.sysmonMove(1, 0); }
-                    else if (pill.recorderOpen) { e.accepted = pill.recorderStep(5); }
-                    else if (pill.settingsLike) { pill.settingsAdjust(1); e.accepted = true; }
+                Keys.onUpPressed: event => moveVertical(event, -1)
+                Keys.onDownPressed: event => moveVertical(event, 1)
+                Keys.onLeftPressed: event => moveHorizontal(event, -1)
+                Keys.onRightPressed: event => moveHorizontal(event, 1)
+
+                function moveVertical(event, direction) {
+                    if (pill.criticalToast) {
+                        event.accepted = true;
+                    } else if (pill.clockOpen) {
+                        event.accepted = pill.clockKey(event.key, event.modifiers);
+                    } else if (pill.keybindsOpen && !pill.keybindsListening) {
+                        pill.keybindsMove(direction);
+                        event.accepted = true;
+                    } else {
+                        event.accepted = pill.fileShelfMove(direction) || pill.sysmonMove(0, direction) || pill.mixerStep(-direction) || pill.recorderStep(-5 * direction) || pill.settingsMove(direction);
+                    }
                 }
 
-                /**
-                 * Return/Enter/Space: the wallpaper strip applies its focused
-                 * thumb on every press; the power surface fires a safe tile on
-                 * the first press and, for a destructive tile, holds the heat
-                 * fill across autorepeat presses (drained on release). Autorepeat
-                 * is swallowed for everything else so a held key never re-fires.
-                 */
-                Keys.onPressed: (e) => {
+                function moveHorizontal(event, direction) {
+                    if (pill.criticalToast) {
+                        event.accepted = true;
+                    } else if (pill.clockOpen) {
+                        event.accepted = pill.clockKey(event.key, event.modifiers);
+                    } else if (pill.mixerOpen) {
+                        pill.mixerFocusMove(direction);
+                        event.accepted = true;
+                    } else if (pill.wallpaperOpen) {
+                        pill.wallpaperMove(direction);
+                        event.accepted = true;
+                    } else if (pill.powerOpen) {
+                        pill.powerMove(direction);
+                        event.accepted = true;
+                    } else if (pill.sysmonOpen) {
+                        event.accepted = pill.sysmonMove(direction, 0);
+                    } else if (pill.recorderOpen) {
+                        event.accepted = pill.recorderStep(5 * direction);
+                    } else if (pill.settingsLike) {
+                        pill.settingsAdjust(direction);
+                        event.accepted = true;
+                    }
+                }
+
+                Keys.onPressed: e => {
                     /** A critical notification covers the open page; keep keys off the hidden page until it clears. */
                     if (pill.criticalToast) {
                         e.accepted = true;
@@ -444,32 +481,32 @@ ShellRoot {
                             e.accepted = true;
                         return;
                     }
-                    if (pill.wallpaperOpen && !pill.wallpaperSearching
-                        && e.text.length === 1 && e.text > " ") {
+                    if (pill.wallpaperOpen && !pill.wallpaperSearching && e.text.length === 1 && e.text > " ") {
                         pill.wallpaperType(e.text);
                         e.accepted = true;
                         return;
                     }
                     if (pill.powerOpen && e.text.length === 1 && "wlsruWLSRU".indexOf(e.text) >= 0) {
-                        if (!e.isAutoRepeat) pill.powerHotkey(e.text);
+                        if (!e.isAutoRepeat)
+                            pill.powerHotkey(e.text);
                         e.accepted = true;
                         return;
                     }
                     /** Held Shift+Delete on dictation or vocabulary drives the clear-all heat; release drains it. */
                     if (e.key === Qt.Key_Delete && (e.modifiers & Qt.ShiftModifier) && (pill.dictationOpen || pill.vocabOpen)) {
-                        if (!e.isAutoRepeat) pill.wipePress();
+                        if (!e.isAutoRepeat)
+                            pill.wipePress();
                         e.accepted = true;
                         return;
                     }
                     /** Held Delete on keep-awake drives the focused preset's hold-to-wipe heat. */
                     if (e.key === Qt.Key_Delete && pill.awakeOpen) {
-                        if (!e.isAutoRepeat) pill.awakeDelete();
+                        if (!e.isAutoRepeat)
+                            pill.awakeDelete();
                         e.accepted = true;
                         return;
                     }
-                    if (pill.vocabOpen && e.text.length === 1 && e.text > " "
-                        && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
-                        && pill.vocabType(e.text)) {
+                    if (pill.vocabOpen && e.text.length === 1 && e.text > " " && !(e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) && pill.vocabType(e.text)) {
                         e.accepted = true;
                         return;
                     }
@@ -486,34 +523,39 @@ ShellRoot {
                     if (e.key !== Qt.Key_Return && e.key !== Qt.Key_Enter && e.key !== Qt.Key_Space)
                         return;
                     if (pill.wallpaperOpen) {
-                        if (!e.isAutoRepeat) pill.wallpaperActivate();
+                        if (!e.isAutoRepeat)
+                            pill.wallpaperActivate();
                         e.accepted = true;
                     } else if (pill.powerOpen) {
-                        if (!e.isAutoRepeat) pill.powerPress();
+                        if (!e.isAutoRepeat)
+                            pill.powerPress();
                         e.accepted = true;
                     } else if (pill.sysmonOpen && !e.isAutoRepeat && pill.sysmonActivate()) {
                         e.accepted = true;
                     } else if (pill.vocabOpen && pill.vocabEnter()) {
                         e.accepted = true;
                     } else if (pill.settingsLike) {
-                        if (!e.isAutoRepeat) pill.settingsActivate();
+                        if (!e.isAutoRepeat)
+                            pill.settingsActivate();
                         e.accepted = true;
                     } else if (pill.keybindsOpen && !pill.keybindsListening) {
-                        if (!e.isAutoRepeat) pill.keybindsActivate();
+                        if (!e.isAutoRepeat)
+                            pill.keybindsActivate();
                         e.accepted = true;
                     }
                 }
-                Keys.onReleased: (e) => {
+                Keys.onReleased: e => {
                     if (e.isAutoRepeat)
                         return;
                     if (e.key === Qt.Key_Delete && (pill.awakeOpen || pill.dictationOpen || pill.vocabOpen)) {
-                        if (pill.awakeOpen) pill.awakeDeleteRelease(); else pill.wipeRelease();
+                        if (pill.awakeOpen)
+                            pill.awakeDeleteRelease();
+                        else
+                            pill.wipeRelease();
                         e.accepted = true;
                         return;
                     }
-                    if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space
-                        || (e.text.length === 1 && "wlsruWLSRU".indexOf(e.text) >= 0))
-                        && pill.powerOpen) {
+                    if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space || (e.text.length === 1 && "wlsruWLSRU".indexOf(e.text) >= 0)) && pill.powerOpen) {
                         pill.powerRelease();
                         e.accepted = true;
                     }
@@ -558,10 +600,22 @@ ShellRoot {
                             readonly property real edge: slot.pad / (sideways ? slot.width : slot.height)
                             gradient: Gradient {
                                 orientation: wallRect.sideways ? Gradient.Horizontal : Gradient.Vertical
-                                GradientStop { position: 0.0; color: wallRect.sideways && !wallRect.leftward ? "white" : "transparent" }
-                                GradientStop { position: wallRect.edge; color: "white" }
-                                GradientStop { position: 1 - wallRect.edge; color: "white" }
-                                GradientStop { position: 1.0; color: wallRect.sideways && wallRect.leftward ? "white" : "transparent" }
+                                GradientStop {
+                                    position: 0.0
+                                    color: wallRect.sideways && !wallRect.leftward ? "white" : "transparent"
+                                }
+                                GradientStop {
+                                    position: wallRect.edge
+                                    color: "white"
+                                }
+                                GradientStop {
+                                    position: 1 - wallRect.edge
+                                    color: "white"
+                                }
+                                GradientStop {
+                                    position: 1.0
+                                    color: wallRect.sideways && wallRect.leftward ? "white" : "transparent"
+                                }
                             }
                         }
                     }
@@ -587,7 +641,10 @@ ShellRoot {
                             }
                         }
                         transform: [
-                            Translate { x: pill.swipeX; y: pill.swipeY },
+                            Translate {
+                                x: pill.swipeX
+                                y: pill.swipeY
+                            },
                             Translate {
                                 y: overlay.pillHidden ? -(pill.height + overlay.topGap) : 0
                                 Behavior on y {
@@ -600,13 +657,14 @@ ShellRoot {
                             }
                         ]
 
-                        onRequestSurface: (name) => root.toggleSurface(overlay.modelData.name, name)
+                        onRequestSurface: name => root.toggleSurface(overlay.modelData.name, name)
                         onRequestClose: root.close()
                     }
                 }
             }
 
-            onSurfaceOpenChanged: if (surfaceOpen) focusScope.forceActiveFocus()
+            onSurfaceOpenChanged: if (surfaceOpen)
+                focusScope.forceActiveFocus()
 
             Connections {
                 target: pill

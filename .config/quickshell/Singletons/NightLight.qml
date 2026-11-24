@@ -45,13 +45,9 @@ Singleton {
     function buildConf() {
         var out = "max-gamma = 150\n\n";
         if (Flags.nightLightMode === "scheduled") {
-            out += "profile {\n    time = " + root.hhmm(Flags.nightLightOnMin)
-                + "\n    temperature = " + root.clampTemp(Flags.nightLightTemp) + "\n}\n\n"
-                + "profile {\n    time = " + root.hhmm(Flags.nightLightOffMin)
-                + "\n    identity = true\n}\n";
+            out += "profile {\n    time = " + root.hhmm(Flags.nightLightOnMin) + "\n    temperature = " + root.clampTemp(Flags.nightLightTemp) + "\n}\n\n" + "profile {\n    time = " + root.hhmm(Flags.nightLightOffMin) + "\n    identity = true\n}\n";
         } else if (Flags.nightLightMode === "on") {
-            out += "profile {\n    time = 0:00\n    temperature = "
-                + root.clampTemp(Flags.nightLightTemp) + "\n}\n";
+            out += "profile {\n    time = 0:00\n    temperature = " + root.clampTemp(Flags.nightLightTemp) + "\n}\n";
         } else {
             out += "profile {\n    time = 0:00\n    identity = true\n}\n";
         }
@@ -60,11 +56,8 @@ Singleton {
 
     /** The IPC command the current mode and clock resolve to. */
     function desiredCmd() {
-        var warm = Flags.nightLightMode === "on"
-            || (Flags.nightLightMode === "scheduled" && root.windowOpen());
-        return warm
-            ? ["hyprctl", "hyprsunset", "temperature", String(root.clampTemp(Flags.nightLightTemp))]
-            : ["hyprctl", "hyprsunset", "identity"];
+        var warm = Flags.nightLightMode === "on" || (Flags.nightLightMode === "scheduled" && root.windowOpen());
+        return warm ? ["hyprctl", "hyprsunset", "temperature", String(root.clampTemp(Flags.nightLightTemp))] : ["hyprctl", "hyprsunset", "identity"];
     }
 
     /**

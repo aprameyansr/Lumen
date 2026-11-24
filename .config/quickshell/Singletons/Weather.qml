@@ -33,8 +33,17 @@ Singleton {
 
     readonly property bool fahrenheit: Flags.weatherUnit === "f"
     readonly property int tempNow: temp(rawNow)
-    readonly property var hourly: rawHourly.map(r => ({ hour: r.hour, temp: root.temp(r.t), code: r.code }))
-    readonly property var daily: rawDaily.map(r => ({ day: Clocks.weekday(r.date, Flags.dateLang), code: r.code, temp: root.temp(r.t), rh: r.rh }))
+    readonly property var hourly: rawHourly.map(r => ({
+                hour: r.hour,
+                temp: root.temp(r.t),
+                code: r.code
+            }))
+    readonly property var daily: rawDaily.map(r => ({
+                day: Clocks.weekday(r.date, Flags.dateLang),
+                code: r.code,
+                temp: root.temp(r.t),
+                rh: r.rh
+            }))
 
     /** Epoch ms of the last good forecast (0 until the first one). */
     property real updatedAt: 0
@@ -124,7 +133,11 @@ Singleton {
 
     /** Persist resolved coordinates so a restart skips the location round-trip. */
     function writeLoc() {
-        locCache.setText(JSON.stringify({ city: root.city, lat: root.lat, lon: root.lon }));
+        locCache.setText(JSON.stringify({
+            city: root.city,
+            lat: root.lat,
+            lon: root.lon
+        }));
     }
 
     function fetchWeather() {
@@ -139,7 +152,7 @@ Singleton {
      */
     Component.onCompleted: {
         try {
-            var c = JSON.parse(locCache.text());
+            const c = JSON.parse(locCache.text());
             if (c && typeof c.lat === "number" && typeof c.lon === "number") {
                 root.city = c.city || "";
                 root.lat = c.lat;
@@ -169,7 +182,9 @@ Singleton {
 
     Connections {
         target: Flags
-        function onWeatherCityChanged() { root.locate(); }
+        function onWeatherCityChanged() {
+            root.locate();
+        }
     }
 
     Process {
@@ -178,7 +193,7 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    var d = JSON.parse(this.text);
+                    const d = JSON.parse(this.text);
                     if (typeof d.lat === "number" && typeof d.lon === "number") {
                         root.city = d.city || "";
                         root.lat = d.lat;
@@ -196,15 +211,12 @@ Singleton {
 
     Process {
         id: geoProc
-        command: ["curl", "-s", "--max-time", "8", "-G",
-            "https://geocoding-api.open-meteo.com/v1/search",
-            "--data-urlencode", "name=" + (Flags.weatherCity || ""),
-            "--data-urlencode", "count=1"]
+        command: ["curl", "-s", "--max-time", "8", "-G", "https://geocoding-api.open-meteo.com/v1/search", "--data-urlencode", "name=" + (Flags.weatherCity || ""), "--data-urlencode", "count=1"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    var d = JSON.parse(this.text);
-                    var r = d.results && d.results[0];
+                    const d = JSON.parse(this.text);
+                    const r = d.results && d.results[0];
                     if (r && typeof r.latitude === "number" && typeof r.longitude === "number") {
                         root.city = r.name || "";
                         root.lat = r.latitude;
@@ -222,26 +234,21 @@ Singleton {
 
     Process {
         id: wxProc
-        command: ["curl", "-s", "--max-time", "10",
-            "https://api.open-meteo.com/v1/forecast?latitude=" + root.lat
-            + "&longitude=" + root.lon
-            + "&current=temperature_2m,weather_code,is_day,relative_humidity_2m"
-            + "&hourly=temperature_2m,weather_code&forecast_hours=24"
-            + "&daily=weather_code,temperature_2m_max,relative_humidity_2m_mean&forecast_days=5&timezone=auto"]
+        command: ["curl", "-s", "--max-time", "10", "https://api.open-meteo.com/v1/forecast?latitude=" + root.lat + "&longitude=" + root.lon + "&current=temperature_2m,weather_code,is_day,relative_humidity_2m" + "&hourly=temperature_2m,weather_code&forecast_hours=24" + "&daily=weather_code,temperature_2m_max,relative_humidity_2m_mean&forecast_days=5&timezone=auto"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    var d = JSON.parse(this.text);
-                    var cur = d.current;
+                    const d = JSON.parse(this.text);
+                    const cur = d.current;
                     if (!cur || typeof cur.temperature_2m !== "number") {
                         root.failed();
                         return;
                     }
-                    var rows = [];
-                    var h = d.hourly;
+                    const rows = [];
+                    const h = d.hourly;
                     if (h && h.time && h.temperature_2m && h.weather_code) {
-                        var n = Math.min(h.time.length, h.temperature_2m.length, h.weather_code.length);
-                        for (var i = 0; i < n; i++) {
+                        const n = Math.min(h.time.length, h.temperature_2m.length, h.weather_code.length);
+                        for (let i = 0; i < n; i++) {
                             rows.push({
                                 hour: h.time[i].slice(11, 13),
                                 t: h.temperature_2m[i],
@@ -249,11 +256,11 @@ Singleton {
                             });
                         }
                     }
-                    var days = [];
-                    var dd = d.daily;
+                    const days = [];
+                    const dd = d.daily;
                     if (dd && dd.time && dd.weather_code && dd.temperature_2m_max && dd.relative_humidity_2m_mean) {
-                        var m = Math.min(dd.time.length, dd.weather_code.length, dd.temperature_2m_max.length, dd.relative_humidity_2m_mean.length);
-                        for (var j = 0; j < m; j++) {
+                        const m = Math.min(dd.time.length, dd.weather_code.length, dd.temperature_2m_max.length, dd.relative_humidity_2m_mean.length);
+                        for (let j = 0; j < m; j++) {
                             days.push({
                                 date: new Date(dd.time[j] + "T12:00"),
                                 code: dd.weather_code[j],
