@@ -3,7 +3,7 @@ hl.config({
         kb_layout          = "us",
         follow_mouse       = 1,
         sensitivity        = 0,
-        accel_profile      = "flat",
+        accel_profile      = "adaptive",
         repeat_rate        = 50,
         repeat_delay       = 400,
         numlock_by_default = false,

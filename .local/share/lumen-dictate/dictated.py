@@ -57,7 +57,8 @@ import sherpa_onnx
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL = os.path.join(HERE, "models", "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8")
 WHISPER_SERVER = os.path.join(HERE, "whisper", "whisper-server")
-WHISPER_MODEL = os.path.join(HERE, "models", "ggml-large-v3-turbo-q8_0.bin")
+# Full large-v3 (5-bit): most accurate on your voice in the 2026-11-26 test (bakeoff/). Was large-v3-turbo-q8_0.
+WHISPER_MODEL = os.path.join(HERE, "models", "ggml-large-v3-q5_0.bin")
 VOCAB = os.path.join(HERE, "vocab.json")
 COMMON = os.path.join(HERE, "common-words.txt")
 RATE = 16000
@@ -519,7 +520,7 @@ class Whisper:
     after IDLE seconds unused, which gives back ~1.1 GB of RAM.
     """
     name = "whisper"
-    IDLE = 600
+    IDLE = float("inf")  # kept loaded always (was 600 s); ~1.85 GB RAM
 
     def __init__(self, sock=None):
         for f in (WHISPER_SERVER, WHISPER_MODEL):
@@ -552,6 +553,7 @@ class Whisper:
         # tied to the thread that spawned it (PR_SET_PDEATHSIG), so a short-lived
         # loader thread would take it down with it when it ended.
         threading.Thread(target=self._keeper, daemon=True).start()
+        self.want.set()  # load at start so the first take is instant
 
     def _ensure(self):
         """Start the server if it isn't running. Call with self.lock held."""
