@@ -7,18 +7,22 @@
 #   sh ~/.local/share/lumen-dictate/setup.sh
 #
 # What it does:
-#   1. venv/        Python environment with sherpa-onnx + numpy (~125 MB)
-#   2. models/      Parakeet TDT 0.6B v2, English, int8 (~630 MB): the fast engine
+#   1. venv/        Python environment with sherpa-onnx, numpy and dbus-fast
+#                   (the tray icon) (~130 MB)
+#   2. models/      Parakeet TDT 0.6B v2, English, int8 (~630 MB): the CPU engine
 #   3. whisper/     whisper.cpp server built for your GPU (Vulkan) and
-#      models/      Whisper large-v3-turbo, q8_0 (~875 MB): the accurate engine
+#      models/      Whisper large-v3, q5_0 (~1.1 GB), linked as "Whisper Large.bin",
+#                   the file the service loads: the default, most accurate engine
 #   4. common-words.txt   top ~10k English words, used to flag vocabulary
 #                         forms that would rewrite normal speech
+#   5. icons/       the tray icon (microphone, and slashed when unloaded)
 #
 # Needs: python, curl, tar with bzip2, plus pipewire-audio (pw-record), wtype,
 # wl-clipboard, libpulse (pactl), cava and zenity for the shell side. Whisper
 # also needs git, a C++ compiler, shaderc (glslc), vulkan-icd-loader and your
 # GPU's Vulkan driver (vulkan-intel, vulkan-radeon or nvidia-utils). Without
-# them step 3 is skipped and dictation uses Parakeet.
+# them step 3 is skipped and dictation uses Parakeet. The tray icon is drawn
+# with rsvg-convert (librsvg) and magick (imagemagick).
 # To remove it all: rm -rf ~/.local/share/lumen-dictate
 
 set -eu
@@ -29,7 +33,10 @@ MODEL_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$M
 # A tested whisper.cpp commit (after v1.9.5; adds the unix-socket server the
 # service talks to, so Whisper never opens a network port).
 WHISPER_REF="5eaee0cc9024eb9e9a99469199920c8b7f5cb9ec"
-WHISPER_MODEL="ggml-large-v3-turbo-q8_0.bin"
+WHISPER_MODEL="ggml-large-v3-q5_0.bin"
+# The service loads this name; point it at another model file to switch
+# (e.g. ln -sf ggml-large-v3-turbo-q8_0.bin "Whisper Large.bin").
+WHISPER_LINK="Whisper Large.bin"
 WHISPER_MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$WHISPER_MODEL"
 WORDS_URL="https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt"
 
@@ -44,12 +51,12 @@ done
 mkdir -p "$DIR/models"
 
 # ── 1. Python environment ──
-if [ -x "$DIR/venv/bin/python" ] && "$DIR/venv/bin/python" -c "import sherpa_onnx, numpy" 2>/dev/null; then
+if [ -x "$DIR/venv/bin/python" ] && "$DIR/venv/bin/python" -c "import sherpa_onnx, numpy, dbus_fast" 2>/dev/null; then
     say "Python environment already set up"
 else
-    say "Creating the Python environment"
-    python3 -m venv "$DIR/venv"
-    "$DIR/venv/bin/pip" install --quiet --no-cache-dir --disable-pip-version-check sherpa-onnx numpy
+    say "Setting up the Python environment"
+    [ -x "$DIR/venv/bin/python" ] || python3 -m venv "$DIR/venv"
+    "$DIR/venv/bin/pip" install --quiet --no-cache-dir --disable-pip-version-check sherpa-onnx numpy dbus-fast
 fi
 
 # ── 2. Parakeet ──
@@ -112,9 +119,16 @@ if [ -x "$DIR/whisper/whisper-server" ]; then
     if [ -s "$DIR/models/$WHISPER_MODEL" ]; then
         say "Whisper model already downloaded"
     else
-        say "Downloading the Whisper model (~875 MB)"
+        say "Downloading the Whisper model (~1.1 GB)"
         curl -fL --progress-bar -o "$DIR/models/.$WHISPER_MODEL" "$WHISPER_MODEL_URL"
         mv "$DIR/models/.$WHISPER_MODEL" "$DIR/models/$WHISPER_MODEL"
+    fi
+    # Left alone if it exists, so a model you linked yourself is kept.
+    if [ -e "$DIR/models/$WHISPER_LINK" ]; then
+        say "Whisper model link already set"
+    else
+        ln -s "$WHISPER_MODEL" "$DIR/models/$WHISPER_LINK"
+        say "Linked $WHISPER_MODEL as \"$WHISPER_LINK\""
     fi
 fi
 
@@ -125,6 +139,24 @@ else
     say "Downloading the common-words list"
     curl -fsSL -o "$DIR/common-words.txt" "$WORDS_URL"
 fi
+
+# ── 5. Tray icon ──
+icons="$DIR/icons/hicolor/scalable/status"
+if [ -s "$icons/lumen-dictation-loaded.svg" ] && [ -s "$icons/lumen-dictation-unloaded.svg" ]; then
+    say "Tray icons already in place"
+else
+    say "Writing the tray icons"
+    mkdir -p "$icons"
+    mic='<path d="M8 1.5a2.5 2.5 0 0 0-2.5 2.5v4a2.5 2.5 0 0 0 5 0V4A2.5 2.5 0 0 0 8 1.5z"/><path d="M3.75 7.5a.75.75 0 0 1 .75.75 3.5 3.5 0 0 0 7 0 .75.75 0 0 1 1.5 0 5 5 0 0 1-4.25 4.94V14.5h1.75a.75.75 0 0 1 0 1.5h-5a.75.75 0 0 1 0-1.5h1.75v-1.31A5 5 0 0 1 3 8.25a.75.75 0 0 1 .75-.75z"/>'
+    c='#a1a1aa'
+    printf '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><g fill="%s">%s</g></svg>\n' \
+        "$c" "$mic" > "$icons/lumen-dictation-loaded.svg"
+    printf '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><defs><mask id="m"><rect width="16" height="16" fill="#fff"/><path d="M1.75 1.75L14.25 14.25" stroke="#000" stroke-width="3.6" stroke-linecap="round"/></mask></defs><g fill="%s" mask="url(#m)">%s</g><path d="M2.25 2.25L13.75 13.75" stroke="%s" stroke-width="1.5" stroke-linecap="round"/></svg>\n' \
+        "$c" "$mic" "$c" > "$icons/lumen-dictation-unloaded.svg"
+fi
+for c in rsvg-convert magick; do
+    command -v "$c" >/dev/null 2>&1 || warn "$c not found: the tray icon will be blank (install librsvg and imagemagick)"
+done
 
 [ -f "$DIR/dictated.py" ] || die "dictated.py is missing from $DIR (copy it from the dotfiles)"
 

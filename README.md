@@ -129,9 +129,9 @@ wallpaper.
 
 ### Dictation setup
 
-Offline speech-to-text: about 3 GB of disk, and up to about 3 GB of RAM while
-the model is loaded (it unloads itself after 10 minutes unused). How to use it
-is under [Dictation](#dictation) below.
+Offline speech-to-text: about 2 GB of disk, and about 2–3 GB of RAM while the
+model is loaded (it unloads itself after 10 minutes unused). One script sets up
+everything it needs. How to use it is under [Dictation](#dictation) below.
 
 1. **Packages.** `packages.txt` already lists what it needs (`python`,
    `pipewire-audio`, `wtype`, `wl-clipboard`, `libpulse`, `cava`, `zenity`,
@@ -146,24 +146,22 @@ is under [Dictation](#dictation) below.
    sh ~/.local/share/lumen-dictate/setup.sh
    ```
 
-   It downloads the speech models and a Python runtime, and builds Whisper for
-   your GPU with Vulkan. The build takes a few minutes and runs fewer jobs when
-   you're low on free memory, so it won't freeze the machine. It's safe to run
-   again: finished steps are skipped, and your vocabulary and history are
-   never touched.
-4. **Pick the Whisper model.** The service loads `models/Whisper Large.bin`.
-   I use full Whisper large-v3 (5-bit), which was the most accurate on my voice:
-
-   ```sh
-   cd ~/.local/share/lumen-dictate/models
-   curl -fLO https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-q5_0.bin
-   ln -sf ggml-large-v3-q5_0.bin "Whisper Large.bin"
-   ```
-
-   To use the lighter model `setup.sh` already downloaded instead (faster,
-   a little less accurate, less RAM): `ln -sf ggml-large-v3-turbo-q8_0.bin "Whisper Large.bin"`.
-5. **Turn it on** in **Settings → Dictation**, leave **Engine** on
+   It does everything dictation needs: a Python runtime (including the tray
+   icon's D-Bus library), both speech models (Whisper large-v3 for the GPU and
+   Parakeet for the CPU), a Whisper build for your GPU with Vulkan, the word
+   list and the tray icons. The build takes a few minutes and runs fewer jobs
+   when you're low on free memory, so it won't freeze the machine. It's safe to
+   run again: finished steps are skipped, and your vocabulary and history are
+   never touched. If your GPU driver is missing it skips Whisper, says so, and
+   you can re-run it after installing the driver.
+4. **Turn it on** in **Settings → Dictation**, leave **Engine** on
    **Whisper**, then hold **Right Alt** and talk.
+
+**Switching Whisper models:** the service loads `models/Whisper Large.bin`,
+which the setup points at large-v3 (the most accurate on my voice). To use
+another whisper.cpp model, download it into `models/` and re-point the link,
+e.g. `ln -sf ggml-large-v3-turbo-q8_0.bin "Whisper Large.bin"`; the setup
+never overwrites a link you've set.
 
 **Moving to a new machine:** in **Settings → Dictation → Vocabulary**, use
 **Export** first and **Import** on the new one. Your vocabulary and history
@@ -322,7 +320,7 @@ no GPU at all.
 
 **Other things you may want to change** (all in `dictated.py`):
 
-- `WHISPER_MODEL`: which model file to load (see [Dictation setup](#dictation-setup), step 4)
+- `WHISPER_MODEL`: which model file to load (or just re-point the `Whisper Large.bin` link, see [Dictation setup](#dictation-setup))
 - `IDLE`: seconds before an unused model unloads (`600`; `float("inf")` keeps it loaded)
 - `Streamer.MIN_SEG` / `PAUSE` / `MAX_SEG`: when long takes are split into pieces while you talk
 - the hint text in `Whisper.prompt()`: example sentences that teach Whisper your punctuation and spoken commands
@@ -371,7 +369,7 @@ To update: `git pull` in `~/lumen`, copy the configs again (step 4) and
 - **Chinese/Korean text shows as boxes:** install `noto-fonts-cjk`.
 - **GUI apps never ask for a password:** `systemctl --user enable --now hyprpolkitagent`.
 - **Right Alt does nothing:** run the dictation setup above, check **Settings → Dictation** is on, and `lumen log` for errors.
-- **"Whisper couldn't start" notification:** dictation switched to Parakeet. "isn't installed" usually means `models/Whisper Large.bin` is missing (see [Dictation setup](#dictation-setup), step 4) or the setup didn't finish; "the GPU driver may be missing" means install your GPU's Vulkan driver, then rebuild Whisper. If the build itself failed, the reason is in `~/.local/share/lumen-dictate/.build/build.log`.
+- **"Whisper couldn't start" notification:** dictation switched to Parakeet. "isn't installed" means the setup didn't finish, so run it again; "the GPU driver may be missing" means install your GPU's Vulkan driver, then rebuild Whisper. If the build itself failed, the reason is in `~/.local/share/lumen-dictate/.build/build.log`.
 - **Dictation types the wrong words:** teach names under **Vocabulary**; those words also become hints for Whisper. If your GPU can't run Whisper well, try Parakeet.
 - **Dictation uses too much RAM:** unload the model from its tray icon, or lower `IDLE` in `dictated.py`.
 
