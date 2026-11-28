@@ -21,8 +21,10 @@ dictation is enabled; talks over stdin/stdout, one JSON object per line.
        {"event": "error", "msg": "..."}
 
 Two engines, picked with --engine (Settings → Dictation → Engine):
-  whisper   Whisper large-v3-turbo on the GPU (whisper.cpp + Vulkan), the most
-            accurate, ~1 s a take. Runs as a private whisper-server child on a
+  whisper   Whisper large-v3 on the GPU (whisper.cpp; encoder via OpenVINO,
+            decoder via Vulkan), the most accurate, ~1 s a take. Long takes
+            are transcribed in pieces while you talk (Streamer), so they
+            finish about as fast as short ones. Runs as a private whisper-server child on a
             unix socket (no network port) that dies with this process. Your
             Vocabulary words are passed to it as hints.
   parakeet  NVIDIA Parakeet TDT 0.6B v2 (int8) through sherpa-onnx on the CPU,
@@ -57,8 +59,13 @@ import sherpa_onnx
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL = os.path.join(HERE, "models", "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8")
 WHISPER_SERVER = os.path.join(HERE, "whisper", "whisper-server")
+# 2026-11-27: build with Intel OpenVINO; the encoder runs through OpenVINO on the Arc GPU
+# (models/Whisper Large-encoder-openvino.xml, ~25% faster takes, same accuracy). Falls back to the Vulkan-only build.
+WHISPER_SERVER_OV = os.path.join(HERE, "whisper", "whisper-server-ov")
+WHISPER_OV_LIBS = os.path.join(HERE, "whisper", "ov-libs")
 # Full large-v3 (5-bit): most accurate on your voice in the 2026-11-26 test (bakeoff/). Was large-v3-turbo-q8_0.
-WHISPER_MODEL = os.path.join(HERE, "models", "ggml-large-v3-q5_0.bin")
+# Named link to ggml-large-v3-q5_0.bin so the system monitor shows "Whisper Large".
+WHISPER_MODEL = os.path.join(HERE, "models", "Whisper Large.bin")
 VOCAB = os.path.join(HERE, "vocab.json")
 COMMON = os.path.join(HERE, "common-words.txt")
 RATE = 16000
@@ -357,6 +364,119 @@ def apply_quotes(text):
     return re.sub(r'(^|[.!?]\s+)"([a-z])', lambda m: m.group(1) + '"' + m.group(2).upper(), out)
 
 
+_BRACKET_WORD = r"(?:bracket|parenthesis|parentheses|paren)"
+_BRACKET_OPEN = re.compile(r"[,.]?\s*\bopen " + _BRACKET_WORD + r"s?\b[,.:]?\s*", re.I)
+_BRACKET_CLOSE = re.compile(r"[,.]?\s*\b(?:close|end) " + _BRACKET_WORD + r"s?\b", re.I)
+_BRACKET_BARE = re.compile(r"[,.]?\s*\b" + _BRACKET_WORD + r"\b[,.:]?\s*(?=\w)", re.I)
+# "bracket" as a noun stays prose: "a bracket", "tax bracket", "the age bracket, …"
+_BRACKET_NOUN = _DETERMINERS | {"tax", "age", "income", "price", "salary", "wall", "shelf", "metal", "steel", "mounting",
+                                "lower", "higher", "upper", "top", "bottom", "same", "different", "winners", "losers",
+                                "tournament", "playoff", "square", "curly", "round", "angle", "closing", "opening", "in"}
+
+
+def apply_brackets(text):
+    """
+    Two ways to bracket, like quotes:
+      open bracket ... close bracket            -> (...)
+      continuous assessment bracket CIA, ...    -> continuous assessment (CIA), ...
+    The short form runs to "close bracket" if said, otherwise to the next
+    pause (comma or full stop). After a/the/tax/age… it's the noun and stays.
+    """
+    out = ""
+    while True:
+        o = _BRACKET_OPEN.search(text)
+        c = _BRACKET_CLOSE.search(text, o.end()) if o else None
+        if not c:
+            break
+        out += text[: o.start()] + " (" + text[o.end(): c.start()].strip() + ")"
+        text = text[c.end():]
+    text = out + text
+
+    out = ""
+    pos = 0
+    for m in _BRACKET_BARE.finditer(text):
+        if m.start() < pos:
+            continue
+        prev = re.search(r"(\w+)\W*$", text[:m.start()])
+        # a pause before it ("Part A, bracket, three marks") makes it the command
+        paused = text[m.start()] in ",."
+        if prev and not paused and prev.group(1).lower() in _BRACKET_NOUN:
+            continue
+        c = _BRACKET_CLOSE.search(text, m.end())
+        p = re.search(r"[,.;:!?]|$", text[m.end():])
+        stop = m.end() + p.start()
+        if c and c.start() <= stop:
+            body, after = text[m.end():c.start()], c.end()
+        else:
+            body, after = text[m.end():stop], stop
+        if not body.strip():
+            continue
+        out += text[pos:m.start()] + " (" + body.strip() + ")"
+        pos = after
+    out += text[pos:]
+    out = re.sub(r"\(\s+", "(", out)
+    out = re.sub(r"\s+\)", ")", out)
+    out = re.sub(r"\s+([,.;:!?])", r"\1", out)
+    return re.sub(r"^\s+|(?<=\S)\s{2,}", lambda m: "" if m.start() == 0 else " ", out)
+
+
+# A lettered part: a single letter opening the take, a sentence or a clause,
+# then a hyphen/stop/bracket/colon/comma ("A-construct", "B. Construct", "C) Convert").
+# A letter followed straight by another lone letter ("C-A", "C-I-A") is a
+# spelled-out abbreviation, not a part.
+_LETTER = re.compile(r"(?:^|(?<=[.:;!?,]\s)|(?<=following\s))(?P<l>[A-Za-z])\s*[-–.):,]\s*(?=[A-Za-z])(?![A-Za-z](?:\W|$))")
+
+
+def apply_letters(text):
+    """
+    A, B, C... said in order become lettered parts on their own lines:
+      "Perform the following: A-construct x. B-construct y. C-convert z."
+      -> Perform the following:\nA. Construct x.\nB. Construct y.\nC. Convert z.
+    Only a run starting at A with at least A and B counts, so letters used
+    as labels out of order ("C - continuous …, M - mid-semester …") stay as
+    they are. The last part ends at its first full stop or at "end list".
+    """
+    marks = [m for m in _LETTER.finditer(text)]
+    best = []
+    for i, m in enumerate(marks):
+        if m.group("l").upper() != "A":
+            continue
+        run = [m]
+        for n in marks[i + 1:]:
+            if n.group("l").upper() == chr(ord(run[-1].group("l").upper()) + 1):
+                run.append(n)
+        if len(run) >= 2:
+            best = run
+            break
+    if not best:
+        return text
+    bodies = []
+    for k, m in enumerate(best):
+        end = best[k + 1].start() if k + 1 < len(best) else None
+        if end is None:
+            tail = text[m.end():]
+            e = _END_LIST_RE.search(tail)
+            s_ = re.search(r"[.!?](?=\s|$)", tail)
+            cut = min([x for x in (e.start() if e else None, s_.end() if s_ else None) if x is not None], default=len(tail))
+            body = tail[:cut]
+            after = tail[e.end():] if e and e.start() == cut else tail[cut:]
+        else:
+            body = text[m.end():end]
+        body = body.strip().rstrip(",;").strip()
+        if len(body.split()) < 2:
+            return text
+        bodies.append(body)
+    before = text[: best[0].start()].rstrip()
+    lines = ["%s. %s" % (m.group("l").upper(), _cap(b)) for m, b in zip(best, bodies)]
+    out = "\n".join(lines)
+    if before:
+        out = before + "\n" + out
+    after = after.strip()
+    if after:
+        out += "\n" + _cap(after)
+    return out
+
+
 def apply_breaks(text):
     """new line / new paragraph -> line breaks, the next word capitalised."""
     def brk(n):
@@ -370,16 +490,29 @@ def apply_breaks(text):
 
 def apply_commands(text):
     text = apply_quotes(text)
+    text = apply_brackets(text)
+    text = apply_letters(text)
     text = apply_lists(text)
     text = apply_breaks(text)
     return re.sub(r"[ \t]+\n", "\n", text).strip()
 
 
-def type_text(text):
-    """
-    Type into the focused app. Line breaks go out as Shift+Enter so a list
-    dictated into a chat box doesn't send the message halfway.
-    """
+_TERMINALS = {"kitty", "foot", "footclient", "alacritty", "wezterm", "org.wezfurlong.wezterm", "ghostty",
+              "com.mitchellh.ghostty", "konsole", "org.kde.konsole", "gnome-terminal", "org.gnome.terminal",
+              "org.gnome.ptyxis", "xterm", "urxvt", "st", "terminator", "tilix", "com.gexperts.tilix"}
+
+
+def _focused_is_terminal():
+    try:
+        out = subprocess.run(["hyprctl", "activewindow", "-j"], capture_output=True, text=True, timeout=1).stdout
+        w = json.loads(out or "{}")
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return False
+    return (w.get("class") or w.get("initialClass") or "").lower() in _TERMINALS
+
+
+def _type_out(text):
+    """Fallback: type letter by letter; line breaks as Shift+Enter so a chat box doesn't send."""
     lines = text.split("\n")
     for i, line in enumerate(lines):
         if i:
@@ -387,6 +520,31 @@ def type_text(text):
         if line:
             subprocess.run(["wtype", "--", line], check=False, timeout=30)
     if lines and lines[-1]:
+        subprocess.run(["wtype", "--", " "], check=False, timeout=5)
+
+
+def type_text(text):
+    """
+    Put the text into the focused app by pasting it (it's already on the
+    clipboard): instant at any length, where typing it out letter by letter
+    took ~2 s for a long take. Terminals paste with Ctrl+Shift+V, other apps
+    with Ctrl+V. A pasted list keeps its line breaks without pressing Enter,
+    so a chat box doesn't send halfway. The trailing space is typed.
+    """
+    if _focused_is_terminal():
+        # Hyprland sends it straight to the window: wtype's Ctrl+Shift+V reaches
+        # your Hyprland shortcuts as Ctrl+Shift+Escape (its "v" is read as
+        # Escape) and opened Resources.
+        r = subprocess.run(["hyprctl", "dispatch", "hl.dsp.send_shortcut({mods='CTRL SHIFT', key='V'})"],
+                           capture_output=True, text=True, timeout=3)
+        if r.returncode != 0 or "error" in (r.stdout + r.stderr).lower():
+            _type_out(text)
+            return
+    else:
+        # wtype, because apps like VSCodium ignore Hyprland's sent shortcut.
+        # Hyprland sees this as Ctrl+Escape, which isn't bound.
+        subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], check=False, timeout=5)
+    if text and not text.endswith("\n"):
         subprocess.run(["wtype", "--", " "], check=False, timeout=5)
 
 
@@ -446,6 +604,176 @@ class Take:
         raw = b"".join(self.chunks)
         raw = raw[: len(raw) - (len(raw) % 2)]
         return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+
+
+class Streamer:
+    """
+    Transcribe while you talk (Whisper only). Every quarter second it looks at
+    the audio since the last cut; once there's at least MIN_SEG of it, it cuts
+    in the middle of a natural pause and transcribes that piece in the
+    background, with the text before it as context. On release only the last
+    stretch is left, so a long take finishes about as fast as a short one.
+    Takes shorter than MIN_SEG (4 s) are never cut: they work exactly as before.
+    """
+    FRAME = RATE // 50        # 20 ms frames for the loudness check
+    MIN_SEG = 4 * RATE        # never cut a piece shorter than this (keeps context)
+    MAX_SEG = 8 * RATE        # no pause by here (fluent speech): cut at the quietest gap between words
+    PAUSE = 0.4               # seconds of quiet that count as a pause (0.25 cut inside words)
+
+    def __init__(self, engine, take):
+        self.engine, self.take = engine, take
+        self.audio = np.zeros(0, dtype=np.float32)
+        self.seen = 0               # take.chunks already copied into self.audio
+        self.cut = 0                # samples already handed to the worker
+        self.texts = []
+        self.jobs = []
+        self.cv = threading.Condition()
+        self.stopped = False
+        threading.Thread(target=self._watch, daemon=True).start()
+        threading.Thread(target=self._work, daemon=True).start()
+
+    def _grow(self):
+        n = len(self.take.chunks)
+        if n > self.seen:
+            raw = b"".join(self.take.chunks[self.seen:n])
+            self.seen = n
+            raw = raw[: len(raw) - (len(raw) % 2)]
+            self.audio = np.concatenate([self.audio, np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0])
+
+    @classmethod
+    def find_cut(cls, pending):
+        """Where to cut `pending` (samples from its start), or None to keep listening."""
+        if len(pending) < cls.MIN_SEG:
+            return None
+        f = cls.FRAME
+        n = len(pending) // f
+        rms = np.sqrt(np.mean(pending[: n * f].reshape(n, f) ** 2, axis=1))
+        floor, speech = np.percentile(rms, 10), np.percentile(rms, 90)
+        # relative to this take's own levels: the laptop mic has a loud noise floor
+        quiet = rms < floor + 0.35 * (speech - floor)
+        need = int(cls.PAUSE * 50)
+        first = cls.MIN_SEG // f
+        run = 0
+        for i in range(n):
+            run = run + 1 if quiet[i] else 0
+            if run >= need and i - run + 1 + run // 2 >= first:
+                start = i - run + 1
+                # keep going to the end of this pause, then cut in its middle
+                j = i
+                while j + 1 < n and quiet[j + 1]:
+                    j += 1
+                if j + 1 >= n:      # pause still going on: cut a little into it
+                    return (start + need // 2) * f
+                return (start + (j - start + 1) // 2) * f
+        if len(pending) >= cls.MAX_SEG:
+            # quietest 120 ms between MIN_SEG and MAX_SEG, cut in its middle
+            lo, hi, w = first, cls.MAX_SEG // f, 6
+            sm = np.convolve(rms[lo:hi], np.ones(w) / w, mode="valid")
+            return int(lo + np.argmin(sm) + w // 2) * f
+        return None
+
+    @classmethod
+    def has_speech(cls, piece, levels):
+        """At least 0.25 s clearly louder than the take's background. A piece of
+        silence or breath sent to Whisper comes back as made-up text ("I don't
+        know.", "Subtitles by…"), so such pieces are skipped."""
+        f = cls.FRAME
+        n = len(piece) // f
+        if n == 0:
+            return False
+        floor, speech = levels
+        if speech < 1.8 * floor:       # the whole take so far is just background
+            return False
+        rms = np.sqrt(np.mean(piece[: n * f].reshape(n, f) ** 2, axis=1))
+        # 0.01 ≈ -40 dB: a near-silent mic (Bluetooth between words) has no speech at all
+        return np.sum(rms > max(floor + 0.5 * (speech - floor), 0.01)) >= int(0.25 * 50)
+
+    def levels(self):
+        f = self.FRAME
+        n = len(self.audio) // f
+        rms = np.sqrt(np.mean(self.audio[: n * f].reshape(n, f) ** 2, axis=1))
+        return np.percentile(rms, 10), np.percentile(rms, 90)
+
+    def _watch(self):
+        while not self.stopped:
+            time.sleep(0.25)
+            self._grow()
+            c = self.find_cut(self.audio[self.cut:])
+            if c:
+                with self.cv:
+                    if self.stopped:
+                        return
+                    self.jobs.append((self.audio[self.cut: self.cut + c], self.levels()))
+                    self.cut += c
+                    self.cv.notify_all()
+
+    def _work(self):
+        while True:
+            with self.cv:
+                while not self.jobs and not self.stopped:
+                    self.cv.wait()
+                if not self.jobs:
+                    return
+                seg, lv = self.jobs[0]
+            try:
+                t = self.engine.transcribe(seg, " ".join(self.texts)) if self.has_speech(seg, lv) else ""
+            except Exception as err:  # noqa: BLE001
+                t, self.err = "", err
+            with self.cv:
+                if t:
+                    self.texts.append(t)
+                self.jobs.pop(0)
+                self.cv.notify_all()
+
+    @staticmethod
+    def join(texts):
+        """Glue pieces back together: no space before a stop the next piece
+        starts with, a word split across a cut ("mid-" + "semester") rejoined,
+        and an everyday word capitalised only because it opened a piece
+        ("…the following The…") lowered again when no sentence ended."""
+        out = ""
+        for t in texts:
+            t = t.strip()
+            if not t:
+                continue
+            if not out:
+                out = t
+            elif t[0] in ".,;:!?":
+                out = out.rstrip(" .,;:") + t
+            elif out.endswith("-"):
+                out += t
+            else:
+                w = re.match(r"[A-Z][a-z']*\b", t)
+                if w and out[-1] not in ".!?" and w.group(0).lower() in COMMON_WORDS and w.group(0) not in ("I", "I'm", "I'll", "I've", "I'd"):
+                    t = t[0].lower() + t[1:]
+                out += " " + t
+        return out
+
+    def finish(self, audio):
+        """Recording ended with the whole take `audio`: wait for the pieces, add the rest."""
+        with self.cv:
+            self.stopped = True
+            self.cv.notify_all()
+            while self.jobs:
+                self.cv.wait()
+        if getattr(self, "err", None):
+            raise self.err
+        rest = audio[self.cut:]
+        if self.cut:   # earlier pieces exist: skip a tail that is only silence
+            self.audio = audio
+            if not self.has_speech(rest, self.levels()):
+                rest = rest[:0]
+        if len(rest) >= MIN_SAMPLES:
+            t = self.engine.transcribe(rest, " ".join(self.texts))
+            if t:
+                self.texts.append(t)
+        return self.join(self.texts)
+
+    def cancel(self):
+        with self.cv:
+            self.stopped = True
+            self.jobs.clear()
+            self.cv.notify_all()
 
 
 # ── engines ──
@@ -515,12 +843,13 @@ def collapse_repeats(text):
 
 class Whisper:
     """
-    Loaded only when needed: the first Right Alt press starts whisper-server
-    while you speak (~0.7 s, well under a sentence), and it is shut down again
-    after IDLE seconds unused, which gives back ~1.1 GB of RAM.
+    Loaded at service start, shut down after IDLE seconds unused (gives back
+    ~2.8 GB of RAM), and started again the moment Right Alt goes down: it
+    reloads in ~2.8 s while you speak, so only a very short first take after
+    a break waits a little.
     """
     name = "whisper"
-    IDLE = float("inf")  # kept loaded always (was 600 s); ~1.85 GB RAM
+    IDLE = 600  # unloaded after 10 min unused (~2.8 GB back); reloads when Right Alt goes down
 
     def __init__(self, sock=None):
         for f in (WHISPER_SERVER, WHISPER_MODEL):
@@ -529,6 +858,9 @@ class Whisper:
         self.proc = None
         self.lock = threading.Lock()
         self.busy = False          # a take is being recorded
+        self.keep = False          # tray: "Keep model loaded" pauses the idle unload
+        self.loading = False
+        self.on_change = None      # tray refresh hook
         self.last = time.time()
         if sock:                   # borrow a server someone else runs (voice test)
             self.sock, self.external = sock, True
@@ -559,9 +891,15 @@ class Whisper:
         """Start the server if it isn't running. Call with self.lock held."""
         if self.external or (self.proc and self.proc.poll() is None):
             return
+        cmd, env = [WHISPER_SERVER], None
+        if os.path.exists(WHISPER_SERVER_OV) and os.path.exists(WHISPER_MODEL[:-4] + "-encoder-openvino.xml"):
+            cmd = [WHISPER_SERVER_OV, "--ov-e-device", "GPU"]
+            # WHISPER_SKIP_ENCODER: our patched whisper.cpp doesn't load its own copy
+            # of the encoder, which OpenVINO replaces (~0.5 GB less RAM).
+            env = dict(os.environ, LD_LIBRARY_PATH=WHISPER_OV_LIBS, WHISPER_SKIP_ENCODER="1")
         self.proc = subprocess.Popen(
-            [WHISPER_SERVER, "-m", WHISPER_MODEL, "--host", self.sock, "-l", "en", "-nt", "-t", "4"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=_die_with_parent)
+            cmd + ["-m", WHISPER_MODEL, "--host", self.sock, "-l", "en", "-nt", "-t", "4"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=_die_with_parent, env=env)
         for _ in range(600):
             if self.proc.poll() is not None:
                 raise RuntimeError("the GPU driver may be missing")
@@ -577,6 +915,8 @@ class Whisper:
         else:
             self._kill()
             raise RuntimeError("it didn't start in time")
+        # A short warm-up is enough again: the crash that needed a full 30 s first
+        # request came from the unused encoder copy, which is no longer loaded.
         self._request(np.zeros(RATE // 2, dtype=np.float32))
 
     def _running(self):
@@ -592,21 +932,49 @@ class Whisper:
         if self.err:
             raise self.err
 
+    def _changed(self):
+        if self.on_change:
+            try:
+                self.on_change()
+            except Exception:  # noqa: BLE001
+                pass
+
     def _keeper(self):
         while True:
             if self.want.wait(timeout=30):
                 self.want.clear()
+                self.loading = not self._running()
+                self._changed()
                 with self.lock:
                     try:
                         self._ensure()
                         self.err = None
                     except Exception as err:  # noqa: BLE001
                         self.err = err
+                self.loading = False
+                self._changed()
                 self.tried.set()
-            elif self.proc and not self.busy and time.time() - self.last > self.IDLE:
+            elif self.proc and not self.busy and not self.keep and time.time() - self.last > self.IDLE:
                 with self.lock:
-                    if not self.busy and time.time() - self.last > self.IDLE:
+                    if not self.busy and not self.keep and time.time() - self.last > self.IDLE:
                         self._kill()
+                self._changed()
+
+    def load(self):
+        """Tray: load now, in the keeper thread (the server dies with the thread that started it)."""
+        if not self._running():
+            self.want.set()
+
+    def unload(self):
+        """Tray: give the RAM back now. Skipped mid-take; your next Right Alt reloads it."""
+        if self.external or self.busy:
+            return False
+        with self.lock:
+            if self.busy:
+                return False
+            self._kill()
+        self._changed()
+        return True
 
     def prepare(self):
         """Right Alt went down: load in the background while you talk."""
@@ -633,28 +1001,36 @@ class Whisper:
             pass
 
     @staticmethod
-    def prompt(words):
+    def prompt(words, context=""):
         """
         Punctuated so Whisper punctuates, plus your Vocabulary so it spells them
         right. The quote line makes it expect the word "quote", which it
-        otherwise hears as "coat" or "court" in Indian English.
+        otherwise hears as "coat" or "court" in Indian English; the bracket
+        line keeps the spoken word "bracket". `context` is
+        what was already said earlier in this take (see Streamer); it goes
+        last so Whisper reads the new audio as its continuation.
         """
-        base = "Hello, how are you? I'm doing well. He said, quote, I'll be there."
-        return base + (" Names: " + ", ".join(words) + "." if words else "")
+        # The bracket line does for "bracket" what the quote line does for "quote":
+        # without it Whisper leaves the spoken word out (tested 2026-11-27; this
+        # example was the one it didn't copy into your text).
+        base = ("Hello, how are you? I'm doing well. He said, quote, I'll be there. "
+                "Read chapter two, bracket, page 40.")
+        p = base + (" Names: " + ", ".join(words) + "." if words else "")
+        return p + (" " + context[-400:] if context else "")
 
     def stop(self):
         if not self.external:
             self._kill()
 
-    def transcribe(self, audio):
+    def transcribe(self, audio, context=""):
         self._load()
         with self.lock:
             try:
-                return self._request(audio)
+                return self._request(audio, context)
             finally:
                 self.last = time.time()
 
-    def _request(self, audio):
+    def _request(self, audio, context=""):
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
             w.setnchannels(1)
@@ -664,7 +1040,7 @@ class Whisper:
         words = [e["word"] for e in load_vocab()]
         fields = {
             "language": "en",
-            "prompt": self.prompt(words),
+            "prompt": self.prompt(words, context),
             "response_format": "json",
             "no_timestamps": "true",
             "temperature": "0",
@@ -716,6 +1092,291 @@ def pick_engine():
     return eng
 
 
+# ── tray icon ──
+
+FLAGS = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "lumen", "flags.json")
+ICONS = os.path.join(HERE, "icons")
+
+
+def dictation_off():
+    """Tray: same as switching dictation off in Settings. The pill watches this
+    file, stops this service, and the tray icon goes with it."""
+    with open(FLAGS) as f:
+        flags = json.load(f)
+    flags["dictateEnabled"] = False
+    with open(FLAGS, "w") as f:   # in place, so the pill's file watch keeps working
+        json.dump(flags, f, indent=4)
+
+
+def start_tray(engine):
+    """A standard tray icon (StatusNotifierItem) shown while dictation is on:
+    which engine and whether it's loaded, load/unload, keep loaded, dictation off. It lives on this
+    process's D-Bus connection, so it disappears when the service stops.
+    Optional: if D-Bus isn't there, dictation works without it."""
+    try:
+        import asyncio
+        from dbus_fast import Message, Variant
+        from dbus_fast.aio import MessageBus
+        from dbus_fast.service import PropertyAccess, ServiceInterface, dbus_property, method, signal as dbus_signal
+    except ImportError:
+        return
+
+    whisper = isinstance(engine, Whisper)
+
+    def pixmap(name):
+        """The icon as image data (32 and 64 px). Sent instead of an icon name:
+        your tray couldn't resolve a name from our own icon folder and showed
+        Qt's purple-and-black placeholder."""
+        out = []
+        for n in (32, 64):
+            try:   # rsvg draws the slash's cut-out (an SVG mask) correctly
+                png = subprocess.run(["rsvg-convert", "-w", str(n), "-h", str(n),
+                                      os.path.join(ICONS, "hicolor", "scalable", "status", name + ".svg")],
+                                     capture_output=True, timeout=5).stdout
+                raw = subprocess.run(["magick", "png:-", "-depth", "8", "rgba:-"], input=png,
+                                     capture_output=True, timeout=5).stdout
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            if len(raw) == n * n * 4:
+                a = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 4)
+                out.append([n, n, a[:, [3, 0, 1, 2]].tobytes()])   # ARGB, network byte order
+        return out
+
+    pix = {n: pixmap(n) for n in ("lumen-dictation-loaded", "lumen-dictation-unloaded")}
+
+    def state():
+        """(icon state, status line): names the engine actually running, so a
+        switch to Parakeet (or a fallback to it) reads "Parakeet"."""
+        if not whisper:
+            return "loaded", "Parakeet"
+        if engine._running():
+            return "loaded", "Whisper loaded"
+        if engine.loading:
+            return "loading", "Whisper loading…"
+        return "unloaded", "Whisper unloaded"
+
+    def icon_name():
+        return "lumen-dictation-unloaded" if state()[0] != "loaded" else "lumen-dictation-loaded"
+
+    class Item(ServiceInterface):
+        def __init__(self):
+            super().__init__("org.kde.StatusNotifierItem")
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Category(self) -> "s":
+            return "Hardware"
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Id(self) -> "s":
+            return "lumen-dictation"
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Title(self) -> "s":
+            return "Dictation"
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Status(self) -> "s":
+            return "Active"
+
+        @dbus_property(access=PropertyAccess.READ)
+        def WindowId(self) -> "i":
+            return 0
+
+        @dbus_property(access=PropertyAccess.READ)
+        def IconThemePath(self) -> "s":
+            return ICONS
+
+        @dbus_property(access=PropertyAccess.READ)
+        def IconName(self) -> "s":
+            return ""   # image data only, see pixmap()
+
+        @dbus_property(access=PropertyAccess.READ)
+        def IconPixmap(self) -> "a(iiay)":
+            return pix[icon_name()]
+
+        @dbus_property(access=PropertyAccess.READ)
+        def OverlayIconName(self) -> "s":
+            return ""
+
+        @dbus_property(access=PropertyAccess.READ)
+        def AttentionIconName(self) -> "s":
+            return ""
+
+        @dbus_property(access=PropertyAccess.READ)
+        def ToolTip(self) -> "(sa(iiay)ss)":
+            return ["", [], "Dictation", state()[1]]
+
+        @dbus_property(access=PropertyAccess.READ)
+        def ItemIsMenu(self) -> "b":
+            return True
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Menu(self) -> "o":
+            return "/MenuBar"
+
+        @method()
+        def ContextMenu(self, x: "i", y: "i"):
+            pass
+
+        @method()
+        def Activate(self, x: "i", y: "i"):
+            pass
+
+        @method()
+        def SecondaryActivate(self, x: "i", y: "i"):
+            pass
+
+        @method()
+        def Scroll(self, delta: "i", orientation: "s"):
+            pass
+
+        @dbus_signal()
+        def NewIcon(self):
+            pass
+
+        @dbus_signal()
+        def NewToolTip(self):
+            pass
+
+        @dbus_signal()
+        def NewStatus(self) -> "s":
+            return "Active"
+
+    STATUS, SEP1, LOADER, KEEP, SEP2, OFF = 1, 2, 3, 4, 5, 6
+
+    def entries():
+        st, text = state()
+        out = [(STATUS, {"label": Variant("s", text), "enabled": Variant("b", False)}),
+               (SEP1, {"type": Variant("s", "separator")})]
+        if whisper:
+            if st == "loaded":
+                out.append((LOADER, {"label": Variant("s", "Unload model now"), "enabled": Variant("b", not engine.busy)}))
+            else:
+                out.append((LOADER, {"label": Variant("s", "Load model now"), "enabled": Variant("b", st == "unloaded")}))
+            out.append((KEEP, {"label": Variant("s", "Keep model loaded"), "toggle-type": Variant("s", "checkmark"),
+                               "toggle-state": Variant("i", 1 if engine.keep else 0)}))
+            out.append((SEP2, {"type": Variant("s", "separator")}))
+        out.append((OFF, {"label": Variant("s", "Turn dictation off")}))
+        return out
+
+    class Menu(ServiceInterface):
+        def __init__(self):
+            super().__init__("com.canonical.dbusmenu")
+            self.revision = 1
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Version(self) -> "u":
+            return 3
+
+        @dbus_property(access=PropertyAccess.READ)
+        def TextDirection(self) -> "s":
+            return "ltr"
+
+        @dbus_property(access=PropertyAccess.READ)
+        def Status(self) -> "s":
+            return "normal"
+
+        @dbus_property(access=PropertyAccess.READ)
+        def IconThemePath(self) -> "as":
+            return [ICONS]
+
+        @method()
+        def GetLayout(self, parent: "i", depth: "i", names: "as") -> "u(ia{sv}av)":
+            kids = [Variant("(ia{sv}av)", [i, props, []]) for i, props in entries()]
+            if parent != 0:
+                kids = []
+            return [self.revision, [parent, {"children-display": Variant("s", "submenu")} if parent == 0 else {}, kids]]
+
+        @method()
+        def GetGroupProperties(self, ids: "ai", names: "as") -> "a(ia{sv})":
+            e = dict(entries())
+            return [[i, e[i]] for i in (ids or list(e)) if i in e]
+
+        @method()
+        def GetProperty(self, id_: "i", name: "s") -> "v":
+            return dict(entries()).get(id_, {}).get(name, Variant("s", ""))
+
+        @method()
+        def Event(self, id_: "i", event: "s", data: "v", timestamp: "u"):
+            if event == "clicked":
+                threading.Thread(target=clicked, args=(id_,), daemon=True).start()
+
+        @method()
+        def EventGroup(self, events: "a(isvu)") -> "ai":
+            for id_, event, _data, _ts in events:
+                if event == "clicked":
+                    threading.Thread(target=clicked, args=(id_,), daemon=True).start()
+            return []
+
+        @method()
+        def AboutToShow(self, id_: "i") -> "b":
+            return True   # status is read fresh on every open
+
+        @method()
+        def AboutToShowGroup(self, ids: "ai") -> "aiai":
+            return [ids, []]
+
+        @dbus_signal()
+        def LayoutUpdated(self) -> "ui":
+            self.revision += 1
+            return [self.revision, 0]
+
+    item, menu = Item(), Menu()
+    loop_box = {}
+
+    def clicked(id_):
+        if id_ == LOADER and whisper:
+            if engine._running():
+                engine.unload()
+            else:
+                engine.load()
+        elif id_ == KEEP and whisper:
+            engine.keep = not engine.keep
+            engine.last = time.time()
+        elif id_ == OFF:
+            try:
+                dictation_off()
+            except (OSError, ValueError) as err:
+                emit(event="error", msg="couldn't turn dictation off: %s" % err)
+        refresh()
+
+    def refresh():
+        loop = loop_box.get("loop")
+        if loop:
+            loop.call_soon_threadsafe(lambda: (item.NewIcon(), item.NewToolTip(), menu.LayoutUpdated()))
+
+    async def run():
+        bus = await MessageBus().connect()
+        name = "org.kde.StatusNotifierItem-%d-1" % os.getpid()
+        bus.export("/StatusNotifierItem", item)
+        bus.export("/MenuBar", menu)
+        await bus.request_name(name)
+        await bus.call(Message(destination="org.kde.StatusNotifierWatcher", path="/StatusNotifierWatcher",
+                               interface="org.kde.StatusNotifierWatcher", member="RegisterStatusNotifierItem",
+                               signature="s", body=[name]))
+        last = None
+        while True:   # a server that stopped on its own shows up within a few seconds
+            await asyncio.sleep(5)
+            now = state()
+            if now != last:
+                last = now
+                item.NewIcon()
+                item.NewToolTip()
+                menu.LayoutUpdated()
+
+    def thread():
+        loop = asyncio.new_event_loop()
+        loop_box["loop"] = loop
+        try:
+            loop.run_until_complete(run())
+        except Exception as err:  # noqa: BLE001
+            sys.stderr.write("tray icon unavailable: %s\n" % err)
+
+    if whisper:
+        engine.on_change = refresh
+    threading.Thread(target=thread, daemon=True).start()
+
+
 # ── main ──
 
 def main():
@@ -725,8 +1386,9 @@ def main():
         emit(event="error", msg="model failed to load: %s" % err)
         return 1
     emit(event="ready")
+    start_tray(engine)
 
-    take = None
+    take = stream = None
     for line in sys.stdin:
         try:
             msg = json.loads(line)
@@ -738,14 +1400,22 @@ def main():
                 take.finish()
             if hasattr(engine, "prepare"):
                 engine.prepare()
+            if stream:
+                stream.cancel()
+                stream = None
             try:
                 take = Take(resolve_mic(msg.get("mic", "default")))
+                if engine.name == "whisper":
+                    stream = Streamer(engine, take)
             except OSError as err:
                 take = None
                 emit(event="error", msg="mic unavailable: %s" % err)
         elif cmd == "reload":
             load_vocab(force=True)
         elif cmd == "cancel":
+            if stream:
+                stream.cancel()
+                stream = None
             if take:
                 take.finish()
                 take = None
@@ -757,13 +1427,16 @@ def main():
                 continue
             audio = take.finish()
             take = None
+            st, stream = stream, None
             if hasattr(engine, "done"):
                 engine.done()
             if len(audio) < MIN_SAMPLES:
+                if st:
+                    st.cancel()
                 emit(event="empty")
                 continue
             try:
-                raw = engine.transcribe(audio)
+                raw = st.finish(audio) if st else engine.transcribe(audio)
             except Exception as err:  # noqa: BLE001
                 emit(event="error", msg="%s: %s" % (engine.name, err))
                 continue
