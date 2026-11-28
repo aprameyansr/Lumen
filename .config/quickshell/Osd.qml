@@ -163,11 +163,11 @@ Item {
      */
     readonly property bool onFocusedMonitor: !Hyprland.focusedMonitor || Hyprland.focusedMonitor.name === screenName
 
-    /** Volume and brightness answer a key press, so Do not disturb keeps them. */
+    /** Do Not Disturb keeps feedback for volume, brightness and workspace changes. */
     function allowed(which) {
         if ((Flags.osdOff || []).indexOf(which) >= 0)
             return false;
-        return !Flags.dnd || which === "volume" || which === "brightness";
+        return !Flags.dnd || which === "volume" || which === "brightness" || which === "workspace";
     }
 
     function flash(which) {

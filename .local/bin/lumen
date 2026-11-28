@@ -158,7 +158,7 @@ cmd_status() {
 }
 
 # Mirror the live configs into the dotfiles repo, laid out like $HOME
-# (.config/, .local/bin/, the dictation service's code under .local/share/)
+# (.config/, .local/bin/lumen, the dictation service's code under .local/share/)
 # plus the root-owned bits under etc/. Backups
 # (*.bak*) are never copied and are cleared from the repo copy. Zen's files go
 # under a generic "<profile>" folder, since the real profile name is per machine.
@@ -182,9 +182,8 @@ cmd_sync() {
     done
 
     mkdir -p "$DOTFILES/.local/bin"
-    rsync -a --delete --exclude='*.bak*' --delete-excluded \
-        "$HOME/.local/bin/" "$DOTFILES/.local/bin/" || die "Copy failed: .local/bin"
-    row "${flame}·${rst} ${cream}.local/bin${rst}"
+    rsync -a "$HOME/.local/bin/lumen" "$DOTFILES/.local/bin/" || die "Copy failed: .local/bin/lumen"
+    row "${flame}·${rst} ${cream}.local/bin/lumen${rst}"
 
     # Dictation service: its code, setup script, tray icons and the OpenVINO
     # build files (whisper.cpp patch + encoder converter). The venv, models,
