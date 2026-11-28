@@ -186,16 +186,18 @@ cmd_sync() {
         "$HOME/.local/bin/" "$DOTFILES/.local/bin/" || die "Copy failed: .local/bin"
     row "${flame}·${rst} ${cream}.local/bin${rst}"
 
-    # Dictation service: only its code and setup script. The venv, the model,
-    # the word list (all fetched by setup.sh) and the personal vocabulary and
-    # history never leave the machine.
+    # Dictation service: its code, setup script, tray icons and the OpenVINO
+    # build files (whisper.cpp patch + encoder converter). The venv, models,
+    # binaries and word list (fetched or built by setup.sh) and the personal
+    # vocabulary and history never leave the machine.
     dict_src="$HOME/.local/share/lumen-dictate"
     if [ -d "$dict_src" ]; then
         mkdir -p "$DOTFILES/.local/share/lumen-dictate"
-        rsync -a --delete --delete-excluded \
-            --include='dictated.py' --include='setup.sh' --exclude='*' \
+        rsync -a --delete --delete-excluded --exclude='*.bak*' \
+            --include='dictated.py' --include='setup.sh' --include='icons/***' \
+            --include='whisper/' --include='whisper/ov-convert/***' --exclude='*' \
             "$dict_src/" "$DOTFILES/.local/share/lumen-dictate/" || die "Copy failed: .local/share/lumen-dictate"
-        row "${flame}·${rst} ${cream}.local/share/lumen-dictate${rst} ${dim}(code only)${rst}"
+        row "${flame}·${rst} ${cream}.local/share/lumen-dictate${rst} ${dim}(code, icons, OpenVINO files)${rst}"
     else
         row "${faint}skip  .local/share/lumen-dictate (missing)${rst}"
     fi

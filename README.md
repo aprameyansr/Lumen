@@ -355,7 +355,7 @@ Change them in `~/.config/hypr/modules/binds.lua` or **Settings → Keybinds**.
 | `lumen status`  | Is the pill running                                 |
 | `lumen restart` | Restart the pill                                    |
 | `lumen log`     | Follow the pill's log                               |
-| `lumen sync`    | Copy your live configs back into `~/lumen` (dictation: code only, never your vocabulary or history) |
+| `lumen sync`    | Copy your live configs back into `~/lumen` (dictation: code, setup, tray icons and OpenVINO build files; never models, your vocabulary or history) |
 
 To update: `git pull` in `~/lumen`, copy the configs again (step 4) and
 `lumen restart`.

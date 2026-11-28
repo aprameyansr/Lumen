@@ -1,0 +1,25 @@
+1493a1494,1501
+> // Lumen patch: WHISPER_SKIP_ENCODER=1 means an external encoder (OpenVINO) does
+> // all encoding, so the ggml encoder weights are never loaded and its compute
+> // buffer is never reserved (~0.5 GB saved for large-v3).
+> static bool whisper_skip_encoder() {
+>     static const bool skip = [] { const char * e = getenv("WHISPER_SKIP_ENCODER"); return e && e[0] == '1'; }();
+>     return skip;
+> }
+> 
+1729a1738,1740
+>         if (system == ASR_SYSTEM_ENCODER && whisper_skip_encoder()) {
+>             return nullptr; // Lumen patch: not loaded, see whisper_skip_encoder()
+>         }
+1918a1930,1936
+>             if (model.tensors.find(name) == model.tensors.end() && whisper_skip_encoder() && name.rfind("encoder.", 0) == 0) {
+>                 // Lumen patch: skip the encoder weights' bytes
+>                 read_buf.resize((size_t) nelements * ggml_type_size(ggml_type(ttype)) / ggml_blck_size(ggml_type(ttype)));
+>                 loader->read(loader->context, read_buf.data(), read_buf.size());
+>                 continue;
+>             }
+> 
+1983a2002,2004
+>     if (whisper_skip_encoder()) {
+>         return true;
+>     }

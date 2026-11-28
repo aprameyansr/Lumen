@@ -72,3 +72,7 @@ __pycache__/
 .local/share/lumen-dictate/*
 !.local/share/lumen-dictate/dictated.py
 !.local/share/lumen-dictate/setup.sh
+!.local/share/lumen-dictate/icons/
+!.local/share/lumen-dictate/whisper/
+.local/share/lumen-dictate/whisper/*
+!.local/share/lumen-dictate/whisper/ov-convert/
